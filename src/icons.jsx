@@ -1,4 +1,4 @@
-// Minimal line icons — Lucide-style, 1.6 stroke
+// Minimal line icons - Lucide-style, 1.6 stroke
 const Icon = ({ d, children, size = 16, sw = 1.6, fill, ...p }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={fill || "none"} stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" className={p.className} style={p.style}>
     {d && <path d={d} />}

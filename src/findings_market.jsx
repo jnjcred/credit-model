@@ -13,7 +13,7 @@ function WSFindings() {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 13.5, fontWeight: 500 }}>5 observationer genereret fra modtaget materiale</div>
           <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-            Hver observation har kilde og konfidensniveau. AI træffer ikke beslutninger — du gør.
+            Hver observation har kilde og konfidensniveau. AI træffer ikke beslutninger - du gør.
           </div>
         </div>
         <button className="btn btn-sm btn-ghost"><I.Refresh className="ic"/> Kør igen</button>
@@ -84,7 +84,7 @@ function WSMarket() {
         <div className="card">
           <div className="card-head"><div className="card-title">Forretningsmodel</div></div>
           <div style={{ padding: '14px 18px 18px', fontSize: 13.5, lineHeight: 1.6, color: 'var(--c-text)' }}>
-            Nordhavn Composite producerer fiberforstærkede komposit­komponenter til vindmølle­blade — primært strukturelle elementer og rotorindfatninger. Salget sker B2B til <b>Vestas (DK)</b>, <b>Siemens Gamesa (DE)</b> og <b>GE Vernova (US)</b>, hvor de tre kunder samlet udgør ca. 64% af omsætningen.
+            Nordhavn Composite producerer fiberforstærkede komposit­komponenter til vindmølle­blade - primært strukturelle elementer og rotorindfatninger. Salget sker B2B til <b>Vestas (DK)</b>, <b>Siemens Gamesa (DE)</b> og <b>GE Vernova (US)</b>, hvor de tre kunder samlet udgør ca. 64% af omsætningen.
             <div style={{ marginTop: 10 }}><span className="source"><I.File className="ic"/> Årsrapport 2025 · s. 9</span></div>
           </div>
         </div>
@@ -97,7 +97,7 @@ function WSMarket() {
         <div className="card">
           <div className="card-head"><div className="card-title">Branche­vurdering</div></div>
           <div style={{ padding: '14px 18px 18px', fontSize: 13.5, lineHeight: 1.6 }}>
-            Det globale marked for vindkomponenter forventes at vokse <b>6,8% p.a.</b> i 2025–2030 (IEA). DK-leverandører nyder nærhed til OEM'er og høj teknisk modenhed. Risici: råvarepriser på kulfiber (+22% YoY) og politisk usikkerhed om amerikanske IRA-fradrag.
+            Det globale marked for vindkomponenter forventes at vokse <b>6,8% p.a.</b> i 2025-2030 (IEA). DK-leverandører nyder nærhed til OEM'er og høj teknisk modenhed. Risici: råvarepriser på kulfiber (+22% YoY) og politisk usikkerhed om amerikanske IRA-fradrag.
             <div style={{ marginTop: 10, display: 'flex', gap: 6 }}>
               <span className="tag">IEA WEO 2025</span>
               <span className="tag">EWEA Q1 2026</span>

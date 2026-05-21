@@ -8,7 +8,7 @@ function WSSecurity() {
     { id: 2, type: "Pant i fast ejendom", asset: "Havnegade 47, Frederikshavn", value: 1.8, currency: "DKK M", doc: "Tinglyst_pantebrev_Havnegade.pdf", priority: "1.", status: "tinglyst", valued: "EDC Erhverv · 2025", note: null },
     { id: 3, type: "Debitorpant", asset: "Tilgodehavende fra Vestas, GE", value: 1.2, currency: "DKK M", doc: "Debitorpant_aftale.pdf", priority: "1.", status: "tinglyst", valued: "Bog­ført værdi", note: null },
     { id: 4, type: "Pant i varelager", asset: "Råvarer (kulfiber, epoxy)", value: 0.4, currency: "DKK M", doc: "Pantebrev_varelager.pdf", priority: "2.", status: "tinglyst", valued: "Bog­ført værdi", note: "Sekundær prioritet efter Nordea" },
-    { id: 5, type: "Pant i IP / patenter", asset: "Patent EP3214876 + know-how", value: null, currency: "—", doc: null, priority: "—", status: "ikke-tinglyst", valued: "Ikke vurderet", note: "Forsøgt vurderet — ingen markedsdata" },
+    { id: 5, type: "Pant i IP / patenter", asset: "Patent EP3214876 + know-how", value: null, currency: "-", doc: null, priority: "-", status: "ikke-tinglyst", valued: "Ikke vurderet", note: "Forsøgt vurderet - ingen markedsdata" },
   ]);
 
   const addSecurity = (s) => setSecurities(prev => [...prev, { ...s, id: prev.length + 1 }]);
@@ -17,7 +17,7 @@ function WSSecurity() {
     { id: 1, type: "Personlig kaution", from: "Anders Christensen", role: "Stifter / CEO", amount: 0.5, scope: "Solidarisk · op til beløb", doc: "Personlig_kaution_AC.pdf", status: "signed", limit: "Maks 0,5M", note: null },
     { id: 2, type: "Selskabskaution", from: "Anders Holding ApS", role: "48,2% ejer", amount: 1.0, scope: "Solidarisk · op til beløb", doc: "Selskabskaution_AH.pdf", status: "signed", limit: "Maks 1,0M", note: null },
     { id: 3, type: "EIFO-garanti (intern)", from: "EIFO Eksportkaution", role: "Modregnes mod kreditrisiko", amount: 3.2, scope: "70% af eksport-tilgodehavender", doc: null, status: "draft", limit: "70% dækning", note: "Ramme­garanti for Block-Island leverance" },
-    { id: 4, type: "Tilbagetrædelses­erklæring", from: "Anders Holding ApS", role: "Anpartshaver­lån 0,5M", amount: 0.5, scope: "Efterstillet alle øvrige kreditorer", doc: null, status: "missing", limit: "—", note: "AI fandt: dokument mangler i sagen" },
+    { id: 4, type: "Tilbagetrædelses­erklæring", from: "Anders Holding ApS", role: "Anpartshaver­lån 0,5M", amount: 0.5, scope: "Efterstillet alle øvrige kreditorer", doc: null, status: "missing", limit: "-", note: "AI fandt: dokument mangler i sagen" },
   ];
 
   const totalCredit = 4.5;
@@ -28,7 +28,7 @@ function WSSecurity() {
   return (
     <div className="page page-wide" style={{ maxWidth: 1280 }}>
       {/* Header KPIs */}
-      <div className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', marginBottom: 16 }}>
+      <div className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: 16 }}>
         <div className="kpi">
           <div className="kpi-lbl">Kreditbeløb</div>
           <div className="kpi-val mono">4,5M</div>
@@ -43,18 +43,6 @@ function WSSecurity() {
           <div className="kpi-lbl">Kautioner</div>
           <div className="kpi-val mono">{totalGuaranteed.toFixed(1)}M</div>
           <div className="kpi-delta flat">2 personlige · 1 ramme</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-lbl">Dækningsgrad</div>
-          <div className="kpi-val mono">{coverage}%</div>
-          <div className="kpi-delta up"><I.TrendUp size={12}/> Over tærskel (90%)</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-lbl">Status</div>
-          <div className="kpi-val" style={{ fontSize: 16, marginTop: 8 }}>
-            <span className="pill warn" style={{ fontSize: 11.5 }}><span className="pill-dot"/>1 afklaring</span>
-          </div>
-          <div className="kpi-delta flat" style={{ marginTop: 5 }}>Tilbagetrædelses­erklæring</div>
         </div>
       </div>
 
@@ -127,7 +115,7 @@ function WSSecurity() {
                   </td>
                   <td className="mono" style={{ fontSize: 12.5 }}>{s.priority}</td>
                   <td className="mono num" style={{ textAlign: 'right', fontWeight: 500, color: s.value === null ? 'var(--c-text-4)' : 'var(--c-ink)' }}>
-                    {s.value === null ? '—' : `${s.value.toFixed(1)}M`}
+                    {s.value === null ? '-' : `${s.value.toFixed(1)}M`}
                   </td>
                   <td><div style={{ fontSize: 12.5 }}>{s.valued}</div></td>
                   <td>
@@ -136,7 +124,7 @@ function WSSecurity() {
                       : <span className="pill warn" style={{ fontSize: 11 }}><span className="pill-dot"/>Ikke tinglyst</span>}
                   </td>
                   <td>
-                    {s.doc ? <span className="source" style={{ cursor: 'pointer' }}><I.File className="ic"/> {s.doc}</span> : <span className="muted" style={{ fontSize: 11.5 }}>—</span>}
+                    {s.doc ? <span className="source" style={{ cursor: 'pointer' }}><I.File className="ic"/> {s.doc}</span> : <span className="muted" style={{ fontSize: 11.5 }}>-</span>}
                   </td>
                   <td><button className="btn btn-sm btn-ghost"><I.MoreH className="ic"/></button></td>
                 </tr>
@@ -218,11 +206,18 @@ function CoverageBar({ credit, security, guarantee }) {
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--c-text-2)' }}/> Kautioner <b className="mono num" style={{ marginLeft: 4 }}>{guarantee.toFixed(1)}M</b></span>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}><span style={{ width: 12, height: 2, background: 'var(--c-danger)' }}/> Kreditbeløb <b className="mono num" style={{ marginLeft: 4 }}>{credit.toFixed(1)}M</b></span>
       </div>
-      <div style={{ position: 'relative', height: 28, background: 'var(--c-line-2)', borderRadius: 6, overflow: 'visible' }}>
+      <div style={{ position: 'relative', height: 28, background: 'var(--c-line-2)', borderRadius: 6, overflow: 'visible', marginTop: 22 }}>
         <div style={{ position: 'absolute', left: 0, top: 0, height: '100%', width: secW + '%', background: 'var(--c-ink)', borderRadius: '6px 0 0 6px' }}/>
         <div style={{ position: 'absolute', left: secW + '%', top: 0, height: '100%', width: guarW + '%', background: 'var(--c-text-2)', opacity: 0.7 }}/>
-        <div style={{ position: 'absolute', left: creditX + '%', top: -4, bottom: -4, width: 2, background: 'var(--c-danger)', borderRadius: 1 }}>
-          <div style={{ position: 'absolute', left: 6, top: -2, fontSize: 11, fontWeight: 500, color: 'var(--c-danger)', whiteSpace: 'nowrap' }}>Kredit {credit.toFixed(0)}M</div>
+        <div style={{ position: 'absolute', left: creditX + '%', top: -6, bottom: -6, width: 2, background: 'var(--c-danger)', borderRadius: 1 }}>
+          <div style={{
+            position: 'absolute', left: '50%', top: -20, transform: 'translateX(-50%)',
+            fontSize: 11, fontWeight: 600, color: 'var(--c-danger)',
+            background: '#fff', border: '1px solid var(--c-danger)',
+            padding: '1px 6px', borderRadius: 4, whiteSpace: 'nowrap',
+          }}>
+            Kredit {credit.toFixed(1)}M
+          </div>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, fontSize: 11.5, color: 'var(--c-text-3)' }}>
@@ -240,7 +235,7 @@ function AddPantModal({ onClose, onSave }) {
     { k: "Pant i fast ejendom", desc: "Tinglyst pant i specifik ejendom", ic: <I.Building size={16}/> },
     { k: "Pant i varelager", desc: "Pant i råvarer, færdigvarer eller komponenter", ic: <I.Database size={16}/> },
     { k: "Debitorpant", desc: "Pant i tilgodehavender fra navngivne kunder", ic: <I.Users size={16}/> },
-    { k: "Pant i specifikke aktiver", desc: "Maskiner, køretøjer, udstyr — afgrænset", ic: <I.Lock size={16}/> },
+    { k: "Pant i specifikke aktiver", desc: "Maskiner, køretøjer, udstyr - afgrænset", ic: <I.Lock size={16}/> },
     { k: "Pant i IP / patenter", desc: "Patenter, varemærker, know-how", ic: <I.Star size={16}/> },
     { k: "Andet", desc: "Brugerdefineret type", ic: <I.Plus size={16}/> },
   ];
@@ -342,7 +337,7 @@ function AddPantModal({ onClose, onSave }) {
                     <option value="1.">1. prioritet</option>
                     <option value="2.">2. prioritet</option>
                     <option value="3.">3. prioritet</option>
-                    <option value="—">Ikke relevant</option>
+                    <option value="-">Ikke relevant</option>
                   </select>
                 </div>
               </div>
@@ -410,11 +405,11 @@ function AddPantModal({ onClose, onSave }) {
               <div style={{ padding: '12px 14px', background: 'var(--c-surface-2)', borderRadius: 8, fontSize: 12.5 }}>
                 <div className="label-mini" style={{ marginBottom: 6 }}>Sammendrag</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: '4px 12px' }}>
-                  <div className="muted">Type</div><div>{form.type || "—"}</div>
-                  <div className="muted">Aktiv</div><div>{form.asset || "—"}</div>
-                  <div className="muted">Værdi</div><div className="mono">{form.value ? form.value + " M DKK" : "—"} · {form.priority} prioritet</div>
+                  <div className="muted">Type</div><div>{form.type || "-"}</div>
+                  <div className="muted">Aktiv</div><div>{form.asset || "-"}</div>
+                  <div className="muted">Værdi</div><div className="mono">{form.value ? form.value + " M DKK" : "-"} · {form.priority} prioritet</div>
                   <div className="muted">Status</div><div>{form.status}</div>
-                  <div className="muted">Dokument</div><div>{form.doc || "Mangler — tilføj senere"}</div>
+                  <div className="muted">Dokument</div><div>{form.doc || "Mangler - tilføj senere"}</div>
                 </div>
               </div>
             </div>

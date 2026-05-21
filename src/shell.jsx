@@ -1,4 +1,4 @@
-// Shell — sidebar + topbar
+// Shell - sidebar + topbar
 const { useState } = React;
 
 function Sidebar({ route, go, openNewCase }) {
@@ -127,7 +127,7 @@ function CaseSearch() {
           onChange={(e) => { setQ(e.target.value); setOpen(true); setHover(0); }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKey}
-          placeholder="Søg kunde — navn eller CVR"
+          placeholder="Søg kunde - navn eller CVR"
           aria-label="Søg kunde"
           style={{
             width: '100%', height: 30, padding: '0 28px 0 28px',

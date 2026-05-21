@@ -28,14 +28,13 @@ function NewCaseModal({ close, go }) {
   const dataOptions = [
     { id: "annual", name: "Seneste årsrapport", req: true, auto: false },
     { id: "interim", name: "Periodetal", req: true, auto: true, src: "e-conomic" },
-    { id: "budget", name: "Budget 2026–2028", req: true, auto: false },
+    { id: "budget", name: "Budget 2026-2028", req: true, auto: false },
     { id: "ownership", name: "Ejerbog", req: true, auto: false },
     { id: "articles", name: "Vedtægter", req: false, auto: true, src: "CVR-registret" },
     { id: "shareholder", name: "Ejeraftale", req: false, auto: false },
     { id: "loans", name: "Eksisterende låneaftaler", req: true, auto: false },
     { id: "security", name: "Sikkerheds­dokumenter", req: true, auto: false },
     { id: "pep", name: "PEP-erklæring", req: true, auto: false },
-    { id: "esg", name: "ESG-rating", req: false, auto: true, src: "Sustainalytics" },
     { id: "org", name: "Organisations­diagram", req: false, auto: false },
     { id: "trade", name: "Samhandelslande", req: false, auto: false },
   ];
@@ -91,7 +90,7 @@ function NewCaseModal({ close, go }) {
               )}
               {!foundCompany && cvr.length === 0 && (
                 <div className="muted" style={{ fontSize: 12, textAlign: 'center', padding: 18 }}>
-                  Indtast CVR eller virksomhedsnavn — prøv fx <span className="mono" style={{ background: 'var(--c-surface-2)', padding: '1px 5px', borderRadius: 4, cursor: 'pointer' }} onClick={() => lookup("38 42 71 56")}>38 42 71 56</span>
+                  Indtast CVR eller virksomhedsnavn - prøv fx <span className="mono" style={{ background: 'var(--c-surface-2)', padding: '1px 5px', borderRadius: 4, cursor: 'pointer' }} onClick={() => lookup("38 42 71 56")}>38 42 71 56</span>
                 </div>
               )}
             </div>
@@ -191,13 +190,13 @@ function NewCaseModal({ close, go }) {
   );
 }
 
-// External customer-facing upload portal — multi-screen flow
+// External customer-facing upload portal - multi-screen flow
 function CustomerPortal({ back }) {
   const [screen, setScreen] = React.useState("welcome"); // welcome | hub | upload | connect | pep | trade | followup | done
   const [items, setItems] = React.useState([
     { id: "annual", l: "Seneste årsrapport", kind: "upload", st: "done", note: "Aarsrapport_2025.pdf · uploadet i går", min: 1 },
     { id: "interim", l: "Periodetal Q1 2026", kind: "connect", st: "done", note: "Hentet automatisk fra e-conomic", min: 0 },
-    { id: "budget", l: "Budget 2026–2028", kind: "upload", st: "done", note: "Budget_2026-28_v3.xlsx · uploadet i dag", min: 1, hasFollowup: true },
+    { id: "budget", l: "Budget 2026-2028", kind: "upload", st: "done", note: "Budget_2026-28_v3.xlsx · uploadet i dag", min: 1, hasFollowup: true },
     { id: "ownership", l: "Ejerbog", kind: "upload", st: "done", note: "Ejerbog.pdf · uploadet i går", min: 1 },
     { id: "loans", l: "Eksisterende låneaftaler", kind: "upload", st: "open", note: "Træk PDF'er ind", min: 2 },
     { id: "security", l: "Sikkerheds­dokumenter", kind: "upload", st: "open", note: "Pantebreve, kautionserklæringer", min: 2 },
@@ -303,8 +302,8 @@ function PortalWelcome({ onStart }) {
       <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
         <div className="label-mini" style={{ marginBottom: 10 }}>Sådan foregår det</div>
         {[
-          { ic: <I.Clock size={14}/>, t: "Ca. 10 minutter samlet — det meste er upload" },
-          { ic: <I.Refresh size={14}/>, t: "Vend tilbage senere — fremgang er gemt automatisk" },
+          { ic: <I.Clock size={14}/>, t: "Ca. 10 minutter samlet - det meste er upload" },
+          { ic: <I.Refresh size={14}/>, t: "Vend tilbage senere - fremgang er gemt automatisk" },
           { ic: <I.Lock size={14}/>, t: "Krypteret forbindelse · ingen login krævet" },
           { ic: <I.Spark size={14}/>, t: "Vi henter data fra e-conomic og CVR automatisk hvor vi kan" },
         ].map((x, i) => (
@@ -332,7 +331,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onWa
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
       <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>Materiale til EIFO</div>
       <div style={{ fontSize: 13.5, color: 'var(--c-text-2)', marginTop: 4 }}>
-        {done} af {total} elementer afleveret · {allDone ? "alt klar — du kan indsende nu" : "fortsæt hvor du vil"}
+        {done} af {total} elementer afleveret · {allDone ? "alt klar - du kan indsende nu" : "fortsæt hvor du vil"}
       </div>
 
       {/* Followup card */}
@@ -340,7 +339,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onWa
         <div style={{ marginTop: 18, padding: '14px 16px', background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10, borderLeft: '3px solid var(--c-warn)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <I.AlertCircle size={16} style={{ color: 'var(--c-warn)', flexShrink: 0 }}/>
           <div style={{ flex: 1, fontSize: 13 }}>
-            <b>Mette har et opfølgende spørgsmål</b> til budgettet — kan du bekræfte stigningen i juli 2026?
+            <b>Mette har et opfølgende spørgsmål</b> til budgettet - kan du bekræfte stigningen i juli 2026?
           </div>
           <button onClick={onFollowup} className="btn btn-sm btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>Svar</button>
         </div>
@@ -496,7 +495,7 @@ function PortalUpload({ item, onBack, onDone }) {
         <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--c-surface-2)', margin: '0 auto 14px', display: 'grid', placeItems: 'center', color: 'var(--c-text-2)' }}>
           <I.Upload size={22}/>
         </div>
-        <div style={{ fontSize: 15.5, fontWeight: 500, color: 'var(--c-ink)' }}>Træk filer hertil — eller klik for at vælge</div>
+        <div style={{ fontSize: 15.5, fontWeight: 500, color: 'var(--c-ink)' }}>Træk filer hertil - eller klik for at vælge</div>
         <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 6 }}>PDF, Excel, Word, billeder · max 50 MB pr. fil</div>
       </div>
 
@@ -517,7 +516,7 @@ function PortalUpload({ item, onBack, onDone }) {
       )}
 
       <div style={{ marginTop: 22, display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
-        <button className="btn btn-ghost"><I.X className="ic"/> Ikke relevant — spring over</button>
+        <button className="btn btn-ghost"><I.X className="ic"/> Ikke relevant - spring over</button>
         <button onClick={() => onDone(files.length + " dokumenter uploadet i dag")} disabled={files.length < (item.min || 1)}
           className="btn btn-primary"
           style={files.length < (item.min || 1) ? { opacity: 0.5, cursor: 'not-allowed' } : { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
@@ -542,7 +541,7 @@ function PortalConnect({ item, onBack, onDone }) {
       <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>FORBIND DATA</div>
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '6px 0 6px' }}>{item.l}</h1>
       <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 18 }}>
-        Vi henter periodetal direkte fra jeres bogføringssystem. Det kræver kun et engangs-samtykke — I kan trække det tilbage når som helst.
+        Vi henter periodetal direkte fra jeres bogføringssystem. Det kræver kun et engangs-samtykke - I kan trække det tilbage når som helst.
       </p>
 
       <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden' }}>
@@ -589,9 +588,9 @@ function PortalPep({ item, onBack, onDone }) {
             </div>
             <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
-                { v: "no", l: "Nej — hverken jeg eller mine nærtstående er PEP" },
-                { v: "self", l: "Ja — jeg er selv PEP" },
-                { v: "rel", l: "Ja — en nærtstående er PEP" },
+                { v: "no", l: "Nej - hverken jeg eller mine nærtstående er PEP" },
+                { v: "self", l: "Ja - jeg er selv PEP" },
+                { v: "rel", l: "Ja - en nærtstående er PEP" },
               ].map(o => (
                 <label key={o.v} onClick={() => setPep(o.v)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', border: '1px solid ' + (pep === o.v ? 'var(--c-primary)' : 'var(--c-line)'), borderRadius: 8, cursor: 'pointer', background: pep === o.v ? 'var(--c-surface-2)' : '#fff' }}>
                   <span style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid ' + (pep === o.v ? 'var(--c-primary)' : 'var(--c-line-strong)'), display: 'grid', placeItems: 'center' }}>
@@ -731,7 +730,7 @@ function PortalTrade({ item, onBack, onDone }) {
   );
 }
 
-// Followup question — customer answers Mette's question inline
+// Followup question - customer answers Mette's question inline
 function PortalFollowup({ onBack, onSubmit }) {
   const [answer, setAnswer] = React.useState("");
   const [files, setFiles] = React.useState([]);
@@ -753,7 +752,7 @@ function PortalFollowup({ onBack, onSubmit }) {
           </div>
         </div>
         <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.6 }}>
-          Hej Anders, tak for budgettet. Jeg ser at I har en stigning fra <b className="mono">2,0M</b> i juni til <b className="mono">2,5M</b> i juli — en stigning på <b>25,0%</b> som ikke følger jeres normale sæsonmønster. Kan I bekræfte hvad der ligger bag? Er det Block-Island leverancen til GE Vernova der slår igennem her?
+          Hej Anders, tak for budgettet. Jeg ser at I har en stigning fra <b className="mono">2,0M</b> i juni til <b className="mono">2,5M</b> i juli - en stigning på <b>25,0%</b> som ikke følger jeres normale sæsonmønster. Kan I bekræfte hvad der ligger bag? Er det Block-Island leverancen til GE Vernova der slår igennem her?
         </div>
         <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--c-surface-2)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--c-text-2)' }}>
           <I.File size={12}/> Refererer til <b style={{ color: 'var(--c-ink)' }}>Budget_2026-28_v3.xlsx</b> · linje 197
@@ -767,7 +766,7 @@ function PortalFollowup({ onBack, onSubmit }) {
           value={answer}
           onChange={e => setAnswer(e.target.value)}
           rows={5}
-          placeholder="Skriv her — du kan også vedhæfte et dokument hvis det hjælper..."
+          placeholder="Skriv her - du kan også vedhæfte et dokument hvis det hjælper..."
           style={{ width: '100%', padding: 12, border: '1px solid var(--c-line)', borderRadius: 8, fontSize: 13.5, fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.55, color: 'var(--c-text)' }}
         />
 
@@ -777,8 +776,8 @@ function PortalFollowup({ onBack, onSubmit }) {
             <div className="label-mini" style={{ marginBottom: 6, fontSize: 10.5 }}>Forslag til svar</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[
-                "Ja, korrekt — Block-Island leverancen til GE Vernova faktureres i juli 2026. Ordreværdi DKK 5,2M.",
-                "Det er rigtigt observeret — det er Block-Island ordren. Vi vedhæfter ordrebekræftelsen.",
+                "Ja, korrekt - Block-Island leverancen til GE Vernova faktureres i juli 2026. Ordreværdi DKK 5,2M.",
+                "Det er rigtigt observeret - det er Block-Island ordren. Vi vedhæfter ordrebekræftelsen.",
               ].map((s, i) => (
                 <button key={i} onClick={() => setAnswer(s)}
                   style={{ textAlign: 'left', padding: '8px 10px', border: '1px solid var(--c-line)', background: 'var(--c-surface-2)', borderRadius: 6, cursor: 'pointer', fontSize: 12.5, color: 'var(--c-text-2)' }}>
@@ -868,7 +867,7 @@ function DelegateAccountantModal({ item, onClose, onSend }) {
           <div style={{ display: 'flex', gap: 12, padding: '12px 14px', background: 'var(--c-surface-2)', borderRadius: 8, marginBottom: 16, alignItems: 'center' }}>
             <I.User size={14} style={{ color: 'var(--c-text-2)' }}/>
             <div style={{ flex: 1, fontSize: 12.5 }}>
-              Jeres revisor får et begrænset link kun til <b>{item.l.toLowerCase()}</b> — ikke andre dele af jeres ansøgning.
+              Jeres revisor får et begrænset link kun til <b>{item.l.toLowerCase()}</b> - ikke andre dele af jeres ansøgning.
             </div>
           </div>
           <div className="vstack" style={{ gap: 12 }}>

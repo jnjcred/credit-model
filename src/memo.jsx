@@ -1,4 +1,4 @@
-// Credit memo — split view (left: sections nav + sources, right: document preview)
+// Credit memo - split view (left: sections nav + sources, right: document preview)
 function WSMemo() {
   const [active, setActive] = React.useState("summary");
   const sections = [
@@ -81,7 +81,7 @@ function WSMemo() {
             </MemoSection>
 
             <MemoSection num="3" title="Produkt og marked" status="ok">
-              <p>Selskabet producerer fiberforstærkede kompositkomponenter, primært til vindmølleblade. Det globale marked forventes at vokse 6,8% p.a. i 2025–2030.</p>
+              <p>Selskabet producerer fiberforstærkede kompositkomponenter, primært til vindmølleblade. Det globale marked forventes at vokse 6,8% p.a. i 2025-2030.</p>
             </MemoSection>
 
             <MemoSection num="6" title="Finansiel udvikling" status="ok">
@@ -99,7 +99,7 @@ function WSMemo() {
               <ul style={{ paddingLeft: 18, margin: '6px 0' }}>
                 <li><b>Kundekoncentration:</b> Top-3 kunder = 64% af omsætning.</li>
                 <li><b>Råvarepriser:</b> Kulfiber +22% YoY, dækning kun 60%.</li>
-                <li><b>Valutaeksponering:</b> 41% af omsætning i USD/EUR — afdækning under afklaring.</li>
+                <li><b>Valutaeksponering:</b> 41% af omsætning i USD/EUR - afdækning under afklaring.</li>
               </ul>
             </MemoSection>
 

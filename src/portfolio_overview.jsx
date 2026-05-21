@@ -1,4 +1,4 @@
-// Porteføljeoverblik — kreditkontorets monitorering på tværs af portefølje
+// Porteføljeoverblik - kreditkontorets monitorering på tværs af portefølje
 function PortfolioOverview({ go }) {
   const [tab, setTab] = React.useState("oversigt");
   const [filter, setFilter] = React.useState([]);
@@ -220,7 +220,7 @@ function PortfolioOverview({ go }) {
                   <label>Min. eksponering (DKK)</label>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <input className="input mono" placeholder="Fra" style={{ flex: 1 }}/>
-                    <span className="muted">—</span>
+                    <span className="muted">-</span>
                     <input className="input mono" placeholder="Til" style={{ flex: 1 }}/>
                   </div>
                 </div>

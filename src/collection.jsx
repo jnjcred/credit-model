@@ -1,4 +1,4 @@
-// Data collection — HERO view
+// Data collection - HERO view
 function WSCollection() {
   const [copied, setCopied] = React.useState(false);
   const [drag, setDrag] = React.useState(false);
@@ -19,7 +19,7 @@ function WSCollection() {
       <div className="grid g-2-1">
         <div className="vstack" style={{ gap: 16 }}>
 
-          {/* ERP Connection — prominent */}
+          {/* ERP Connection - prominent */}
           <div className="card" style={{ overflow: 'hidden' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px', borderBottom: '1px solid var(--c-line-2)' }}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--c-primary-bg)', display: 'grid', placeItems: 'center', color: 'var(--c-primary)', flexShrink: 0 }}>
@@ -188,7 +188,6 @@ function WSCollection() {
                 { name: "e-conomic", what: "Periodetal, kontoplan", st: 'connected' },
                 { name: "CVR-registret", what: "Selskabsdata, vedtægter", st: 'connected' },
                 { name: "Experian", what: "Kreditdata, RKI", st: 'connected' },
-                { name: "Sustainalytics", what: "ESG-rating", st: 'optional' },
               ].map(s => (
                 <div key={s.name} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--c-line-2)' }}>
                   <div style={{ width: 26, height: 26, borderRadius: 5, background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 600, color: 'var(--c-text-2)' }}>{s.name.slice(0,2).toUpperCase()}</div>
@@ -296,7 +295,7 @@ function CustomerMiniPreview() {
           {[
             { l: 'Seneste årsrapport', d: true },
             { l: 'Periodetal Q1 2026', d: true },
-            { l: 'Budget 2026–2028', d: true },
+            { l: 'Budget 2026-2028', d: true },
             { l: 'Sikkerheds­dokumenter', d: false, h: true },
             { l: 'Ejeraftale', d: false },
           ].map((x, i) => (

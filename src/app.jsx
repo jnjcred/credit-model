@@ -1,8 +1,8 @@
-// Main app — routing + state
+// Main app - routing + state
 const { useState: useS, useEffect } = React;
 
 function App() {
-  const [route, setRoute] = useS("workspace:1"); // default to redesigned overview hero
+  const [route, setRoute] = useS("cases"); // default to Mine opgaver
   const [newCaseOpen, setNewCaseOpen] = useS(false);
 
   // Tweak defaults (persisted via host)

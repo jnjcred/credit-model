@@ -1,4 +1,4 @@
-// Dataanmodninger — all active data collection links across cases
+// Dataanmodninger - all active data collection links across cases
 function DataRequests({ go }) {
   const [filter, setFilter] = React.useState("active");
   const [selected, setSelected] = React.useState(null);
@@ -7,10 +7,10 @@ function DataRequests({ go }) {
     { id: 1, company: "Nordhavn Composite A/S", contact: "Anders Nielsen", role: "CFO", email: "an@nordhavn-composite.dk", sent: "23. maj", deadline: "29. maj", progress: 83, opened: true, items: { received: 10, total: 12 }, lastActivity: "i dag · 09:01", status: "active", lastAction: "Uploadede 3 dokumenter", followup: true },
     { id: 2, company: "Vendia Bio ApS", contact: "Lise Krogh", role: "CFO", email: "lise@vendia.bio", sent: "20. maj", deadline: "03. jun", progress: 25, opened: true, items: { received: 2, total: 8 }, lastActivity: "i går · 14:22", status: "stuck", lastAction: "Åbnede sikkerhedssektion, ikke afsluttet" },
     { id: 3, company: "Refshaleøen Robotics", contact: "Jonas P.", role: "CEO", email: "jonas@refshaleoen-robotics.dk", sent: "16. maj", deadline: "12. jun", progress: 38, opened: true, items: { received: 3, total: 8 }, lastActivity: "4 dage siden", status: "stuck", lastAction: "Ingen aktivitet 4 dage" },
-    { id: 4, company: "Marstal Maritime A/S", contact: "Birgit O.", role: "Økonomichef", email: "bo@marstal-maritime.dk", sent: "15. maj", deadline: "31. maj", progress: 100, opened: true, items: { received: 9, total: 9 }, lastActivity: "i dag · 11:14", status: "ready", lastAction: "Indsendt — afventer Mettes gennemgang" },
+    { id: 4, company: "Marstal Maritime A/S", contact: "Birgit O.", role: "Økonomichef", email: "bo@marstal-maritime.dk", sent: "15. maj", deadline: "31. maj", progress: 100, opened: true, items: { received: 9, total: 9 }, lastActivity: "i dag · 11:14", status: "ready", lastAction: "Indsendt - afventer Mettes gennemgang" },
     { id: 5, company: "Skagen Klima ApS", contact: "Per Sørensen", role: "Direktør", email: "per@skagenklima.dk", sent: "12. maj", deadline: "27. maj", progress: 100, opened: true, items: { received: 7, total: 7 }, lastActivity: "2 dage siden", status: "ready", lastAction: "Komplet · 2 dage siden" },
     { id: 6, company: "Lyngbæk Industrier A/S", contact: "Steen M.", role: "CFO", email: "sm@lyngbaek.dk", sent: "21. maj", deadline: "02. jun", progress: 67, opened: true, items: { received: 6, total: 9 }, lastActivity: "i dag · 11:02", status: "active", lastAction: "Uploadede låneaftaler" },
-    { id: 7, company: "Aalborg Hydrogen A/S", contact: "—", role: "—", email: "—", sent: null, deadline: "—", progress: 0, opened: false, items: { received: 0, total: 12 }, lastActivity: "Ikke afsendt", status: "draft", lastAction: "Udkast" },
+    { id: 7, company: "Aalborg Hydrogen A/S", contact: "-", role: "-", email: "-", sent: null, deadline: "-", progress: 0, opened: false, items: { received: 0, total: 12 }, lastActivity: "Ikke afsendt", status: "draft", lastAction: "Udkast" },
   ];
 
   const counts = {
@@ -132,7 +132,7 @@ function DataRequestRow({ r, isFirst, selected, onSelect, go }) {
           {r.followup && <span className="tag" style={{ fontSize: 9.5, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>1 spørgsmål åbent</span>}
         </div>
         <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
-          {r.contact !== "—" ? <>{r.contact} · {r.role}</> : "Ingen modtager valgt"}
+          {r.contact !== "-" ? <>{r.contact} · {r.role}</> : "Ingen modtager valgt"}
         </div>
       </div>
       <div style={{ minWidth: 0 }}>
@@ -152,7 +152,7 @@ function DataRequestRow({ r, isFirst, selected, onSelect, go }) {
       </div>
       <div style={{ fontSize: 12.5 }}>
         <div className="label-mini" style={{ fontSize: 10 }}>Deadline</div>
-        <div style={{ fontWeight: 500, marginTop: 2, color: r.deadline === "—" ? 'var(--c-text-4)' : 'var(--c-text)' }}>{r.deadline}</div>
+        <div style={{ fontWeight: 500, marginTop: 2, color: r.deadline === "-" ? 'var(--c-text-4)' : 'var(--c-text)' }}>{r.deadline}</div>
         <div className="muted" style={{ fontSize: 11 }}>{r.lastActivity}</div>
       </div>
       <div>
@@ -189,7 +189,7 @@ function DataRequestDetail({ r, onClose, go }) {
         {/* Contact */}
         <div className="label-mini" style={{ marginBottom: 6 }}>Modtager</div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14 }}>
-          <div className="avatar" style={{ width: 32, height: 32, fontSize: 12 }}>{r.contact !== "—" ? r.contact.split(' ').map(w => w[0]).join('') : "—"}</div>
+          <div className="avatar" style={{ width: 32, height: 32, fontSize: 12 }}>{r.contact !== "-" ? r.contact.split(' ').map(w => w[0]).join('') : "-"}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 500 }}>{r.contact}</div>
             <div className="muted" style={{ fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.email}</div>
@@ -204,7 +204,7 @@ function DataRequestDetail({ r, onClose, go }) {
           {[
             { t: r.lastAction, d: r.lastActivity, dot: r.status === 'stuck' ? 'var(--c-warn)' : 'var(--c-ink)' },
             { t: "Åbnet af modtager", d: "23. maj · 08:54", dot: 'var(--c-success)' },
-            { t: "Link sendt", d: r.sent || "—", dot: 'var(--c-text-3)' },
+            { t: "Link sendt", d: r.sent || "-", dot: 'var(--c-text-3)' },
           ].map((a, i) => (
             <div key={i} style={{ display: 'flex', gap: 12, paddingBottom: 12, position: 'relative' }}>
               <div style={{ position: 'absolute', left: -12, top: 4, width: 7, height: 7, borderRadius: '50%', background: a.dot, border: '2px solid #fff', boxShadow: '0 0 0 1px ' + a.dot }}/>

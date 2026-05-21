@@ -187,22 +187,22 @@ function OwnershipCompare() {
                     <div className="muted" style={{ fontSize: 11.5 }}>{r.type === 'holding' ? 'Holding' : r.type === 'fund' ? 'Fond' : r.type === 'person' ? 'Person' : 'Andet'}{r.role ? ` · ${r.role}` : ''}</div>
                   </td>
                   <td className="mono num" style={{ textAlign: 'right', color: r.cvr === undefined ? 'var(--c-text-4)' : 'var(--c-text)' }}>
-                    {r.cvr === undefined ? '—' : r.cvr.toFixed(1) + '%'}
+                    {r.cvr === undefined ? '-' : r.cvr.toFixed(1) + '%'}
                   </td>
                   <td className="mono num" style={{ textAlign: 'right', color: r.uploaded === undefined ? 'var(--c-text-4)' : 'var(--c-text)', fontWeight: r.uploaded !== undefined ? 500 : 400 }}>
-                    {r.uploaded === undefined ? '—' : r.uploaded.toFixed(1) + '%'}
+                    {r.uploaded === undefined ? '-' : r.uploaded.toFixed(1) + '%'}
                   </td>
                   <td className="mono num" style={{ textAlign: 'right' }}>
                     {onlyInUploaded ? <span style={{ color: 'var(--c-warn)' }}>NY</span>
                      : onlyInCvr ? <span style={{ color: 'var(--c-danger)' }}>FJERNET</span>
                      : isDiff ? <span style={{ color: diff > 0 ? 'var(--c-success)' : 'var(--c-danger)' }}>{diff > 0 ? '+' : ''}{diff.toFixed(1)}pp</span>
-                     : <span style={{ color: 'var(--c-text-4)' }}>—</span>}
+                     : <span style={{ color: 'var(--c-text-4)' }}>-</span>}
                   </td>
                   <td style={{ fontSize: 12, color: 'var(--c-text-2)' }}>
                     {onlyInUploaded && r.name === "Medarbejder­warrants" && "Warrant-program oprettet marts 2025"}
                     {isDiff && r.name === "Anders Holding ApS" && "Konsekvens af warrant-fortynding"}
                     {isDiff && r.name === "Industrifonden A/S" && "Konsekvens af warrant-fortynding"}
-                    {!isDiff && !onlyInUploaded && !onlyInCvr && r.name !== "Medarbejder­warrants" && <span className="muted">—</span>}
+                    {!isDiff && !onlyInUploaded && !onlyInCvr && r.name !== "Medarbejder­warrants" && <span className="muted">-</span>}
                   </td>
                 </tr>
               );
@@ -211,7 +211,7 @@ function OwnershipCompare() {
         </table>
         <div style={{ padding: '12px 18px', borderTop: '1px solid var(--c-line-2)', background: 'var(--c-surface-2)', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ flex: 1, fontSize: 12.5, color: 'var(--c-text-2)' }}>
-            <b style={{ color: 'var(--c-ink)' }}>Anbefaling:</b> Brug uploadet ejerbog som primær kilde — den er nyere og afspejler den aktuelle situation. Behold CVR-version som reference.
+            <b style={{ color: 'var(--c-ink)' }}>Anbefaling:</b> Brug uploadet ejerbog som primær kilde - den er nyere og afspejler den aktuelle situation. Behold CVR-version som reference.
           </div>
           <button className="btn btn-sm"><I.Plus className="ic"/> Til spørgsmål</button>
           <button className="btn btn-sm">Behold begge</button>

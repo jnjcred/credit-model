@@ -1,9 +1,9 @@
-// Sager — task-focused workflow inbox
+// Sager - task-focused workflow inbox
 function statusPill(s) {
   const map = {
     "Draft": ["outline", "Draft"],
     "Waiting for customer": ["warn", "Afventer kunde"],
-    "Data received": ["info", "Data modtaget"],
+    "Data received": ["ink", "Til gennemgang"],
     "Needs review": ["ink", "Til gennemgang"],
     "Credit memo ready": ["success", "Memo klar"],
     "Approved": ["success", "Godkendt"],
@@ -13,15 +13,22 @@ function statusPill(s) {
   return <span className={"pill " + klass}><span className="pill-dot"/>{label}</span>;
 }
 
+// Sub-stage label shown next to the status pill — tells the advisor *how far* we've gotten.
+function stageLabel(s) {
+  if (s === "Needs review") return "Indhentet offentligt data";
+  if (s === "Data received") return "Indhentet kundedata";
+  return null;
+}
+
 // Task definitions per case (each case has multiple specific tasks)
 const CASE_TASKS = {
   1: [
-    { id: "a", action: "Gennemgå", obj: "AI findings (3 åbne)", urgent: true, due: "i dag", kind: "review" },
+    { id: "a", action: "Gennemgå", obj: "findings (3 åbne)", urgent: true, due: "i dag", kind: "review" },
     { id: "b", action: "Send", obj: "4 spørgsmål til kunde", urgent: true, due: "i dag", kind: "send" },
     { id: "c", action: "Vurder", obj: "budgetafvigelse juli (+25,0%)", urgent: false, due: "29 maj", kind: "review" },
   ],
   2: [
-    { id: "a", action: "Påmind", obj: "kunde — 4 dokumenter mangler", urgent: true, due: "forsinket 2 dage", kind: "remind" },
+    { id: "a", action: "Påmind", obj: "kunde - 4 dokumenter mangler", urgent: true, due: "forsinket 2 dage", kind: "remind" },
   ],
   3: [
     { id: "a", action: "Gennemgå", obj: "modtaget materiale", urgent: false, due: "31 maj", kind: "review" },
@@ -39,11 +46,11 @@ const CASE_TASKS = {
   6: [],
   7: [],
   8: [
-    { id: "a", action: "Påmind", obj: "kunde — 3 dokumenter mangler", urgent: false, due: "12 jun", kind: "remind" },
+    { id: "a", action: "Påmind", obj: "kunde - 3 dokumenter mangler", urgent: false, due: "12 jun", kind: "remind" },
   ],
 };
 
-// Status grouping for "Alle sager" — open categories first, closed last
+// Status grouping for "Alle sager" - open categories first, closed last
 const ALL_STATUS_GROUPS = [
   { key: "Needs review",         label: "Til gennemgang",   open: true },
   { key: "Waiting for customer", label: "Afventer kunde",   open: true },
@@ -127,38 +134,15 @@ function Portfolio({ go, openNewCase }) {
             <div>
               <h1 className="page-title">Mine opgaver</h1>
               <div className="page-sub">
-                {totalTasks === 0 ? "Alle opgaver klaret — godt arbejde 🎉"
-                  : <>Du har <b style={{ color: 'var(--c-ink)' }}>{totalTasks} opgaver</b> fordelt på <b style={{ color: 'var(--c-ink)' }}>{myCases.filter(c => (CASE_TASKS[c.id] || []).length > 0).length} sager</b>{urgentTasks > 0 && <> · <span style={{ color: 'var(--c-warn)' }}>{urgentTasks} haster i dag</span></>}</>}
+                {(() => {
+                  const n = myCases.filter(c => (CASE_TASKS[c.id] || []).length > 0).length;
+                  if (n === 0) return "Alle sager er ajour - godt arbejde 🎉";
+                  return <><b style={{ color: 'var(--c-ink)' }}>{n} sager</b> mangler action fra dig</>;
+                })()}
               </div>
             </div>
           </div>
 
-          {/* "Mod nul"-bar */}
-          <div className="card" style={{ marginBottom: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 18 }}>
-            <div style={{ position: 'relative', width: 56, height: 56, flexShrink: 0 }}>
-              <svg width="56" height="56" viewBox="0 0 56 56" style={{ display: 'block' }}>
-                <circle cx="28" cy="28" r="22" fill="none" stroke="var(--c-line-2)" strokeWidth="4"/>
-                <circle cx="28" cy="28" r="22" fill="none" stroke="var(--c-primary)" strokeWidth="4"
-                  strokeDasharray={`${(completed / Math.max(1, myCases.length)) * 138} 138`} transform="rotate(-90 28 28)" strokeLinecap="round"/>
-              </svg>
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, lineHeight: 1, color: 'var(--c-ink)', pointerEvents: 'none' }} className="mono num">{completed}/{myCases.length}</div>
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>
-                {totalTasks === 0 ? "Alle dine sager er ajour" : `Nå til 0 — så er du færdig for i dag`}
-              </div>
-              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 2 }}>
-                {totalTasks > 0
-                  ? <>{completed} sager er klaret · {myCases.length - completed} har stadig åbne opgaver</>
-                  : "Tag en kop kaffe — eller åbn en ny sag"}
-              </div>
-            </div>
-            {urgentTasks > 0 && (
-              <div style={{ padding: '6px 12px', background: 'var(--c-warn-bg)', borderRadius: 8, fontSize: 12.5, color: 'var(--c-warn)', display: 'flex', alignItems: 'center', gap: 6, fontWeight: 500 }}>
-                <I.AlertCircle size={13}/> {urgentTasks} haster
-              </div>
-            )}
-          </div>
 
           {/* Filter tabs */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid var(--c-line)' }}>
@@ -178,7 +162,7 @@ function Portfolio({ go, openNewCase }) {
             ))}
           </div>
 
-          {/* Filter bar — works on all tabs */}
+          {/* Filter bar - works on all tabs */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap',
           }}>
@@ -279,7 +263,7 @@ function Portfolio({ go, openNewCase }) {
                       </span>
                     </button>
                     {!isCollapsed && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, alignItems: 'stretch' }}>
                         {grp.cases.map(c => <CaseTaskCard key={c.id} c={c} tasks={CASE_TASKS[c.id] || []} go={go}/>)}
                       </div>
                     )}
@@ -288,7 +272,7 @@ function Portfolio({ go, openNewCase }) {
               })}
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, alignItems: 'stretch' }}>
               {displayCases.map(c => <CaseTaskCard key={c.id} c={c} tasks={CASE_TASKS[c.id] || []} go={go}/>)}
             </div>
           )}
@@ -299,50 +283,43 @@ function Portfolio({ go, openNewCase }) {
 }
 
 function CaseTaskCard({ c, tasks, go }) {
-  const urgent = tasks.filter(t => t.urgent).length;
   const isEmpty = tasks.length === 0;
   return (
-    <div className="card" style={{ overflow: 'hidden' }}>
-      <div onClick={() => go("workspace:" + c.id)}
-        style={{ padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14, borderBottom: tasks.length > 0 ? '1px solid var(--c-line-2)' : 'none' }}>
-        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 12, color: 'var(--c-text-2)', flexShrink: 0 }}>
-          {c.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
+    <div
+      className="card"
+      onClick={() => go("workspace:" + c.id)}
+      style={{
+        height: '100%',
+        display: 'flex', alignItems: 'center', gap: 12,
+        padding: '10px 14px',
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{
+        width: 30, height: 30, borderRadius: 7,
+        background: 'var(--c-surface-2)', border: '1px solid var(--c-line)',
+        display: 'grid', placeItems: 'center',
+        fontWeight: 600, fontSize: 11, color: 'var(--c-text-2)',
+        flexShrink: 0,
+      }}>
+        {c.name.split(' ').map(w => w[0]).slice(0, 2).join('')}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', minWidth: 0 }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.name}</span>
+          <span style={{ flexShrink: 0 }}>{statusPill(c.status)}</span>
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>{c.name}</span>
-            <span className="mono" style={{ fontSize: 11, color: 'var(--c-text-3)' }}>CVR {c.cvr}</span>
-            {statusPill(c.status)}
-            {c.pinned && <I.Pin size={11} style={{ color: 'var(--c-text-3)' }}/>}
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 3 }}>
-            {c.type} · <span className="mono">{c.amount}</span> · ansvarlig {c.responsible} · senest {c.lastActivity}
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          {isEmpty ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--c-success)', fontSize: 12.5, fontWeight: 500 }}>
-              <I.Check size={13}/> Færdig
-            </span>
-          ) : (
-            <>
-              {urgent > 0 && <span style={{ padding: '2px 8px', background: 'var(--c-warn-bg)', color: 'var(--c-warn)', borderRadius: 999, fontSize: 11, fontWeight: 600 }}>{urgent} haster</span>}
-              <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-text-2)' }}>
-                <b style={{ color: 'var(--c-ink)', fontSize: 14 }}>{tasks.length}</b> {tasks.length === 1 ? "opgave" : "opgaver"}
-              </span>
-            </>
-          )}
-          <I.ChevronRight size={14} style={{ color: 'var(--c-text-3)' }}/>
+        <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {stageLabel(c.status) && <><span style={{ color: 'var(--c-text-2)', fontWeight: 500 }}>{stageLabel(c.status)}</span> · </>}
+          <span className="mono">CVR {c.cvr}</span> · {c.type} · <span className="mono">{c.amount}</span> · {c.lastActivity}
         </div>
       </div>
-
-      {tasks.length > 0 && (
-        <div>
-          {tasks.map((t, i) => (
-            <CaseTaskRow key={t.id} task={t} isLast={i === tasks.length - 1} go={go} caseId={c.id}/>
-          ))}
-        </div>
+      {isEmpty && (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--c-success)', fontSize: 12, fontWeight: 500, flexShrink: 0 }}>
+          <I.Check size={12}/> Færdig
+        </span>
       )}
+      <I.ChevronRight size={14} style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
     </div>
   );
 }
@@ -361,8 +338,8 @@ function CaseTaskRow({ task, isLast, go, caseId }) {
 
   return (
     <div style={{
-      padding: '10px 18px 10px 60px',
-      display: 'flex', alignItems: 'center', gap: 12,
+      padding: '9px 14px 9px 52px',
+      display: 'flex', alignItems: 'center', gap: 10,
       borderBottom: isLast ? 'none' : '1px solid var(--c-line-2)',
       background: done ? 'var(--c-success-bg)' : 'transparent',
       transition: 'background 200ms',

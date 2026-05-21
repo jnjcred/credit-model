@@ -1,13 +1,54 @@
 // Documents + AI extraction
 function WSDocuments() {
-  const [selected, setSelected] = React.useState(DATA.DOCS[0]);
+  const [uploaded, setUploaded] = React.useState([]); // advisor-uploaded docs (session)
+  const allDocs = React.useMemo(() => [...uploaded, ...DATA.DOCS], [uploaded]);
+
+  const [selected, setSelected] = React.useState(allDocs[0]);
   const [q, setQ] = React.useState("");
   const [sortMode, setSortMode] = React.useState("newest");
   const [sortOpen, setSortOpen] = React.useState(false);
   const [typeFilter, setTypeFilter] = React.useState("all");
+  const [dragOver, setDragOver] = React.useState(false);
+  const fileInputRef = React.useRef(null);
 
-  const types = [...new Set(DATA.DOCS.map(d => d.type))];
-  let docs = [...DATA.DOCS];
+  const handleFiles = (fileList) => {
+    if (!fileList || !fileList.length) return;
+    const today = new Date();
+    const stamp = `${today.getDate()}. ${['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'][today.getMonth()]} ${String(today.getHours()).padStart(2,'0')}:${String(today.getMinutes()).padStart(2,'0')}`;
+    const dateIso = today.toISOString().slice(0, 10);
+    const inferType = (name) => {
+      const n = name.toLowerCase();
+      if (n.includes('aarsrapport') || n.includes('årsrapport')) return 'Årsrapport';
+      if (n.includes('budget')) return 'Budget';
+      if (n.includes('periode') || n.includes('saldo')) return 'Periodetal';
+      if (n.includes('laan') || n.includes('lån')) return 'Låneaftale';
+      if (n.includes('pant') || n.includes('sikker')) return 'Sikkerhed';
+      if (n.includes('ejer') || n.includes('vedtaeg') || n.includes('vedtæg')) return 'Selskab';
+      return 'Andet';
+    };
+    const fmtSize = (bytes) => {
+      if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      if (bytes >= 1024) return Math.round(bytes / 1024) + ' KB';
+      return bytes + ' B';
+    };
+    const newDocs = Array.from(fileList).map(f => ({
+      name: f.name,
+      type: inferType(f.name),
+      year: '-',
+      size: fmtSize(f.size),
+      uploaded: stamp,
+      date: dateIso,
+      ai: 0,
+      status: 'Modtaget',
+      origin: 'uploaded',
+      sourceLabel: 'Rådgiverupload',
+    }));
+    setUploaded(prev => [...newDocs, ...prev]);
+    if (newDocs.length) setSelected(newDocs[0]);
+  };
+
+  const types = [...new Set(allDocs.map(d => d.type))];
+  let docs = [...allDocs];
 
   // Filter by type
   if (typeFilter !== "all") {
@@ -48,7 +89,7 @@ function WSDocuments() {
   const sortLabels = {
     "newest": "Nyeste først",
     "oldest": "Ældste først",
-    "name": "Navn (A–Z)",
+    "name": "Navn (A-Z)",
     "size": "Størrelse",
     "type": "Type, derefter dato",
     "latest-per-type": "Seneste pr. type",
@@ -59,6 +100,51 @@ function WSDocuments() {
       <div className="grid" style={{ gridTemplateColumns: '420px 1fr', gap: 16 }}>
         <div className="card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--c-line-2)' }}>
+            {/* Upload zone */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) => { handleFiles(e.target.files); e.target.value = ''; }}
+            />
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                handleFiles(e.dataTransfer.files);
+              }}
+              onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              style={{
+                padding: '10px 12px', marginBottom: 10,
+                border: '1px dashed ' + (dragOver ? 'var(--c-primary)' : 'var(--c-line-strong)'),
+                background: dragOver ? 'var(--c-primary-bg)' : 'var(--c-surface-2)',
+                borderRadius: 7,
+                display: 'flex', alignItems: 'center', gap: 10,
+                cursor: 'pointer',
+                transition: 'border-color .12s, background .12s',
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current && fileInputRef.current.click(); } }}
+              aria-label="Upload dokumenter"
+            >
+              <span style={{
+                width: 28, height: 28, borderRadius: 6,
+                background: '#fff', border: '1px solid var(--c-line)',
+                display: 'grid', placeItems: 'center', color: 'var(--c-text-2)',
+                flexShrink: 0,
+              }}>
+                <I.Upload size={13}/>
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>Upload dokument</div>
+                <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 1 }}>Træk filer hertil eller klik for at vælge</div>
+              </div>
+            </div>
+
             <div style={{ position: 'relative' }}>
               <I.Search size={14} style={{ position: 'absolute', left: 11, top: 9, color: 'var(--c-text-3)' }}/>
               <input value={q} onChange={e => setQ(e.target.value)} className="input" style={{ paddingLeft: 32, height: 30, fontSize: 12.5 }} placeholder="Søg dokumenter, indhold, citater…"/>
@@ -97,10 +183,10 @@ function WSDocuments() {
 
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
               <span onClick={() => setTypeFilter("all")} className="tag" style={{ cursor: 'pointer', background: typeFilter === "all" ? 'var(--c-ink)' : 'var(--c-surface-2)', color: typeFilter === "all" ? '#fff' : 'var(--c-text-2)', border: typeFilter === "all" ? 'none' : '1px solid var(--c-line)' }}>
-                Alle · {DATA.DOCS.length}
+                Alle · {allDocs.length}
               </span>
               {types.map(t => {
-                const n = DATA.DOCS.filter(d => d.type === t).length;
+                const n = allDocs.filter(d => d.type === t).length;
                 return (
                   <span key={t} onClick={() => setTypeFilter(t)} className="tag" style={{ cursor: 'pointer', background: typeFilter === t ? 'var(--c-ink)' : 'var(--c-surface-2)', color: typeFilter === t ? '#fff' : 'var(--c-text-2)', border: typeFilter === t ? 'none' : '1px solid var(--c-line)' }}>
                     {t} · {n}
@@ -117,9 +203,45 @@ function WSDocuments() {
           </div>
 
           <div style={{ overflow: 'auto', flex: 1 }}>
-            {docs.map((d, i) => (
-              <DocRow key={d.name + i} d={d} selected={selected} onSelect={setSelected} latestPerType={sortMode === "latest-per-type"}/>
-            ))}
+            {(() => {
+              const publicDocs = docs.filter(d => d.origin === 'public');
+              const uploadedDocs = docs.filter(d => d.origin !== 'public');
+              const groups = [
+                { key: 'public',   label: 'Offentligt hentet',  sub: 'Dokumenter hentet automatisk fra offentlige eller eksterne kilder.', items: publicDocs },
+                { key: 'uploaded', label: 'Uploadet materiale', sub: 'Dokumenter modtaget fra kunde, rådgiver eller kundelink.',          items: uploadedDocs },
+              ];
+              return groups.map(g => (
+                g.items.length === 0 ? null : (
+                  <div key={g.key}>
+                    <div style={{
+                      padding: '12px 14px 6px',
+                      background: 'var(--c-surface-2)',
+                      borderBottom: '1px solid var(--c-line-2)',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--c-text-2)' }}>
+                          {g.label}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>
+                          · {g.items.length} {g.items.length === 1 ? 'dokument' : 'dokumenter'}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2, lineHeight: 1.4 }}>
+                        {g.sub}
+                      </div>
+                    </div>
+                    {g.items.map((d, i) => (
+                      <DocRow key={d.name + i} d={d} selected={selected} onSelect={setSelected} latestPerType={sortMode === "latest-per-type"}/>
+                    ))}
+                  </div>
+                )
+              ));
+            })()}
+            {docs.length === 0 && (
+              <div style={{ padding: '24px 14px', fontSize: 12.5, color: 'var(--c-text-3)', textAlign: 'center' }}>
+                Ingen dokumenter matcher filtrene.
+              </div>
+            )}
           </div>
         </div>
 
@@ -128,68 +250,48 @@ function WSDocuments() {
           <div className="card-head">
             <div>
               <div className="card-title">{selected?.name || "Vælg dokument"}</div>
-              <div className="card-sub">{selected?.type} · uploadet {selected?.uploaded} · <span className="ai-hint"><I.Spark className="spark"/> {selected?.ai} nøglepunkter udtrukket</span></div>
+              <div className="card-sub">{selected?.type} · uploadet {selected?.uploaded}</div>
             </div>
             <div className="hstack">
               <button className="btn btn-sm btn-ghost"><I.Download className="ic"/></button>
               <button className="btn btn-sm"><I.Maximize className="ic"/> Åbn</button>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 0, flex: 1, minHeight: 480 }}>
-            <div style={{ padding: 22, background: 'var(--c-surface-2)', borderRight: '1px solid var(--c-line-2)', overflow: 'auto' }}>
-              <div style={{ background: '#fff', maxWidth: 480, margin: '0 auto', borderRadius: 4, boxShadow: 'var(--shadow-sm)', padding: '32px 36px', fontSize: 11.5, color: 'var(--c-text)', lineHeight: 1.65 }}>
-                <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>Nordhavn Composite A/S</div>
-                <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginBottom: 22 }}>Årsrapport 2025 · CVR 38 42 71 56</div>
-                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>Hoved- og nøgletal</div>
-                <div className="mono" style={{ fontSize: 10.5, lineHeight: 1.8 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 12, color: 'var(--c-text-3)', borderBottom: '1px solid var(--c-line)', paddingBottom: 4 }}>
-                    <span>DKK 1.000</span><span>2025</span><span>2024</span><span>2023</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0, flex: 1, minHeight: 480 }}>
+            <div style={{
+              padding: 28, background: 'var(--c-surface-2)',
+              display: 'flex', justifyContent: 'center',
+              overflow: 'auto',
+            }}>
+              {selected?.type === 'Årsrapport' ? (
+                <AnnualReportPreview doc={selected}/>
+              ) : (
+                <div style={{
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: 14, padding: '60px 20px',
+                }}>
+                  <div style={{
+                    width: 56, height: 70, borderRadius: 4,
+                    background: '#fff', border: '1px solid var(--c-line)',
+                    display: 'grid', placeItems: 'center',
+                    color: 'var(--c-text-3)',
+                    boxShadow: 'var(--shadow-sm)',
+                  }}>
+                    <I.File size={22}/>
                   </div>
-                  {[
-                    ["Nettoomsætning", "248.500", "214.800", "186.200"],
-                    ["EBITDA", "31.200", "24.600", "18.400"],
-                    ["Resultat før skat", "22.100", "16.800", "11.200"],
-                    ["Egenkapital", "78.200", "58.600", "42.000"],
-                    ["Balancesum", "212.400", "168.200", "138.400"],
-                  ].map((r, i) => (
-                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 12, padding: '3px 0', borderBottom: i < 4 ? '1px solid var(--c-line-2)' : 'none' }}>
-                      {r.map((c, j) => <span key={j} style={{ color: j === 0 ? 'var(--c-text)' : 'var(--c-text-2)' }}>{c}</span>)}
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{selected?.name || 'Intet dokument valgt'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 3 }}>
+                      {selected ? `${selected.type} · ${selected.size}` : 'Vælg et dokument i listen til venstre'}
                     </div>
-                  ))}
+                  </div>
+                  {selected && (
+                    <button className="btn btn-sm" style={{ marginTop: 4 }}><I.Maximize className="ic"/> Åbn dokument</button>
+                  )}
                 </div>
-                <div style={{ fontWeight: 600, fontSize: 13, marginTop: 22, marginBottom: 6 }}>Note 14 · Lån fra anpartshavere</div>
-                <div style={{ background: 'var(--c-warn-bg)', borderLeft: '2px solid var(--c-warn)', padding: '6px 10px', marginTop: 4, fontSize: 11.5 }}>
-                  Selskabet har modtaget et lån fra Anders Holding ApS på <b>6.800</b> tkr. Lånet er rente­bærende (Nibor + 2,5%) og forfalder til betaling i 2029.
-                  <div style={{ marginTop: 4 }}><span className="ai-hint"><I.Spark className="spark"/> AI fandt: tilbagetrædelses­erklæring mangler</span></div>
-                </div>
-              </div>
+              )}
             </div>
 
-            <div style={{ padding: 14, overflow: 'auto', background: '#fff' }}>
-              <div className="label-mini" style={{ marginBottom: 8 }}>Nøglepunkter (AI)</div>
-              {[
-                { t: "Nettoomsætning steg 21,7% til 18,5M", s: "Side 3 · Hoved- og nøgletal" },
-                { t: "EBITDA-margin udvidet med 1,2pp", s: "Side 3 · Hoved- og nøgletal" },
-                { t: "Anpartshaver­lån 0,5M · note 14", s: "Side 14 · Noter", warn: true },
-                { t: "Tre kunder = 64% af omsætning", s: "Side 9 · Forretningsmodel", warn: true },
-                { t: "Eksportandel: 78% (DE, US, NL)", s: "Side 7" },
-                { t: "Block-Island ordre signaleret Q3", s: "Side 11 · Vækst" },
-              ].map((p, i) => (
-                <div key={i} style={{ padding: '10px 0', borderBottom: '1px solid var(--c-line-2)' }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 500, color: p.warn ? 'var(--c-warn)' : 'var(--c-ink)', display: 'flex', gap: 6 }}>
-                    {p.warn ? <I.AlertTriangle size={12} style={{ marginTop: 3, flexShrink: 0 }}/> : <I.CheckCircle size={12} style={{ marginTop: 3, color: 'var(--c-success)', flexShrink: 0 }}/>}
-                    <span>{p.t}</span>
-                  </div>
-                  <div style={{ marginTop: 5, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-                    <span className="source"><I.File className="ic"/> {p.s}</span>
-                    {p.warn && <button className="btn btn-sm btn-ghost" style={{ fontSize: 11, padding: '0 6px', height: 22 }}><I.Plus className="ic" style={{ width: 10, height: 10 }}/> Til spørgsmål</button>}
-                  </div>
-                </div>
-              ))}
-              <div style={{ marginTop: 12 }}>
-                <button className="btn btn-sm" style={{ width: '100%', justifyContent: 'center' }}><I.Sparkles className="ic"/> Spørg dette dokument</button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -208,7 +310,7 @@ function DocRow({ d, selected, onSelect, latestPerType }) {
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</span>
             {latestPerType && <span className="tag" style={{ fontSize: 9.5, background: 'var(--c-primary)', color: '#fff', border: 'none', flexShrink: 0 }}>SENESTE</span>}
           </div>
-          <div className="muted" style={{ fontSize: 11.5 }}>{d.type} · {d.year} · {d.size}</div>
+          <div className="muted" style={{ fontSize: 11.5 }}>{d.type} · {d.sourceLabel || (d.origin === 'public' ? 'CVR' : 'Kundeupload')} · {d.year} · {d.size}</div>
           {latestPerType && d._olderCount > 0 && (
             <button onClick={(e) => { e.stopPropagation(); setShowOlder(!showOlder); }}
               style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, fontSize: 11, color: 'var(--c-text-3)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -239,4 +341,148 @@ function DocRow({ d, selected, onSelect, latestPerType }) {
   );
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   AnnualReportPreview - realistic PDF-style preview of a Danish årsrapport
+   ──────────────────────────────────────────────────────────────────────── */
+function AnnualReportPreview({ doc }) {
+  const co = DATA.COMPANY;
+  const year = (doc && doc.year) || '2025';
+  // Year-specific figures (DKK 1.000) matching the annual table in Finansielt overblik
+  const figures = {
+    '2023': { revenue: '12.800', ebitda: '1.300', profit: '300',  equity: '3.500', balance: '9.400'  },
+    '2024': { revenue: '15.200', ebitda: '1.900', profit: '700',  equity: '4.800', balance: '11.200' },
+    '2025': { revenue: '18.500', ebitda: '2.400', profit: '1.000',equity: '6.200', balance: '14.000' },
+  };
+  const f = figures[year] || figures['2025'];
+  const prevYear = String(Number(year) - 1);
+  const fp = figures[prevYear] || figures['2024'];
+
+  const Section = ({ title, children }) => (
+    <>
+      <div style={{ marginTop: 18, marginBottom: 6, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.04em', color: '#0d0f12', textTransform: 'uppercase' }}>
+        {title}
+      </div>
+      {children}
+    </>
+  );
+
+  return (
+    <div style={{
+      width: '100%', maxWidth: 560,
+      background: '#fff',
+      boxShadow: '0 4px 20px rgba(15,17,20,0.08), 0 1px 3px rgba(15,17,20,0.06)',
+      borderRadius: 2,
+      padding: '48px 56px 56px',
+      fontFamily: 'ui-serif, Georgia, "Times New Roman", serif',
+      color: '#1a1d22',
+      fontSize: 11,
+      lineHeight: 1.55,
+      position: 'relative',
+    }}>
+      {/* Page header line */}
+      <div style={{
+        position: 'absolute', top: 18, left: 56, right: 56,
+        display: 'flex', justifyContent: 'space-between',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+        fontSize: 9, color: '#8a9099', letterSpacing: '0.04em',
+      }}>
+        <span>{co.name}</span>
+        <span>Årsrapport {year}</span>
+      </div>
+
+      {/* Cover-style title block */}
+      <div style={{ borderBottom: '1px solid #d3d6dc', paddingBottom: 14, marginBottom: 16 }}>
+        <div style={{ fontSize: 10, letterSpacing: '0.14em', color: '#5b6068', textTransform: 'uppercase', fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+          Årsrapport
+        </div>
+        <div style={{ fontSize: 26, fontWeight: 700, color: '#0d0f12', marginTop: 6, letterSpacing: '-0.01em' }}>
+          {co.name}
+        </div>
+        <div style={{ fontSize: 11, color: '#5b6068', marginTop: 6, fontFamily: 'ui-sans-serif, system-ui, sans-serif' }}>
+          For perioden 1. januar - 31. december {year} · CVR {String(co.cvr).replace(/\s+/g, '')}
+        </div>
+      </div>
+
+      {/* Selskabsoplysninger */}
+      <Section title="Selskabsoplysninger">
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 10.5 }}>
+          <tbody>
+            {[
+              ['Navn', co.name],
+              ['CVR-nr.', String(co.cvr).replace(/\s+/g, '')],
+              ['Adresse', `${co.address || 'Strandgade 12'}, ${co.postal || '9900 Frederikshavn'}`],
+              ['Selskabsform', co.legalForm || 'Anpartsselskab (ApS)'],
+              ['Stiftet', co.founded || '12. marts 2017'],
+              ['Regnskabsår', `1. januar - 31. december ${year}`],
+            ].map(([k, v], i) => (
+              <tr key={i}>
+                <td style={{ padding: '3px 0', color: '#5b6068', width: 150, verticalAlign: 'top' }}>{k}</td>
+                <td style={{ padding: '3px 0', color: '#1a1d22' }}>{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Section>
+
+      {/* Ledelsespåtegning */}
+      <Section title="Ledelsespåtegning">
+        <p style={{ margin: 0 }}>
+          Bestyrelse og direktion har dags dato behandlet og godkendt årsrapporten for regnskabsåret 1. januar - 31. december {year} for {co.name}.
+        </p>
+        <p style={{ marginTop: 8 }}>
+          Årsrapporten aflægges i overensstemmelse med årsregnskabsloven. Det er vores opfattelse, at årsrapporten giver et retvisende billede af selskabets aktiver, passiver og finansielle stilling pr. 31. december {year} samt af resultatet af selskabets aktiviteter for regnskabsåret.
+        </p>
+      </Section>
+
+      {/* Hoved- og nøgletal */}
+      <Section title="Hoved- og nøgletal">
+        <div style={{ fontFamily: 'ui-monospace, "SF Mono", Menlo, monospace', fontSize: 10.5, lineHeight: 1.7 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 18, color: '#5b6068', borderBottom: '1px solid #d3d6dc', paddingBottom: 4 }}>
+            <span style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif', fontSize: 10 }}>DKK 1.000</span>
+            <span>{year}</span>
+            <span>{prevYear}</span>
+          </div>
+          {[
+            ['Bruttofortjeneste',   f.revenue, fp.revenue],
+            ['EBITDA',               f.ebitda,  fp.ebitda],
+            ['Årets resultat',       f.profit,  fp.profit],
+            ['Egenkapital',          f.equity,  fp.equity],
+            ['Balancesum',           f.balance, fp.balance],
+          ].map((r, i, arr) => (
+            <div key={i} style={{
+              display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 18,
+              padding: '4px 0',
+              borderBottom: i < arr.length - 1 ? '1px solid #eef0f3' : 'none',
+            }}>
+              <span style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif', fontSize: 10.5 }}>{r[0]}</span>
+              <span>{r[1]}</span>
+              <span style={{ color: '#5b6068' }}>{r[2]}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Note 14 - anpartshaverlån */}
+      <Section title="Noter - Anpartshaverlån (note 14)">
+        <p style={{ margin: 0 }}>
+          Selskabet har optaget lån fra hovedaktionær Anders Nielsen på <b>500</b> tkr. Lånet er rentebærende (CIBOR + 2,0%) og forfalder til betaling i 2028.
+          Der er ikke afgivet tilbagetrædelseserklæring for lånet.
+        </p>
+      </Section>
+
+      {/* Signature */}
+      <div style={{
+        marginTop: 22, paddingTop: 14, borderTop: '1px solid #d3d6dc',
+        display: 'flex', justifyContent: 'space-between',
+        fontSize: 10, color: '#5b6068',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+      }}>
+        <span>Frederikshavn, 28. april {String(Number(year) + 1)}</span>
+        <span>Side 1 af 18</span>
+      </div>
+    </div>
+  );
+}
+
 window.WSDocuments = WSDocuments;
+window.AnnualReportPreview = AnnualReportPreview;
