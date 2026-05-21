@@ -3,10 +3,14 @@ const COMPANY = {
   name: "Nordhavn Composite ApS",
   short: "NC",
   cvr: "38 42 71 56",
-  founded: "2017",
+  founded: "12. marts 2017",
+  legalForm: "Anpartsselskab (ApS)",
   industry: "Komposit­materialer / vindenergi",
   employees: 28,
   hq: "Frederikshavn, DK",
+  address: "Strandgade 12",
+  postal: "9900 Frederikshavn",
+  country: "Danmark",
   website: "nordhavn-composite.dk",
   caseType: "Eksportkaution + driftskredit",
   amount: "DKK 4,5M",
@@ -14,6 +18,9 @@ const COMPANY = {
   responsible: "Mette L.",
   deadline: "29. maj 2026",
   nextStep: "Gennemgå budgetafvigelse for juli",
+  masterDataSource: "CVR-registeret",
+  masterDataUpdated: "23. maj 2026",
+  cvrUrl: "https://datacvr.virk.dk/enhed/virksomhed/38427156",
 };
 
 const CASES = [

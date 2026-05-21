@@ -32,6 +32,9 @@ function App() {
 
   const go = (r) => setRoute(r);
 
+  // Expose router for self-contained components (e.g. global CaseSearch in Topbar)
+  React.useEffect(() => { window.__go = go; }, []);
+
   // Parse route
   const isWorkspace = route.startsWith("workspace:");
   const workspaceTab = isWorkspace ? (route.split(":")[2] || "overview") : null;
@@ -40,10 +43,9 @@ function App() {
   return (
     <>
       {isPortal ? (
-        <CustomerPortal back={() => go("workspace:1:collection")}/>
+        <CustomerPortal back={() => go("workspace:1")}/>
       ) : (
-        <div className="app">
-          <Sidebar route={route} go={go} openNewCase={() => setNewCaseOpen(true)}/>
+        <div className="app" style={{ gridTemplateColumns: '1fr' }}>
           <div className="main">
             {route === "cases" && <Portfolio go={go} openNewCase={() => setNewCaseOpen(true)}/>}
             {route === "portfolio" && <PortfolioOverview go={go}/>}
@@ -59,13 +61,6 @@ function App() {
 
       {newCaseOpen && <NewCaseModal close={() => setNewCaseOpen(false)} go={go}/>}
 
-      {/* Floating "view customer portal" hint */}
-      {!isPortal && route.startsWith("workspace:") && workspaceTab === "collection" && (
-        <button onClick={() => go("portal")}
-          style={{ position: 'fixed', bottom: 24, right: 24, background: 'var(--c-ink)', color: '#fff', padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer', boxShadow: 'var(--shadow-lg)', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 500, zIndex: 50 }}>
-          <I.Eye size={14}/> Se kundens visning
-        </button>
-      )}
 
       {/* Tweaks panel */}
       <window.TweaksPanel title="Tweaks" defaultOpen={false}>
@@ -87,7 +82,6 @@ function App() {
             <button className="btn btn-sm" onClick={() => go("portfolio")}>Porteføljeoverblik ★</button>
             <button className="btn btn-sm" onClick={() => setNewCaseOpen(true)}>Ny sag</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1")}>Workspace</button>
-            <button className="btn btn-sm" onClick={() => go("workspace:1:collection")}>Indsamling ★</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:financials")}>Finans</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:documents")}>Dokumenter</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:security")}>Sikkerheder</button>

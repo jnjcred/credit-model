@@ -221,7 +221,7 @@ function DataRequestDetail({ r, onClose, go }) {
           <button className="btn btn-sm" style={{ justifyContent: 'flex-start' }}><I.Send className="ic"/> Send påmindelse</button>
           <button className="btn btn-sm" style={{ justifyContent: 'flex-start' }}><I.Plus className="ic"/> Anmod om mere materiale</button>
           <button className="btn btn-sm" style={{ justifyContent: 'flex-start' }}><I.Eye className="ic"/> Se hvad kunden ser</button>
-          <button className="btn btn-sm" onClick={() => go && go("workspace:1:collection")} style={{ justifyContent: 'flex-start' }}><I.Briefcase className="ic"/> Åbn sag</button>
+          <button className="btn btn-sm" onClick={() => go && go("workspace:1")} style={{ justifyContent: 'flex-start' }}><I.Briefcase className="ic"/> Åbn sag</button>
           <button className="btn btn-sm btn-danger" style={{ justifyContent: 'flex-start' }}><I.X className="ic"/> Luk anmodning</button>
         </div>
       </div>

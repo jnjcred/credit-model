@@ -43,8 +43,22 @@ const CASE_TASKS = {
   ],
 };
 
+// Status grouping for "Alle sager" — open categories first, closed last
+const ALL_STATUS_GROUPS = [
+  { key: "Needs review",         label: "Til gennemgang",   open: true },
+  { key: "Waiting for customer", label: "Afventer kunde",   open: true },
+  { key: "Data received",        label: "Data modtaget",    open: true },
+  { key: "Draft",                label: "Kladde",           open: true },
+  { key: "Credit memo ready",    label: "Memo klar",        open: false },
+  { key: "Approved",             label: "Godkendt",         open: false },
+  { key: "Rejected",             label: "Afvist",           open: false },
+  { key: "__archived",           label: "Arkiveret",        open: false, archivedFlag: true },
+];
+
 function Portfolio({ go, openNewCase }) {
   const [filter, setFilter] = React.useState("mine");
+  const [search, setSearch] = React.useState("");
+  const [collapsed, setCollapsed] = React.useState({}); // group.key -> bool (true = manually collapsed)
 
   const activeCases = DATA.CASES.filter(c => !c.archived);
   const myCases = activeCases.filter(c => c.responsible === "Mette L.");
@@ -52,12 +66,20 @@ function Portfolio({ go, openNewCase }) {
   const urgentTasks = myCases.reduce((s, c) => s + (CASE_TASKS[c.id] || []).filter(t => t.urgent).length, 0);
   const completed = myCases.filter(c => (CASE_TASKS[c.id] || []).length === 0).length;
 
+  const matchesFilters = (c) => {
+    if (search) {
+      const q = search.toLowerCase();
+      if (!c.name.toLowerCase().includes(q) && !String(c.cvr).toLowerCase().includes(q)) return false;
+    }
+    return true;
+  };
+
   const filters = [
     { k: "mine", l: "Afventer mig", n: myCases.filter(c => (CASE_TASKS[c.id] || []).length > 0).length },
     { k: "waiting", l: "Afventer kunde", n: activeCases.filter(c => c.status === "Waiting for customer").length },
     { k: "ready", l: "Klar til indstilling", n: activeCases.filter(c => c.status === "Credit memo ready").length },
     { k: "done", l: "Færdig (denne uge)", n: DATA.CASES.filter(c => c.archived).length },
-    { k: "all", l: "Alle sager", n: activeCases.length },
+    { k: "all", l: "Alle sager", n: DATA.CASES.length },
   ];
 
   let displayCases;
@@ -65,15 +87,30 @@ function Portfolio({ go, openNewCase }) {
   else if (filter === "waiting") displayCases = activeCases.filter(c => c.status === "Waiting for customer");
   else if (filter === "ready") displayCases = activeCases.filter(c => c.status === "Credit memo ready");
   else if (filter === "done") displayCases = DATA.CASES.filter(c => c.archived);
-  else displayCases = activeCases;
+  else displayCases = DATA.CASES; // "all" includes archived (shown in a separate group)
 
-  // Sort by urgency: cases with urgent tasks first
+  displayCases = displayCases.filter(matchesFilters);
+
+  // Sort by urgency: cases with urgent tasks first, then by missing material
   displayCases = [...displayCases].sort((a, b) => {
     const ua = (CASE_TASKS[a.id] || []).filter(t => t.urgent).length;
     const ub = (CASE_TASKS[b.id] || []).filter(t => t.urgent).length;
-    return ub - ua;
+    if (ub !== ua) return ub - ua;
+    return (b.missing || 0) - (a.missing || 0);
   });
 
+  // For "all" view: group by status, open categories first.
+  let groupedForAll = null;
+  if (filter === "all") {
+    groupedForAll = ALL_STATUS_GROUPS
+      .map(g => ({
+        ...g,
+        cases: displayCases.filter(c => g.archivedFlag ? c.archived : (!c.archived && c.status === g.key)),
+      }))
+      .filter(g => g.cases.length > 0);
+  }
+
+  const hasActiveFilter = search !== "";
   const allDone = filter === "mine" && totalTasks === 0;
 
   return (
@@ -124,7 +161,7 @@ function Portfolio({ go, openNewCase }) {
           </div>
 
           {/* Filter tabs */}
-          <div style={{ display: 'flex', gap: 4, marginBottom: 14, borderBottom: '1px solid var(--c-line)' }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 12, borderBottom: '1px solid var(--c-line)' }}>
             {filters.map(f => (
               <button key={f.k}
                 onClick={() => setFilter(f.k)}
@@ -141,12 +178,114 @@ function Portfolio({ go, openNewCase }) {
             ))}
           </div>
 
-          {/* Cases as task-cards */}
+          {/* Filter bar — works on all tabs */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap',
+          }}>
+            <div style={{
+              position: 'relative', flex: '1 1 240px', minWidth: 200, maxWidth: 360,
+            }}>
+              <I.Search size={13} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--c-text-3)', pointerEvents: 'none' }}/>
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Søg på virksomhed eller CVR"
+                aria-label="Søg sager"
+                style={{
+                  width: '100%', height: 32, padding: '0 30px 0 30px',
+                  border: '1px solid var(--c-line)', borderRadius: 6,
+                  fontSize: 13, background: '#fff', color: 'var(--c-ink)',
+                  outline: 'none',
+                }}
+              />
+              {search && (
+                <button
+                  type="button"
+                  aria-label="Ryd søgning"
+                  onClick={() => setSearch("")}
+                  style={{
+                    position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                    width: 20, height: 20, borderRadius: 4, border: 0, background: 'transparent',
+                    cursor: 'pointer', color: 'var(--c-text-3)', display: 'grid', placeItems: 'center',
+                  }}
+                >
+                  <I.X size={12}/>
+                </button>
+              )}
+            </div>
+
+            {hasActiveFilter && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                style={{
+                  height: 32, padding: '0 10px', border: 0, background: 'transparent',
+                  color: 'var(--c-primary)', fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+                }}
+              >
+                Ryd søgning
+              </button>
+            )}
+
+            <div style={{ flex: 1 }}/>
+            <div style={{ fontSize: 12, color: 'var(--c-text-3)', whiteSpace: 'nowrap' }}>
+              {displayCases.length} {displayCases.length === 1 ? 'sag' : 'sager'}
+            </div>
+          </div>
+
+          {/* Cases */}
           {displayCases.length === 0 ? (
             <div className="card empty">
               <I.Check className="ic"/>
-              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-ink)' }}>Ingen opgaver her</div>
-              <div style={{ fontSize: 12, marginTop: 4 }}>Du kan skifte filter ovenfor for at se andre sager</div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-ink)' }}>
+                {hasActiveFilter ? "Ingen sager matcher filtrene" : "Ingen opgaver her"}
+              </div>
+              <div style={{ fontSize: 12, marginTop: 4 }}>
+                {hasActiveFilter ? "Prøv at justere søgning eller filtre" : "Du kan skifte filter ovenfor for at se andre sager"}
+              </div>
+            </div>
+          ) : groupedForAll ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+              {groupedForAll.map(grp => {
+                const isCollapsed = collapsed[grp.key] != null ? collapsed[grp.key] : !grp.open;
+                return (
+                  <section key={grp.key}>
+                    <button
+                      type="button"
+                      aria-expanded={!isCollapsed}
+                      onClick={() => setCollapsed(s => ({ ...s, [grp.key]: !isCollapsed }))}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 0 10px', marginBottom: 10,
+                        background: 'transparent', border: 0, borderBottom: '1px solid var(--c-line)',
+                        cursor: 'pointer', textAlign: 'left',
+                      }}
+                    >
+                      <I.ChevronDown size={13} style={{
+                        color: 'var(--c-text-3)',
+                        transform: isCollapsed ? 'rotate(-90deg)' : 'none',
+                        transition: 'transform .15s ease',
+                      }}/>
+                      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.005em' }}>
+                        {grp.label}
+                      </span>
+                      <span style={{
+                        fontSize: 11, fontWeight: 500, color: 'var(--c-text-2)',
+                        background: 'var(--c-surface-2)', border: '1px solid var(--c-line)',
+                        padding: '1px 7px', borderRadius: 999,
+                      }}>
+                        {grp.cases.length}
+                      </span>
+                    </button>
+                    {!isCollapsed && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {grp.cases.map(c => <CaseTaskCard key={c.id} c={c} tasks={CASE_TASKS[c.id] || []} go={go}/>)}
+                      </div>
+                    )}
+                  </section>
+                );
+              })}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -251,5 +390,38 @@ function CaseTaskRow({ task, isLast, go, caseId }) {
   );
 }
 
+function FilterDropdown({ label, value, onChange, options }) {
+  const isActive = value !== 'all';
+  return (
+    <label style={{
+      display: 'inline-flex', alignItems: 'center', height: 32,
+      border: '1px solid ' + (isActive ? 'var(--c-primary-border)' : 'var(--c-line)'),
+      background: isActive ? 'var(--c-primary-bg)' : '#fff',
+      color: isActive ? 'var(--c-primary)' : 'var(--c-text-2)',
+      borderRadius: 6, padding: '0 8px 0 10px',
+      fontSize: 12.5, fontWeight: 500,
+      cursor: 'pointer', gap: 6,
+    }}>
+      <span style={{ color: isActive ? 'var(--c-primary)' : 'var(--c-text-3)' }}>{label}:</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+          border: 0, background: 'transparent', font: 'inherit', color: 'inherit',
+          cursor: 'pointer', paddingRight: 16, outline: 'none',
+          backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'><path fill='%238a9099' d='M0 0h8L4 5z'/></svg>\")",
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right 2px center',
+        }}
+        aria-label={label}
+      >
+        {options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+      </select>
+    </label>
+  );
+}
+
 window.Portfolio = Portfolio;
 window.statusPill = statusPill;
+window.FilterDropdown = FilterDropdown;
