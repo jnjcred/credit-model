@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8"/>
+<title>Crediwire · Credit tool</title>
+<meta name="viewport" content="width=1280"/>
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
+<meta http-equiv="Pragma" content="no-cache"/>
+<link rel="stylesheet" href="tokens.css?v=88"/>
+<link rel="stylesheet" href="styles.css?v=88"/>
+<script>
+  // Wipe Babel-standalone's localStorage cache so file edits show up on reload.
+  try { Object.keys(localStorage).filter(k => k.startsWith('babel-cache')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+</script>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx?v=88"></script>
+<script src="src/data.js?v=88"></script>
+<script type="text/babel" src="src/icons.jsx?v=88"></script>
+<script type="text/babel" src="src/shell.jsx?v=88"></script>
+<script type="text/babel" src="src/portfolio.jsx?v=88"></script>
+<script type="text/babel" src="src/portfolio_overview.jsx?v=88"></script>
+<script type="text/babel" src="src/data_requests.jsx?v=88"></script>
+<script type="text/babel" src="src/collection.jsx?v=88"></script>
+<script type="text/babel" src="src/financials.jsx?v=88"></script>
+<script type="text/babel" src="src/documents.jsx?v=88"></script>
+<script type="text/babel" src="src/security.jsx?v=88"></script>
+<script type="text/babel" src="src/findings_market.jsx?v=88"></script>
+<script type="text/babel" src="src/ownership_questions.jsx?v=88"></script>
+<script type="text/babel" src="src/memo.jsx?v=88"></script>
+<script type="text/babel" src="src/workspace.jsx?v=88"></script>
+<script type="text/babel" src="src/new_case_portal.jsx?v=88"></script>
+<script type="text/babel" src="src/app.jsx?v=88"></script>
+</body>
+</html>
