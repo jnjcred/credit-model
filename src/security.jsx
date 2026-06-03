@@ -16,7 +16,7 @@ function WSSecurity() {
   const guarantees = [
     { id: 1, type: "Personlig kaution", from: "Anders Christensen", role: "Stifter / CEO", amount: 0.5, scope: "Solidarisk · op til beløb", doc: "Personlig_kaution_AC.pdf", status: "signed", limit: "Maks 0,5M", note: null },
     { id: 2, type: "Selskabskaution", from: "Anders Holding ApS", role: "48,2% ejer", amount: 1.0, scope: "Solidarisk · op til beløb", doc: "Selskabskaution_AH.pdf", status: "signed", limit: "Maks 1,0M", note: null },
-    { id: 3, type: "EIFO-garanti (intern)", from: "EIFO Eksportkaution", role: "Modregnes mod kreditrisiko", amount: 3.2, scope: "70% af eksport-tilgodehavender", doc: null, status: "draft", limit: "70% dækning", note: "Ramme­garanti for Block-Island leverance" },
+    { id: 3, type: "Eksportgaranti (intern)", from: "Eksportkaution", role: "Modregnes mod kreditrisiko", amount: 3.2, scope: "70% af eksport-tilgodehavender", doc: null, status: "draft", limit: "70% dækning", note: "Ramme­garanti for Block-Island leverance" },
     { id: 4, type: "Tilbagetrædelses­erklæring", from: "Anders Holding ApS", role: "Anpartshaver­lån 0,5M", amount: 0.5, scope: "Efterstillet alle øvrige kreditorer", doc: null, status: "missing", limit: "-", note: "AI fandt: dokument mangler i sagen" },
   ];
 

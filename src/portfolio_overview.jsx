@@ -2,6 +2,31 @@
 function PortfolioOverview({ go }) {
   const [tab, setTab] = React.useState("oversigt");
   const [filter, setFilter] = React.useState([]);
+  const [sortCol, setSortCol] = React.useState("risk");
+  const [sortDir, setSortDir] = React.useState("asc");
+
+  const onSort = (col) => {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  };
+
+  const RISK_ORDER = { kritisk: 0, høj: 1, moderat: 2, lav: 3, ingen: 4 };
+  const parseDanishDate = (s) => {
+    const M = { jan:1,feb:2,mar:3,apr:4,maj:5,jun:6,jul:7,aug:8,sep:9,okt:10,nov:11,dec:12 };
+    const m = s.match(/(\d+)\.\s+(\w+)\s+(\d+)/);
+    return m ? parseInt(m[3])*10000 + (M[m[2]]||0)*100 + parseInt(m[1]) : 0;
+  };
+
+  const sorted = React.useMemo(() => {
+    const rows = [...PORTFOLIO_ROWS];
+    const dir = sortDir === 'asc' ? 1 : -1;
+    if (sortCol === 'name') rows.sort((a, b) => a.name.localeCompare(b.name, 'da') * dir);
+    else if (sortCol === 'exp') rows.sort((a, b) => (a.exp - b.exp) * dir);
+    else if (sortCol === 'date') rows.sort((a, b) => (parseDanishDate(a.date) - parseDanishDate(b.date)) * dir);
+    else rows.sort((a, b) => ((RISK_ORDER[a.risk]??5) - (RISK_ORDER[b.risk]??5)) * dir);
+    return rows;
+  }, [sortCol, sortDir]);
+
   return (
     <>
       <Topbar
@@ -32,69 +57,19 @@ function PortfolioOverview({ go }) {
             </div>
           </div>
 
-          {/* Sub-tabs */}
-          <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--c-line)', marginBottom: 22 }}>
-            {[
-              { k: "oversigt", l: "Oversigt" },
-              { k: "risiko", l: "Risikomarkører" },
-              { k: "eksp", l: "Eksponering" },
-              { k: "trends", l: "Trends" },
-              { k: "watch", l: "Overvågning" },
-              { k: "reports", l: "Rapporter" },
-            ].map(t => (
-              <button key={t.k} onClick={() => setTab(t.k)}
-                style={{
-                  padding: '8px 14px', marginBottom: -1, border: 'none', background: 'transparent',
-                  borderBottom: tab === t.k ? '2px solid var(--c-ink)' : '2px solid transparent',
-                  color: tab === t.k ? 'var(--c-ink)' : 'var(--c-text-2)',
-                  fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
-                }}>{t.l}</button>
-            ))}
-          </div>
 
           {/* KPI row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12, marginBottom: 18 }}>
-            <KpiCard label="Samlet udlån" value="8,7 mia." unit="DKK" sub="Fordelt på 1.000 lån" icon={<I.Database size={14}/>}/>
-            <KpiCard label="Gns. eksponering pr. lån" value="8,7 mio." unit="DKK" sub="Median 3,2 mio." icon={<I.Users size={14}/>}/>
-            <KpiCard label="Risikomarkører" value="147" sub="Kunder med høj eller kritisk risiko" icon={<I.Flag size={14}/>} accent="danger"/>
-            <KpiCard label="Stigende risiko" value="253" sub="Kunder med forværring i risiko" icon={<I.TrendUp size={14}/>} accent="warn"/>
-            <KpiCard label="Watchlist" value="86" sub="Kunder under observation" icon={<I.Eye size={14}/>} accent="info"/>
-            <KpiCard label="Ingen markører" value="514" sub="Kunder uden aktuelle markører" icon={<I.CheckCircle size={14}/>} accent="success"/>
+            <PortfolioKpiCard label="Samlet udlån" value="8,7 mia." unit="DKK" sub="Fordelt på 1.000 aktive lån" icon={<I.Database size={14}/>}/>
+            <PortfolioKpiCard label="Gns. eksponering pr. lån" value="8,7 mio." unit="DKK" sub="Median: 3,2 mio. DKK" icon={<I.Users size={14}/>}/>
+            <PortfolioKpiCard label="Høj / kritisk risiko" value="147" sub="Kunder med aktive risikomarkører" icon={<I.Flag size={14}/>} accent="danger"/>
+            <PortfolioKpiCard label="Stigende risiko" value="253" sub="Forværring siden seneste måling" icon={<I.TrendUp size={14}/>} accent="warn"/>
+            <PortfolioKpiCard label="Watchlist" value="86" sub="Kunder under aktiv overvågning" icon={<I.Eye size={14}/>} accent="info"/>
+            <PortfolioKpiCard label="Uden risikomarkører" value="514" sub="Kunder uden aktuelle risikoflag" icon={<I.CheckCircle size={14}/>} accent="success"/>
           </div>
 
-          {/* Mid row: donut + trend + top 5 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr 1.2fr', gap: 12, marginBottom: 18 }}>
-            <div className="card">
-              <div className="card-head">
-                <div>
-                  <div className="card-title">Fordeling af risikomarkører</div>
-                  <div className="card-sub">Antal kunder</div>
-                </div>
-              </div>
-              <div style={{ padding: 16, display: 'flex', alignItems: 'center', gap: 18 }}>
-                <RiskDonut/>
-                <div style={{ flex: 1, fontSize: 12.5 }}>
-                  {[
-                    { l: "Kritisk risiko", n: 37, p: "3,7%", c: "var(--c-danger)" },
-                    { l: "Høj risiko", n: 110, p: "11,0%", c: "#d97706" },
-                    { l: "Moderat risiko", n: 214, p: "21,4%", c: "var(--c-warn)" },
-                    { l: "Lav risiko", n: 125, p: "12,5%", c: "#5b6cdb" },
-                    { l: "Ingen markører", n: 514, p: "51,4%", c: "var(--c-success)" },
-                  ].map(r => (
-                    <div key={r.l} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.c, flexShrink: 0 }}/>
-                      <span style={{ flex: 1, color: 'var(--c-text)' }}>{r.l}</span>
-                      <span className="mono num" style={{ fontWeight: 500 }}>{r.n}</span>
-                      <span className="muted" style={{ fontSize: 11, width: 42, textAlign: 'right' }}>{r.p}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--c-line-2)' }}>
-                <button className="btn btn-sm btn-ghost" style={{ padding: 0 }}>Se alle markører <I.ArrowRight className="ic"/></button>
-              </div>
-            </div>
-
+          {/* Mid row: trend + top 5 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1.2fr', gap: 12, marginBottom: 18 }}>
             <div className="card">
               <div className="card-head">
                 <div>
@@ -120,10 +95,10 @@ function PortfolioOverview({ go }) {
               <div style={{ padding: '4px 16px 12px' }}>
                 {[
                   { l: "Faldende EBITDA", n: 312, p: 31.2, c: "var(--c-danger)" },
-                  { l: "Høj afhængighed af få kunder", n: 286, p: 28.6, c: "#d97706" },
-                  { l: "Negativ egenkapital", n: 198, p: 19.8, c: "var(--c-warn)" },
-                  { l: "Stigende gældsgrad", n: 171, p: 17.1, c: "#5b6cdb" },
-                  { l: "Likviditets­udfordringer", n: 135, p: 13.5, c: "var(--c-success)" },
+                  { l: "Høj afhængighed af få kunder", n: 286, p: 28.6, c: "var(--c-danger)" },
+                  { l: "Negativ egenkapital", n: 198, p: 19.8, c: "var(--c-danger)" },
+                  { l: "Stigende gældsgrad", n: 171, p: 17.1, c: "var(--c-danger)" },
+                  { l: "Likviditets­udfordringer", n: 135, p: 13.5, c: "var(--c-danger)" },
                 ].map(r => (
                   <div key={r.l} style={{ padding: '10px 0', borderBottom: '1px solid var(--c-line-2)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
@@ -138,9 +113,6 @@ function PortfolioOverview({ go }) {
                   </div>
                 ))}
               </div>
-              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--c-line-2)' }}>
-                <button className="btn btn-sm btn-ghost" style={{ padding: 0 }}>Se alle risikomarkører <I.ArrowRight className="ic"/></button>
-              </div>
             </div>
           </div>
 
@@ -149,37 +121,36 @@ function PortfolioOverview({ go }) {
             <div className="card" style={{ overflow: 'hidden' }}>
               <div className="card-head">
                 <div className="hstack" style={{ gap: 10 }}>
-                  <div className="card-title">Kunder med høj eller kritisk risiko</div>
-                  <span style={{ background: 'var(--c-danger-bg)', color: 'var(--c-danger)', padding: '1px 7px', borderRadius: 999, fontSize: 11.5, fontWeight: 600 }}>147</span>
+                  <div className="card-title">Alle kunder</div>
+                  <span style={{ background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', padding: '1px 7px', borderRadius: 999, fontSize: 11.5, fontWeight: 600 }}>1.000</span>
                 </div>
                 <div className="hstack" style={{ gap: 6 }}>
                   <span className="muted" style={{ fontSize: 12 }}>Vis</span>
                   <button className="btn btn-sm">25 rækker <I.ChevronDown className="ic"/></button>
-                  <button className="btn btn-sm btn-ghost"><I.Layout className="ic"/> Tilpas kolonner</button>
-                  <button className="btn btn-sm btn-ghost"><I.Boxes className="ic"/></button>
+<button className="btn btn-sm btn-ghost"><I.Boxes className="ic"/></button>
                 </div>
               </div>
               <table className="tbl">
                 <thead>
                   <tr>
                     <th style={{ width: 28 }}></th>
-                    <th>Kunde</th>
+                    <SortTh col="name" label="Kunde" sortCol={sortCol} sortDir={sortDir} onSort={onSort}/>
                     <th>CVR</th>
-                    <th style={{ textAlign: 'right' }}>Eksponering (DKK)</th>
-                    <th>Risikoklasse</th>
+                    <SortTh col="exp" label="Eksponering (DKK)" sortCol={sortCol} sortDir={sortDir} onSort={onSort} style={{ textAlign: 'right' }}/>
+                    <SortTh col="risk" label="Risikoklasse" sortCol={sortCol} sortDir={sortDir} onSort={onSort}/>
                     <th>Vigtigste risikomarkører</th>
                     <th>Risikoudvikling (30 dage)</th>
-                    <th>Seneste data</th>
+                    <SortTh col="date" label="Seneste data" sortCol={sortCol} sortDir={sortDir} onSort={onSort}/>
                     <th style={{ width: 32 }}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {PORTFOLIO_ROWS.map((r, i) => (
+                  {sorted.map((r, i) => (
                     <tr key={i} onClick={() => go("workspace:1")}>
                       <td><I.Star size={13} style={{ color: r.starred ? 'var(--c-warn)' : 'var(--c-line-strong)' }}/></td>
                       <td><span style={{ fontWeight: 500, color: 'var(--c-ink)' }}>{r.name}</span></td>
                       <td className="mono" style={{ fontSize: 12 }}>{r.cvr}</td>
-                      <td className="mono num" style={{ textAlign: 'right', fontWeight: 500 }}>{r.exp}</td>
+                      <td className="mono num" style={{ textAlign: 'right', fontWeight: 500 }}>{r.exp.toLocaleString('da-DK')} kr.</td>
                       <td>{riskClassPill(r.risk)}</td>
                       <td><span className="muted" style={{ fontSize: 12.5 }}>{r.markers}</span></td>
                       <td><RiskSpark dir={r.trend}/></td>
@@ -190,42 +161,21 @@ function PortfolioOverview({ go }) {
                 </tbody>
               </table>
               <div style={{ padding: '12px 16px', borderTop: '1px solid var(--c-line-2)', display: 'flex' }}>
-                <button className="btn btn-sm btn-ghost" style={{ padding: 0 }}>Se alle 147 kunder <I.ArrowRight className="ic"/></button>
+                <button className="btn btn-sm btn-ghost" style={{ padding: 0 }}>Se alle 1.000 kunder <I.ArrowRight className="ic"/></button>
               </div>
             </div>
 
-            {/* Filter sidebar */}
+            {/* Link to analyse */}
             <div className="card" style={{ alignSelf: 'flex-start' }}>
               <div className="card-head">
                 <div className="card-title">Find kunder med specifikke markører</div>
               </div>
-              <div style={{ padding: '14px 16px' }}>
-                <div className="field" style={{ marginBottom: 14 }}>
-                  <label>Vælg risikomarkører</label>
-                  <div style={{ border: '1px solid var(--c-line-strong)', borderRadius: 6, padding: 6, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    <span className="tag" style={{ background: 'var(--c-primary)', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Faldende EBITDA <I.X size={10}/></span>
-                    <span className="tag" style={{ background: 'var(--c-primary)', color: '#fff', border: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>Høj afh. af få kunder <I.X size={10}/></span>
-                    <input placeholder="Søg flere…" style={{ border: 'none', padding: '2px 4px', fontSize: 12, flex: 1, minWidth: 80, outline: 'none' }}/>
-                  </div>
-                </div>
-                <div className="field" style={{ marginBottom: 12 }}>
-                  <label>Vælg risikoklasse</label>
-                  <button className="input" style={{ textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>Alle <I.ChevronDown className="ic"/></button>
-                </div>
-                <div className="field" style={{ marginBottom: 12 }}>
-                  <label>Vælg forretningsområde</label>
-                  <button className="input" style={{ textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff' }}>Alle <I.ChevronDown className="ic"/></button>
-                </div>
-                <div className="field" style={{ marginBottom: 16 }}>
-                  <label>Min. eksponering (DKK)</label>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <input className="input mono" placeholder="Fra" style={{ flex: 1 }}/>
-                    <span className="muted">-</span>
-                    <input className="input mono" placeholder="Til" style={{ flex: 1 }}/>
-                  </div>
-                </div>
-                <button className="btn btn-primary btn-lg" style={{ width: '100%', justifyContent: 'center', background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
-                  Vis 86 kunder <I.ArrowRight className="ic"/>
+              <div style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.5 }}>
+                  Brug Porteføljeanalyse til at filtrere kunder på tværs af finansielle kriterier som omsætning, EBITDA og egenkapital.
+                </p>
+                <button className="btn btn-primary" onClick={() => window.__go && window.__go('analyse')}>
+                  Gå til Porteføljeanalyse <I.ArrowRight className="ic"/>
                 </button>
               </div>
             </div>
@@ -247,15 +197,48 @@ function PortfolioOverview({ go }) {
 }
 
 const PORTFOLIO_ROWS = [
-  { name: "GreenTech Solutions A/S", cvr: "12345678", exp: "25.000.000", risk: "kritisk", markers: "Faldende EBITDA, Negativ egenkapital", trend: "up", date: "17. maj 2026", starred: false },
-  { name: "Nordic Steel ApS", cvr: "23456789", exp: "18.500.000", risk: "kritisk", markers: "Likviditets­udfordringer, Stigende gældsgrad", trend: "up", date: "16. maj 2026", starred: false },
-  { name: "Urban Energy A/S", cvr: "34567890", exp: "35.750.000", risk: "høj", markers: "Faldende EBITDA, Høj afh. af få kunder", trend: "up", date: "15. maj 2026", starred: true },
-  { name: "Furniture Design ApS", cvr: "45678901", exp: "9.800.000", risk: "høj", markers: "Stigende gældsgrad, Negativ egenkapital", trend: "up", date: "14. maj 2026", starred: false },
-  { name: "Ocean Logistics A/S", cvr: "56789012", exp: "41.200.000", risk: "høj", markers: "Høj afh. af få kunder, Faldende EBITDA", trend: "up", date: "14. maj 2026", starred: false },
-  { name: "BioMaterials ApS", cvr: "67890123", exp: "6.300.000", risk: "moderat", markers: "Stigende gældsgrad", trend: "flat", date: "13. maj 2026", starred: false },
-  { name: "Scan Packaging A/S", cvr: "78901234", exp: "7.900.000", risk: "moderat", markers: "Faldende EBITDA", trend: "down", date: "12. maj 2026", starred: false },
-  { name: "BlueWater Tech ApS", cvr: "89012345", exp: "12.400.000", risk: "moderat", markers: "Likviditets­udfordringer", trend: "flat", date: "11. maj 2026", starred: false },
+  { name: "GreenTech Solutions A/S",     cvr: "12345678", exp: 25000000, risk: "kritisk", markers: "Faldende EBITDA, Negativ egenkapital",           trend: "up",   date: "17. maj 2026", starred: false },
+  { name: "Nordic Steel ApS",            cvr: "23456789", exp: 18500000, risk: "kritisk", markers: "Likviditetsudfordringer, Stigende gældsgrad",     trend: "up",   date: "16. maj 2026", starred: false },
+  { name: "Vestjylland Transport A/S",   cvr: "31847265", exp: 42800000, risk: "kritisk", markers: "Negativ egenkapital, Faldende EBITDA",            trend: "up",   date: "16. maj 2026", starred: true  },
+  { name: "Randers Plast ApS",           cvr: "40192837", exp: 9200000,  risk: "kritisk", markers: "Stigende gældsgrad, Negativ egenkapital",         trend: "up",   date: "15. maj 2026", starred: false },
+  { name: "Kolding Møbler A/S",          cvr: "28473619", exp: 14600000, risk: "kritisk", markers: "Faldende EBITDA, Likviditetsudfordringer",         trend: "up",   date: "15. maj 2026", starred: false },
+  { name: "Sydjysk Byggeservice ApS",    cvr: "37264918", exp: 7100000,  risk: "kritisk", markers: "Høj afh. af få kunder, Negativ egenkapital",      trend: "up",   date: "14. maj 2026", starred: false },
+  { name: "Fynske Fiskeri A/S",          cvr: "19284736", exp: 31400000, risk: "kritisk", markers: "Faldende EBITDA, Stigende gældsgrad",             trend: "up",   date: "14. maj 2026", starred: false },
+  { name: "Bornholm Shipping ApS",       cvr: "44738291", exp: 22100000, risk: "kritisk", markers: "Likviditetsudfordringer, Faldende EBITDA",         trend: "up",   date: "13. maj 2026", starred: false },
+  { name: "Midtjysk Finans ApS",         cvr: "35619274", exp: 8800000,  risk: "kritisk", markers: "Negativ egenkapital, Høj afh. af få kunder",      trend: "up",   date: "13. maj 2026", starred: false },
+  { name: "Aarhus Tekstil ApS",          cvr: "26471839", exp: 11300000, risk: "kritisk", markers: "Stigende gældsgrad, Faldende EBITDA",             trend: "up",   date: "12. maj 2026", starred: false },
+  { name: "Thy Maskinservice A/S",       cvr: "48362917", exp: 6400000,  risk: "kritisk", markers: "Faldende EBITDA, Likviditetsudfordringer",         trend: "up",   date: "12. maj 2026", starred: false },
+  { name: "Lemvig Metal ApS",            cvr: "52917384", exp: 19700000, risk: "kritisk", markers: "Negativ egenkapital, Stigende gældsgrad",         trend: "up",   date: "11. maj 2026", starred: false },
+  { name: "Urban Energy A/S",            cvr: "34567890", exp: 35750000, risk: "høj",     markers: "Faldende EBITDA, Høj afh. af få kunder",          trend: "up",   date: "15. maj 2026", starred: true  },
+  { name: "Furniture Design ApS",        cvr: "45678901", exp: 9800000,  risk: "høj",     markers: "Stigende gældsgrad, Negativ egenkapital",         trend: "up",   date: "14. maj 2026", starred: false },
+  { name: "Ocean Logistics A/S",         cvr: "56789012", exp: 41200000, risk: "høj",     markers: "Høj afh. af få kunder, Faldende EBITDA",          trend: "up",   date: "14. maj 2026", starred: false },
+  { name: "Odense Elektronik ApS",       cvr: "61928374", exp: 13500000, risk: "høj",     markers: "Stigende gældsgrad",                              trend: "flat", date: "13. maj 2026", starred: false },
+  { name: "Vejle Industri A/S",          cvr: "72839146", exp: 28600000, risk: "høj",     markers: "Faldende EBITDA",                                 trend: "up",   date: "13. maj 2026", starred: false },
+  { name: "Horsens Metal ApS",           cvr: "83746291", exp: 5700000,  risk: "høj",     markers: "Høj afh. af få kunder",                           trend: "flat", date: "12. maj 2026", starred: false },
+  { name: "Silkeborg Pharma ApS",        cvr: "94837162", exp: 17900000, risk: "høj",     markers: "Stigende gældsgrad, Faldende EBITDA",             trend: "up",   date: "11. maj 2026", starred: false },
+  { name: "Viborg Agro A/S",             cvr: "15926374", exp: 33200000, risk: "høj",     markers: "Likviditetsudfordringer",                         trend: "flat", date: "10. maj 2026", starred: false },
+  { name: "BioMaterials ApS",            cvr: "67890123", exp: 6300000,  risk: "moderat", markers: "Stigende gældsgrad",                              trend: "flat", date: "13. maj 2026", starred: false },
+  { name: "Scan Packaging A/S",          cvr: "78901234", exp: 7900000,  risk: "moderat", markers: "Faldende EBITDA",                                 trend: "down", date: "12. maj 2026", starred: false },
+  { name: "BlueWater Tech ApS",          cvr: "89012345", exp: 12400000, risk: "moderat", markers: "Likviditetsudfordringer",                         trend: "flat", date: "11. maj 2026", starred: false },
+  { name: "Copenhagen Foods ApS",        cvr: "20384756", exp: 21800000, risk: "moderat", markers: "Høj afh. af få kunder",                           trend: "down", date: "10. maj 2026", starred: false },
+  { name: "Aalborg Maritim A/S",         cvr: "30475869", exp: 9100000,  risk: "moderat", markers: "Stigende gældsgrad",                              trend: "flat", date: "9. maj 2026",  starred: false },
+  { name: "Aarhus Software A/S",         cvr: "50697142", exp: 4800000,  risk: "lav",     markers: "",                                                trend: "down", date: "8. maj 2026",  starred: false },
+  { name: "Fredericia Handel ApS",       cvr: "60781923", exp: 8300000,  risk: "lav",     markers: "",                                                trend: "down", date: "7. maj 2026",  starred: false },
 ];
+
+function SortTh({ col, label, sortCol, sortDir, onSort, style }) {
+  const active = sortCol === col;
+  return (
+    <th onClick={() => onSort(col)} style={{ cursor: 'pointer', userSelect: 'none', ...style }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+        {label}
+        <span style={{ fontSize: 9, color: active ? 'var(--c-ink)' : 'var(--c-line-strong)', lineHeight: 1 }}>
+          {active ? (sortDir === 'asc' ? '▲' : '▼') : '⇅'}
+        </span>
+      </span>
+    </th>
+  );
+}
 
 function riskClassPill(r) {
   if (r === "kritisk") return <span className="pill danger" style={{ fontSize: 11 }}>Kritisk</span>;
@@ -265,18 +248,15 @@ function riskClassPill(r) {
   return <span className="pill outline" style={{ fontSize: 11 }}>Ingen</span>;
 }
 
-function KpiCard({ label, value, unit, sub, icon, accent }) {
-  const ac = { danger: 'var(--c-danger)', warn: 'var(--c-warn)', info: '#5b6cdb', success: 'var(--c-success)' }[accent];
+function PortfolioKpiCard({ label, value, unit, sub, accent }) {
+  const accentColor = { danger: '#dc2626', warn: '#d97706', info: '#2563eb', success: '#16a34a' }[accent] || 'var(--c-text-3)';
   return (
     <div className="card" style={{ padding: '14px 16px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div className="kpi-lbl">{label}</div>
-        <div style={{ color: ac || 'var(--c-text-3)' }}>{icon}</div>
+      <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.01em', lineHeight: 1, marginBottom: 5 }}>
+        {value}{unit && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--c-text-2)', marginLeft: 4 }}>{unit}</span>}
       </div>
-      <div style={{ fontSize: 24, fontWeight: 600, marginTop: 6, letterSpacing: '-0.02em', color: 'var(--c-ink)', fontVariantNumeric: 'tabular-nums' }}>
-        {value}{unit && <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-text-2)', marginLeft: 4 }}>{unit}</span>}
-      </div>
-      <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 4 }}>{sub}</div>
+      <div style={{ fontSize: 11.5, color: accentColor }}>{sub}</div>
     </div>
   );
 }

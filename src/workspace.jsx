@@ -862,7 +862,7 @@ const BUNDLE_DOCS = [
   { id: 'd1', t: "Interne årsrapporter", w: "2023, 2024, 2025 (intern version med noter)", optional: false },
   { id: 'd2', t: "Budget 2026", w: "Budget for 2026 med antagelser", optional: false },
   { id: 'd3', t: "Ejerbog", w: "Aktuel ejerstruktur og anpartshaverfortegnelse", optional: false },
-  { id: 'd4', t: "Låneaftaler", w: "Eksisterende eksterne lån (Nordea, Vækstfonden m.fl.)", optional: false },
+  { id: 'd4', t: "Låneaftaler", w: "Eksisterende eksterne lån (Nordea, Erhvervsfonden m.fl.)", optional: false },
   { id: 'd5', t: "Anpartshaverlån - vilkår", w: "Note 14 · 0,5M - vilkår og tilbagebetaling", optional: false },
   { id: 'd6', t: "Forsikringspolicer", w: "Erhvervs- og produktansvar", optional: false },
   { id: 'd7', t: "Sikkerhedsdokumenter", w: "Pantebrev, tinglysning", optional: false },

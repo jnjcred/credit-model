@@ -1,7 +1,7 @@
 // Ownership / governance + Questions
 const OWNERS_CVR = [
   { name: "Anders Holding ApS", share: 50.7, pep: false, type: "holding" },
-  { name: "Vækstfonden", share: 23.6, pep: false, type: "fund" },
+  { name: "Erhvervsfonden", share: 23.6, pep: false, type: "fund" },
   { name: "Maria Lindbjerg", share: 15.6, pep: false, type: "person", role: "CTO" },
   { name: "Industrifonden A/S", share: 10.1, pep: false, type: "fund" },
 ];
@@ -112,9 +112,9 @@ function WSOwnership() {
           <div className="card-head"><div className="card-title">Fundinghistorik</div></div>
           <div style={{ padding: '14px 16px' }}>
             {[
-              { y: "2023", t: "Vækstkapital", a: "18,0M DKK", inv: "Vækstfonden + Industrifonden" },
-              { y: "2020", t: "Serie A", a: "32,0M DKK", inv: "Vækstfonden" },
-              { y: "2017", t: "Seed + grants", a: "8,5M DKK", inv: "InnoBooster + Vækstfonden" },
+              { y: "2023", t: "Vækstkapital", a: "18,0M DKK", inv: "Erhvervsfonden + Industrifonden" },
+              { y: "2020", t: "Serie A", a: "32,0M DKK", inv: "Erhvervsfonden" },
+              { y: "2017", t: "Seed + grants", a: "8,5M DKK", inv: "InnoBooster + Erhvervsfonden" },
               { y: "2014", t: "Stiftet", a: "1,5M DKK", inv: "Anders & Maria (stiftere)" },
             ].map((r, i) => (
               <div key={i} style={{ display: 'flex', gap: 14, padding: '10px 0', borderBottom: i < 3 ? '1px solid var(--c-line-2)' : 'none' }}>
@@ -236,7 +236,7 @@ function OwnershipTree({ variant = "uploaded" }) {
         <g transform="translate(155, 20)">
           <rect width="110" height="48" rx="6" fill="#fff" stroke="var(--c-line)"/>
           <text x="55" y="20" textAnchor="middle" fill="var(--c-text-2)" fontSize="9">FOND</text>
-          <text x="55" y="36" textAnchor="middle" fontWeight="500" fill="var(--c-ink)">Vækstfonden</text>
+          <text x="55" y="36" textAnchor="middle" fontWeight="500" fill="var(--c-ink)">Erhvervsfonden</text>
         </g>
         <g transform="translate(280, 20)">
           <rect width="120" height="48" rx="6" fill="#fff" stroke="var(--c-line)"/>

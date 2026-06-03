@@ -252,7 +252,7 @@ function CustomerPortal({ back }) {
         <div style={{ maxWidth: 760, margin: '0 auto', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div className="brand-mark" style={{ background: 'var(--c-primary)' }}>cw</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-primary)' }}>EIFO · Kreditmateriale</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-primary)' }}>Kreditmateriale</div>
             <div className="muted" style={{ fontSize: 11.5 }}>Sikker indlevering · Nordhavn Composite A/S</div>
           </div>
           {screen !== "welcome" && screen !== "done" && (
@@ -293,10 +293,10 @@ function CustomerPortal({ back }) {
 function PortalWelcome({ onStart }) {
   return (
     <div style={{ maxWidth: 560, margin: '40px auto 0', textAlign: 'left' }}>
-      <div style={{ display: 'inline-block', padding: '4px 10px', background: 'var(--c-surface-2)', borderRadius: 999, fontSize: 11, color: 'var(--c-text-2)', fontWeight: 500 }}>FRA EIFO · MAJ 2026</div>
+      <div style={{ display: 'inline-block', padding: '4px 10px', background: 'var(--c-surface-2)', borderRadius: 999, fontSize: 11, color: 'var(--c-text-2)', fontWeight: 500 }}>MAJ 2026</div>
       <h1 style={{ fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '18px 0 10px', lineHeight: 1.15 }}>Hej Anders.<br/>Vi mangler lidt materiale for at gå videre.</h1>
       <p style={{ fontSize: 15, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 24 }}>
-        Mette fra EIFO vurderer jeres ansøgning om <b style={{ color: 'var(--c-ink)' }}>eksportkaution + driftskredit på DKK 45M</b>. Vi har samlet alt det vi har brug for i ét sted, så I slipper for at lede i mails og dokumenter.
+        Mette fra kreditafdelingen vurderer jeres ansøgning om <b style={{ color: 'var(--c-ink)' }}>eksportkaution + driftskredit på DKK 45M</b>. Vi har samlet alt det vi har brug for i ét sted, så I slipper for at lede i mails og dokumenter.
       </p>
 
       <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
@@ -329,7 +329,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onWa
   const hasFollowup = items.some(x => x.hasFollowup);
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
-      <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>Materiale til EIFO</div>
+      <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>Materiale til kreditafdelingen</div>
       <div style={{ fontSize: 13.5, color: 'var(--c-text-2)', marginTop: 4 }}>
         {done} af {total} elementer afleveret · {allDone ? "alt klar - du kan indsende nu" : "fortsæt hvor du vil"}
       </div>
@@ -360,7 +360,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onWa
         <div style={{ marginTop: 14, padding: '12px 16px', background: 'var(--c-warn-bg)', borderRadius: 10, fontSize: 12.5, color: 'var(--c-text)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <I.Clock size={14} style={{ color: 'var(--c-warn)', flexShrink: 0 }}/>
           <div style={{ flex: 1 }}>
-            <b>{accountant}</b> {accountant === 1 ? 'element afventer' : 'elementer afventer'} jeres revisor. EIFO ser status og kan kontakte revisor direkte hvis nødvendigt.
+            <b>{accountant}</b> {accountant === 1 ? 'element afventer' : 'elementer afventer'} jeres revisor. Kreditafdelingen ser status og kan kontakte revisor direkte hvis nødvendigt.
           </div>
         </div>
       )}
@@ -371,7 +371,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onWa
           <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 2 }}>{allDone ? "Mette får besked automatisk når du indsender" : "Vi gemmer automatisk · du kan vende tilbage via det samme link"}</div>
         </div>
         <button onClick={onSubmit} disabled={!allDone} className={"btn " + (allDone ? "btn-primary" : "")} style={allDone ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
-          {allDone ? "Indsend til EIFO" : "Gem og luk"} <I.ArrowRight className="ic"/>
+          {allDone ? "Indsend til kreditafdelingen" : "Gem og luk"} <I.ArrowRight className="ic"/>
         </button>
       </div>
     </div>
@@ -442,7 +442,7 @@ function PortalHubRow({ x, isFirst, onOpen, onReopen, onWaitAccountant }) {
               </button>
               <button onClick={(e) => { e.stopPropagation(); setMenu(false); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
-                <I.Eye size={13}/> Se hvad EIFO modtog
+                <I.Eye size={13}/> Se hvad kreditafdelingen modtog
               </button>
               <button onClick={(e) => { e.stopPropagation(); setMenu(false); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
@@ -561,7 +561,7 @@ function PortalConnect({ item, onBack, onDone }) {
 
       <div style={{ marginTop: 20, padding: 14, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10, fontSize: 12, color: 'var(--c-text-2)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <I.Lock size={14} style={{ marginTop: 1, color: 'var(--c-text-3)' }}/>
-        <div>EIFO ser kun de specifikke felter de har brug for til kreditvurderingen. Adgangen logges, og I kan til enhver tid se hvad der er hentet.</div>
+        <div>Kreditafdelingen ser kun de specifikke felter de har brug for til kreditvurderingen. Adgangen logges, og I kan til enhver tid se hvad der er hentet.</div>
       </div>
 
       <div style={{ marginTop: 22, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
@@ -747,7 +747,7 @@ function PortalFollowup({ onBack, onSubmit }) {
         <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
           <div className="avatar" style={{ width: 32, height: 32, fontSize: 12, flexShrink: 0 }}>ML</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 500 }}>Mette Larsen <span className="muted" style={{ fontWeight: 400 }}>· EIFO</span></div>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>Mette Larsen <span className="muted" style={{ fontWeight: 400 }}>· Kreditafdeling</span></div>
             <div style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>i dag, 09:14</div>
           </div>
         </div>
@@ -824,7 +824,7 @@ function PortalDone({ onBack }) {
       </div>
       <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '0 0 8px' }}>Tak, Anders.</h1>
       <p style={{ fontSize: 15, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 22 }}>
-        Materialet er indsendt til EIFO. Mette får besked nu og vender tilbage senest <b style={{ color: 'var(--c-ink)' }}>29. maj</b>.
+        Materialet er indsendt til kreditafdelingen. Mette får besked nu og vender tilbage senest <b style={{ color: 'var(--c-ink)' }}>29. maj</b>.
       </p>
 
       <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 20, textAlign: 'left', marginBottom: 18 }}>
@@ -851,7 +851,7 @@ function PortalDone({ onBack }) {
 function DelegateAccountantModal({ item, onClose, onSend }) {
   const [email, setEmail] = React.useState("jan@revisor-nordkysten.dk");
   const [name, setName] = React.useState("Jan Holmgaard");
-  const [msg, setMsg] = React.useState("Hej Jan,\n\nKan du sende denne dokumentation direkte til EIFO via det vedhæftede link? Det er en del af vores ansøgning om kreditfacilitet.\n\nMvh Anders");
+  const [msg, setMsg] = React.useState("Hej Jan,\n\nKan du sende denne dokumentation direkte til kreditafdelingen via det vedhæftede link? Det er en del af vores ansøgning om kreditfacilitet.\n\nMvh Anders");
 
   return (
     <div className="scrim" onClick={onClose}>

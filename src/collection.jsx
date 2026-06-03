@@ -286,11 +286,11 @@ function CustomerMiniPreview() {
     <div style={{ border: '1px solid var(--c-line)', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
       <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--c-line-2)', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--c-surface-2)' }}>
         <div style={{ width: 18, height: 18, borderRadius: 4, background: 'var(--c-ink)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 600 }}>cw</div>
-        <div style={{ fontSize: 12, fontWeight: 500 }}>EIFO · Kreditmateriale</div>
+        <div style={{ fontSize: 12, fontWeight: 500 }}>Kreditmateriale</div>
       </div>
       <div style={{ padding: 14 }}>
         <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>Hej Anders,</div>
-        <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>Mette fra EIFO har bedt om følgende materiale for at vurdere jeres ansøgning.</div>
+        <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>Mette fra kreditafdelingen har bedt om følgende materiale for at vurdere jeres ansøgning.</div>
         <div style={{ marginTop: 12 }}>
           {[
             { l: 'Seneste årsrapport', d: true },

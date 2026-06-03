@@ -58,7 +58,7 @@ function WSMemo() {
 
           <div style={{ padding: '36px 56px 60px', maxHeight: 680, overflow: 'auto' }}>
             <div style={{ borderBottom: '2px solid var(--c-ink)', paddingBottom: 14, marginBottom: 22 }}>
-              <div className="label-mini" style={{ marginBottom: 4 }}>EIFO · Kreditindstilling</div>
+              <div className="label-mini" style={{ marginBottom: 4 }}>Kreditindstilling</div>
               <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>Nordhavn Composite A/S</div>
               <div style={{ fontSize: 12, color: 'var(--c-text-2)', marginTop: 4, display: 'flex', gap: 14 }}>
                 <span><span className="mono">CVR 38 42 71 56</span></span>

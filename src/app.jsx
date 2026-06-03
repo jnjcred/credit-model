@@ -2,7 +2,7 @@
 const { useState: useS, useEffect } = React;
 
 function App() {
-  const [route, setRoute] = useS("cases"); // default to Mine opgaver
+  const [route, setRoute] = useS(localStorage.getItem("cw_route") || "cases");
   const [newCaseOpen, setNewCaseOpen] = useS(false);
 
   // Tweak defaults (persisted via host)
@@ -30,7 +30,7 @@ function App() {
     r.setProperty('--c-ink', p.ink);
   }, [tweaks.accent]);
 
-  const go = (r) => setRoute(r);
+  const go = (r) => { localStorage.setItem("cw_route", r); setRoute(r); };
 
   // Expose router for self-contained components (e.g. global CaseSearch in Topbar)
   React.useEffect(() => { window.__go = go; }, []);
@@ -45,11 +45,12 @@ function App() {
       {isPortal ? (
         <CustomerPortal back={() => go("workspace:1")}/>
       ) : (
-        <div className="app" style={{ gridTemplateColumns: '1fr' }}>
+        <div className="app">
+          <Sidebar route={route} go={go} openNewCase={() => setNewCaseOpen(true)}/>
           <div className="main">
             {route === "cases" && <Portfolio go={go} openNewCase={() => setNewCaseOpen(true)}/>}
-            {route === "portfolio" && <PortfolioOverview go={go}/>}
             {isWorkspace && <WorkspaceShell tab={workspaceTab} go={go} openMemo={() => go("workspace:1:memo")}/>}
+            {route === "analyse" && <PortfolioAnalyse go={go}/>}
             {route === "inbox" && <ComingSoon title="Indbakke" sub="Notifikationer, kundebeskeder, deadline-påmindelser"/>}
             {route === "requests" && <DataRequests go={go}/>}
             {route === "templates" && <ComingSoon title="Skabeloner" sub="Memo-skabeloner, datapakker, spørgsmålssæt"/>}
@@ -79,7 +80,7 @@ function App() {
         <window.TweakSection label="Hop til skærm">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
             <button className="btn btn-sm" onClick={() => go("cases")}>Sagsoversigt</button>
-            <button className="btn btn-sm" onClick={() => go("portfolio")}>Porteføljeoverblik ★</button>
+            <button className="btn btn-sm" onClick={() => go("analyse")}>Porteføljeanalyse ★</button>
             <button className="btn btn-sm" onClick={() => setNewCaseOpen(true)}>Ny sag</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1")}>Workspace</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:financials")}>Finans</button>

@@ -2,15 +2,14 @@
 const { useState } = React;
 
 function Sidebar({ route, go, openNewCase }) {
-  const isActive = (r) => route === r || (r === "cases" && route.startsWith("workspace"));
-  const [openPortfolio, setOpenPortfolio] = React.useState(route.startsWith("portfolio"));
+  const isActive = (r) => route === r || (r === "cases" && route.startsWith("workspace")) || (r === "analyse" && route === "analyse");
   return (
     <aside className="sidebar">
       <div className="brand">
         <div className="brand-mark">cw</div>
         <div>
           <div className="brand-name">Crediwire</div>
-          <div className="brand-org">EIFO · Credit ops</div>
+          <div className="brand-org">Kreditafdeling</div>
         </div>
       </div>
 
@@ -21,6 +20,9 @@ function Sidebar({ route, go, openNewCase }) {
       <div className="nav">
         <button className={"nav-item " + (isActive("cases") ? "active" : "")} onClick={() => go("cases")}>
           <I.Briefcase className="ic"/> Mine opgaver <span className="count">8</span>
+        </button>
+        <button className={"nav-item " + (isActive("analyse") ? "active" : "")} onClick={() => go("analyse")}>
+          <I.Filter className="ic"/> Porteføljeanalyse
         </button>
       </div>
 

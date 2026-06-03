@@ -93,7 +93,7 @@ const DOCS = [
   { name: "Periodetal_Q1-2026.xlsx", type: "Periodetal", year: "Q1 2026", size: "92 KB", uploaded: "24. maj 09:01", date: "2026-05-24", ai: 36, status: "Analyseret", origin: "uploaded", sourceLabel: "e-conomic" },
   { name: "Periodetal_Q4-2025.xlsx", type: "Periodetal", year: "Q4 2025", size: "88 KB", uploaded: "23. maj 14:22", date: "2026-05-23", ai: 34, status: "Analyseret", origin: "uploaded", sourceLabel: "e-conomic" },
   { name: "Laaneaftale_Nordea_2022.pdf",        type: "Låneaftale", year: "Nordea",       size: "412 KB", uploaded: "23. maj 16:48", date: "2026-05-23", ai: 8,  status: "Analyseret", origin: "uploaded", sourceLabel: "Kundeupload" },
-  { name: "Laaneaftale_Vaekstfonden_2023.pdf",  type: "Låneaftale", year: "Vækstfonden",  size: "298 KB", uploaded: "23. maj 16:48", date: "2026-05-23", ai: 11, status: "Analyseret", origin: "uploaded", sourceLabel: "Kundeupload" },
+  { name: "Laaneaftale_Erhvervsfonden_2023.pdf", type: "Låneaftale", year: "Erhvervsfonden", size: "298 KB", uploaded: "23. maj 16:48", date: "2026-05-23", ai: 11, status: "Analyseret", origin: "uploaded", sourceLabel: "Kundeupload" },
   { name: "Laaneaftale_Spar_Nord_2024.pdf",     type: "Låneaftale", year: "Spar Nord",    size: "316 KB", uploaded: "23. maj 16:50", date: "2026-05-23", ai: 9,  status: "Analyseret", origin: "uploaded", sourceLabel: "Kundeupload" },
   { name: "Pantebrev_maskiner.pdf",           type: "Sikkerhed", year: "Maskiner",  size: "156 KB", uploaded: "23. maj 16:50", date: "2026-05-23", ai: 4, status: "Analyseret", origin: "uploaded", sourceLabel: "Kundeupload" },
   { name: "Pantebrev_varelager.pdf",          type: "Sikkerhed", year: "Varelager", size: "142 KB", uploaded: "23. maj 16:50", date: "2026-05-23", ai: 3, status: "Analyseret", origin: "uploaded", sourceLabel: "Kundeupload" },
@@ -123,7 +123,7 @@ const QUESTIONS_TO_CUST = [
 // Ownership
 const OWNERS = [
   { name: "Anders Holding ApS", share: 48.2, pep: false, type: "holding" },
-  { name: "Vækstfonden", share: 22.4, pep: false, type: "fund" },
+  { name: "Erhvervsfonden", share: 22.4, pep: false, type: "fund" },
   { name: "Maria Lindbjerg", share: 14.8, pep: false, type: "person", role: "CTO" },
   { name: "Industrifonden A/S", share: 9.6, pep: false, type: "fund" },
   { name: "Medarbejder­warrants", share: 5.0, pep: false, type: "other" },
