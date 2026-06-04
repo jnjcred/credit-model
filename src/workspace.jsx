@@ -169,6 +169,16 @@ function WSOverview({ go }) {
         </>
       )}
 
+      {/* State: Jumped directly to ready (skip customer input) */}
+      {stage === 'ready-skip' && (
+        <SectionLead
+          kind="todo"
+          eyebrow="Klar"
+          title="Klar til indstilling"
+          sub="Du har valgt at indstille direkte. Du kan fortsætte til memo og indstillingsbrev."
+        />
+      )}
+
       {/* Always: Reference of what's in place */}
       {stage !== 'declined' && (
         <div style={{ marginTop: 24 }}>
@@ -207,14 +217,20 @@ function StageHero({ stage, setStage, go }) {
       if (k === 'memo') return 'active';
       return 'pending';
     }
+    if (stage === 'ready-skip') {
+      if (k === 'public' || k === 'decision' || k === 'material') return 'done';
+      if (k === 'customer') return 'skipped';
+      if (k === 'memo') return 'active';
+      return 'pending';
+    }
     return 'pending';
   };
 
   const PROCESS = [
     { k: "public",   label: "Offentligt data",       sub: "Indsamlet automatisk" },
     { k: "decision", label: "Rådgivers beslutning", sub: "Gå videre eller giv afslag" },
-    { k: "material", label: "Materialevalg",        sub: "Vælg hvad kunden skal sende" },
-    { k: "customer", label: "Kundeinput",           sub: "Afventer kundens materiale" },
+    { k: "material", label: "Materialevalg",        sub: stage === 'ready-skip' ? "Markeret færdig" : "Vælg hvad kunden skal sende" },
+    { k: "customer", label: "Kundeinput",           sub: stage === 'ready-skip' ? "Sprunget over" : "Afventer kundens materiale" },
     { k: "memo",     label: "Klar til indstilling", sub: "Kreditmemo til komité" },
   ].map(s => ({ ...s, status: stepState(s.k) }));
 
@@ -236,10 +252,34 @@ function StageHero({ stage, setStage, go }) {
         <button className="btn btn-primary" onClick={() => setStage('material-selection')}>
           Indhent mere materiale <I.ArrowRight className="ic"/>
         </button>
+        <button
+          onClick={() => setStage('ready-skip')}
+          style={{
+            height: 34, padding: '0 16px',
+            background: 'var(--c-success)', color: '#fff',
+            border: 'none', borderRadius: 7, cursor: 'pointer',
+            fontSize: 13.5, fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}
+        >
+          Indstil kunde <I.ArrowRight className="ic"/>
+        </button>
         <button className="btn" onClick={() => go && go("workspace:1:financials")}>
           <I.BarChart className="ic"/> Se materiale
         </button>
         <button className="btn btn-danger" onClick={() => setStage('declined')}>Giv afslag</button>
+      </>
+    );
+  } else if (stage === 'ready-skip') {
+    eyebrow = "Klar";
+    title = "Klar til indstilling";
+    body = "Du har valgt at gå direkte til indstilling. Materialevalg er markeret færdig og Kundeinput er sprunget over.";
+    actions = (
+      <>
+        <button className="btn btn-primary" onClick={() => go && go("workspace:1:memo")}>
+          Fortsæt til memo <I.ArrowRight className="ic"/>
+        </button>
+        <button className="btn" onClick={() => setStage('review-public')}>Tilbage</button>
       </>
     );
   } else if (stage === 'material-selection') {
@@ -302,19 +342,27 @@ function StageHero({ stage, setStage, go }) {
           {PROCESS.map((s, i) => {
             const isDone = s.status === 'done';
             const isActive = s.status === 'active';
+            const isSkipped = s.status === 'skipped';
             const stageColor = isDone ? 'var(--c-success)' : 'var(--c-primary)';
-            const ring = isDone ? 'var(--c-success)' : isActive ? 'var(--c-primary)' : 'var(--c-line-strong)';
+            const ring = isDone ? 'var(--c-success)' : isActive ? 'var(--c-primary)' : isSkipped ? 'var(--c-line-strong)' : 'var(--c-line-strong)';
             return (
-              <div key={s.k} style={{ flex: 1, padding: '14px 14px 18px', textAlign: 'center', position: 'relative' }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', background: isDone ? 'var(--c-success)' : '#fff', border: '2px solid ' + ring, margin: '0 auto', display: 'grid', placeItems: 'center', position: 'relative', zIndex: 1 }}>
+              <div key={s.k} style={{ flex: 1, padding: '14px 14px 18px', textAlign: 'center', position: 'relative', opacity: isSkipped ? 0.55 : 1 }}>
+                <div style={{
+                  width: 24, height: 24, borderRadius: '50%',
+                  background: isDone ? 'var(--c-success)' : '#fff',
+                  border: isSkipped ? '2px dashed var(--c-line-strong)' : '2px solid ' + ring,
+                  margin: '0 auto', display: 'grid', placeItems: 'center', position: 'relative', zIndex: 1,
+                }}>
                   {isDone
                     ? <I.Check size={12} style={{ color: '#fff' }}/>
-                    : isActive
-                      ? <span style={{ display: 'block', width: 8, height: 8, borderRadius: '50%', background: stageColor }}/>
-                      : null}
+                    : isSkipped
+                      ? <span style={{ display: 'block', width: 8, height: 2, borderRadius: 1, background: 'var(--c-text-3)' }}/>
+                      : isActive
+                        ? <span style={{ display: 'block', width: 8, height: 8, borderRadius: '50%', background: stageColor }}/>
+                        : null}
                 </div>
-                <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 8, color: 'var(--c-ink)' }}>{s.label}</div>
-                <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 3, lineHeight: 1.4, maxWidth: 240, marginLeft: 'auto', marginRight: 'auto' }}>{s.sub}</div>
+                <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 8, color: isSkipped ? 'var(--c-text-3)' : 'var(--c-ink)' }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 3, lineHeight: 1.4, maxWidth: 240, marginLeft: 'auto', marginRight: 'auto', fontStyle: isSkipped ? 'italic' : 'normal' }}>{s.sub}</div>
               </div>
             );
           })}
