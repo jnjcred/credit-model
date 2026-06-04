@@ -3,6 +3,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
   const co = DATA.COMPANY;
   const scrollRef = React.useRef(null);
   const scrollMap = React.useRef({});
+  const [confirmIndstil, setConfirmIndstil] = React.useState(false);
 
   // Save current scroll position per tab; restore on tab change
   React.useEffect(() => {
@@ -56,17 +57,41 @@ function WorkspaceShell({ tab, go, openMemo }) {
               <div className="avatar" style={{ width: 20, height: 20, fontSize: 9 }}>ML</div>
               <span style={{ fontSize: 12, fontWeight: 500 }}>{co.responsible}</span>
             </div>
-            <button className="btn btn-sm btn-primary" onClick={openMemo}>Fortsæt <I.ArrowRight className="ic"/></button>
+            <button className="btn btn-sm btn-primary" onClick={() => setConfirmIndstil(true)}>Indstil kunde <I.ArrowRight className="ic"/></button>
           </div>
         </div>
       </div>
 
       <div className="ws-tabs">
-        {tabs.map(t => (
-          <button key={t.k} className={"ws-tab " + (tab === t.k ? "active" : "")} onClick={() => go("workspace:1:" + t.k)}>
-            {t.ic} {t.label} {t.badge && <span className="badge">{t.badge}</span>}
-          </button>
-        ))}
+        {tabs.map(t => {
+          if (t.action) {
+            const isActive = tab === t.k;
+            return (
+              <button
+                key={t.k}
+                onClick={() => go("workspace:1:" + t.k)}
+                style={{
+                  height: 34, padding: '0 14px',
+                  background: isActive ? 'var(--c-success)' : 'transparent',
+                  color: isActive ? '#fff' : 'var(--c-success)',
+                  border: '1.5px solid var(--c-success)',
+                  borderRadius: 7, cursor: 'pointer',
+                  fontSize: 13, fontWeight: 600,
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  marginLeft: 8,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {t.ic} {t.label}
+              </button>
+            );
+          }
+          return (
+            <button key={t.k} className={"ws-tab " + (tab === t.k ? "active" : "")} onClick={() => go("workspace:1:" + t.k)}>
+              {t.ic} {t.label} {t.badge && <span className="badge">{t.badge}</span>}
+            </button>
+          );
+        })}
       </div>
 
       <div className="scroll" ref={scrollRef}>
@@ -76,7 +101,41 @@ function WorkspaceShell({ tab, go, openMemo }) {
         {tab === "security" && <WSSecurity/>}
         {tab === "questions" && <WSQuestions/>}
         {tab === "memo" && <WSMemo/>}
+        {tab === "indstil" && <WSIndstil go={go}/>}
       </div>
+
+      {confirmIndstil && (
+        <div
+          onClick={() => setConfirmIndstil(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(15,17,20,0.45)',
+            display: 'grid', placeItems: 'center', zIndex: 1000, padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: 'min(420px, 100%)',
+              background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)',
+              boxShadow: 'var(--shadow-lg)', padding: '28px 28px 24px',
+            }}
+          >
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-ink)', marginBottom: 8 }}>Er du sikker?</div>
+            <div style={{ fontSize: 13.5, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 24 }}>
+              Du er ved at indstille kunden til kreditkomitéen. Vil du fortsætte?
+            </div>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button className="btn btn-sm" onClick={() => setConfirmIndstil(false)}>Annullér</button>
+              <button
+                className="btn btn-sm btn-primary"
+                onClick={() => { setConfirmIndstil(false); go("workspace:1:indstil"); }}
+              >
+                Ja, indstil kunde
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -252,21 +311,10 @@ function StageHero({ stage, setStage, go }) {
         <button className="btn btn-primary" onClick={() => setStage('material-selection')}>
           Indhent mere materiale <I.ArrowRight className="ic"/>
         </button>
-        <button
-          onClick={() => setStage('ready-skip')}
-          style={{
-            height: 34, padding: '0 16px',
-            background: 'var(--c-success)', color: '#fff',
-            border: 'none', borderRadius: 7, cursor: 'pointer',
-            fontSize: 13.5, fontWeight: 600,
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-          }}
-        >
-          Indstil kunde <I.ArrowRight className="ic"/>
-        </button>
         <button className="btn" onClick={() => go && go("workspace:1:financials")}>
           <I.BarChart className="ic"/> Se materiale
         </button>
+        <button className="btn btn-danger" style={{ color: 'var(--c-success)', borderColor: 'var(--c-success)' }} onClick={() => setStage('ready-skip')}>Indstil kunde</button>
         <button className="btn btn-danger" onClick={() => setStage('declined')}>Giv afslag</button>
       </>
     );
@@ -1566,6 +1614,74 @@ function CustomerStatusBlock({ stage, go, onMarkReady }) {
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function WSIndstil({ go }) {
+  return (
+    <div className="page page-wide" style={{ maxWidth: 780, padding: '48px 32px 80px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16, marginBottom: 40 }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: '50%',
+          background: 'var(--c-success)', color: '#fff',
+          display: 'grid', placeItems: 'center',
+        }}>
+          <I.Check size={26}/>
+        </div>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.02em' }}>Klar til indstilling</div>
+          <div style={{ fontSize: 14, color: 'var(--c-text-2)', marginTop: 6, lineHeight: 1.55, maxWidth: 520 }}>
+            Sagen er klar til at blive indstillet til kreditkomitéen. Gennemgå kreditmemo og underskriv indstillingen nedenfor.
+          </div>
+        </div>
+      </div>
+
+      {/* Checklist */}
+      <div className="card" style={{ padding: '6px 22px', marginBottom: 16 }}>
+        {[
+          { label: "Finansielt overblik gennemgået", done: true },
+          { label: "Sikkerheder vurderet", done: true },
+          { label: "Kreditmemo udfyldt", done: true },
+          { label: "Kundedialog afsluttet", done: true },
+        ].map((it, i) => (
+          <div key={i} style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '13px 0',
+            borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)',
+          }}>
+            <span style={{
+              width: 20, height: 20, borderRadius: '50%',
+              background: 'var(--c-success)', color: '#fff',
+              display: 'grid', placeItems: 'center', flexShrink: 0,
+            }}>
+              <I.Check size={11}/>
+            </span>
+            <span style={{ fontSize: 13.5, color: 'var(--c-ink)', fontWeight: 500 }}>{it.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button
+          className="btn btn-primary"
+          style={{ flex: 1, justifyContent: 'center', height: 40, fontSize: 14 }}
+          onClick={() => go && go("workspace:1:memo")}
+        >
+          <I.FileText className="ic"/> Åbn kreditmemo
+        </button>
+        <button
+          style={{
+            flex: 1, height: 40, fontSize: 14, fontWeight: 600,
+            background: 'var(--c-success)', color: '#fff',
+            border: 'none', borderRadius: 7, cursor: 'pointer',
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}
+        >
+          <I.Check size={15}/> Send til kreditkomité
+        </button>
+      </div>
     </div>
   );
 }

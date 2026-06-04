@@ -1206,7 +1206,7 @@ function TrustpilotStars({ rating, size }) {
   return (
     <span style={{ display: 'inline-flex', gap: 1 }}>
       {[1,2,3,4,5].map(i => (
-        <span key={i} style={{ color: i <= Math.round(rating) ? '#00B67A' : 'var(--c-line-strong)', fontSize: size }}>★</span>
+        <span key={i} style={{ color: i <= Math.round(rating) ? '#009a65' : 'var(--c-line-strong)', fontSize: size }}>★</span>
       ))}
     </span>
   );
@@ -1232,8 +1232,7 @@ function TrustpilotSection() {
   return (
     <FinSection
       title="Trustpilot"
-      sub="Kundeanmeldelser fra Trustpilot. Soft signal – bør sammenholdes med faktisk kundefastholdelse og ordrebog."
-      badge={<StatusTag kind="success">4.2 / 5.0</StatusTag>}
+      sub="Kundeanmeldelser fra Trustpilot. Soft signal - bør sammenholdes med faktisk kundefastholdelse og ordrebog."
     >
       <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         {/* Score overview */}
@@ -1241,7 +1240,7 @@ function TrustpilotSection() {
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           minWidth: 100, paddingRight: 24, borderRight: '1px solid var(--c-line-2)',
         }}>
-          <div style={{ fontSize: 38, fontWeight: 700, color: '#00B67A', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+          <div style={{ fontSize: 38, fontWeight: 700, color: '#009a65', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
             {score.toFixed(1)}
           </div>
           <TrustpilotStars rating={score} size={18}/>
@@ -1253,9 +1252,9 @@ function TrustpilotSection() {
           {dist.map(d => (
             <div key={d.stars} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 11, color: 'var(--c-text-3)', width: 14, textAlign: 'right', flexShrink: 0 }}>{d.stars}</span>
-              <span style={{ color: '#00B67A', fontSize: 11, flexShrink: 0 }}>★</span>
+              <span style={{ color: '#009a65', fontSize: 11, flexShrink: 0 }}>★</span>
               <div style={{ flex: 1, height: 6, background: 'var(--c-line-2)', borderRadius: 3, overflow: 'hidden' }}>
-                <div style={{ width: `${(d.count / maxCount) * 100}%`, height: '100%', background: '#00B67A', borderRadius: 3 }}/>
+                <div style={{ width: `${(d.count / maxCount) * 100}%`, height: '100%', background: '#009a65', borderRadius: 3 }}/>
               </div>
               <span style={{ fontSize: 11, color: 'var(--c-text-3)', width: 22, textAlign: 'right', flexShrink: 0 }}>{d.count}</span>
             </div>
