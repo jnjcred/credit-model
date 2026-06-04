@@ -154,6 +154,9 @@ function WSFinancials({ go }) {
       </FinSection>
       )}
 
+      {/* Trustpilot */}
+      {show("market") && <TrustpilotSection/>}
+
       {/* 5. Marked og branche - kontekst, ikke findings */}
       {show("market") && (
       <FinSection
@@ -1192,6 +1195,88 @@ function SimpleOwnershipTree() {
         </div>
       </div>
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Trustpilot score section
+   ──────────────────────────────────────────────────────────────────────── */
+function TrustpilotStars({ rating, size }) {
+  size = size || 14;
+  return (
+    <span style={{ display: 'inline-flex', gap: 1 }}>
+      {[1,2,3,4,5].map(i => (
+        <span key={i} style={{ color: i <= Math.round(rating) ? '#00B67A' : 'var(--c-line-strong)', fontSize: size }}>★</span>
+      ))}
+    </span>
+  );
+}
+
+function TrustpilotSection() {
+  const score = 4.2;
+  const totalReviews = 127;
+  const dist = [
+    { stars: 5, count: 78 },
+    { stars: 4, count: 26 },
+    { stars: 3, count: 11 },
+    { stars: 2, count: 7 },
+    { stars: 1, count: 5 },
+  ];
+  const reviews = [
+    { stars: 5, text: "Professionelt team og høj kvalitet på produkterne. Levering til tiden og god kommunikation undervejs.", author: "Klaus M.", date: "12. maj 2026" },
+    { stars: 4, text: "Generelt gode oplevelser. Responstiden på forespørgsler kunne forbedres.", author: "Mette H.", date: "3. april 2026" },
+    { stars: 5, text: "Har samarbejdet med dem i 3 år. Stabil leverandør med god faglig kompetence.", author: "Peter L.", date: "18. marts 2026" },
+  ];
+  const maxCount = Math.max(...dist.map(d => d.count));
+
+  return (
+    <FinSection
+      title="Trustpilot"
+      sub="Kundeanmeldelser fra Trustpilot. Soft signal – bør sammenholdes med faktisk kundefastholdelse og ordrebog."
+      badge={<StatusTag kind="success">4.2 / 5.0</StatusTag>}
+    >
+      <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        {/* Score overview */}
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+          minWidth: 100, paddingRight: 24, borderRight: '1px solid var(--c-line-2)',
+        }}>
+          <div style={{ fontSize: 38, fontWeight: 700, color: '#00B67A', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+            {score.toFixed(1)}
+          </div>
+          <TrustpilotStars rating={score} size={18}/>
+          <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2 }}>{totalReviews} anmeldelser</div>
+        </div>
+
+        {/* Distribution bars */}
+        <div style={{ flex: 1, minWidth: 160, display: 'flex', flexDirection: 'column', gap: 5, justifyContent: 'center' }}>
+          {dist.map(d => (
+            <div key={d.stars} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 11, color: 'var(--c-text-3)', width: 14, textAlign: 'right', flexShrink: 0 }}>{d.stars}</span>
+              <span style={{ color: '#00B67A', fontSize: 11, flexShrink: 0 }}>★</span>
+              <div style={{ flex: 1, height: 6, background: 'var(--c-line-2)', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{ width: `${(d.count / maxCount) * 100}%`, height: '100%', background: '#00B67A', borderRadius: 3 }}/>
+              </div>
+              <span style={{ fontSize: 11, color: 'var(--c-text-3)', width: 22, textAlign: 'right', flexShrink: 0 }}>{d.count}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent reviews */}
+      <div style={{ marginTop: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 4 }}>Seneste anmeldelser</div>
+        {reviews.map((r, i) => (
+          <div key={i} style={{ borderTop: '1px solid var(--c-line-2)', padding: '10px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <TrustpilotStars rating={r.stars} size={12}/>
+              <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>{r.author} · {r.date}</span>
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.5 }}>{r.text}</div>
+          </div>
+        ))}
+      </div>
+    </FinSection>
   );
 }
 
