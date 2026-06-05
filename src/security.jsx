@@ -2,6 +2,7 @@
 function WSSecurity() {
   const [filter, setFilter] = React.useState("all");
   const [showAddPant, setShowAddPant] = React.useState(false);
+  const [showAddGuarantee, setShowAddGuarantee] = React.useState(false);
 
   const [securities, setSecurities] = React.useState([
     { id: 1, type: "Virksomhedspant", asset: "Driftsmateriel og maskiner", value: 2.8, currency: "DKK M", doc: "Pantebrev_maskiner.pdf", priority: "1.", status: "tinglyst", valued: "EY · 12. mar 2026", note: null },
@@ -13,12 +14,23 @@ function WSSecurity() {
 
   const addSecurity = (s) => setSecurities(prev => [...prev, { ...s, id: prev.length + 1 }]);
 
-  const guarantees = [
-    { id: 1, type: "Personlig kaution", from: "Anders Christensen", role: "Stifter / CEO", amount: 0.5, scope: "Solidarisk · op til beløb", doc: "Personlig_kaution_AC.pdf", status: "signed", limit: "Maks 0,5M", note: null },
-    { id: 2, type: "Selskabskaution", from: "Anders Holding ApS", role: "48,2% ejer", amount: 1.0, scope: "Solidarisk · op til beløb", doc: "Selskabskaution_AH.pdf", status: "signed", limit: "Maks 1,0M", note: null },
-    { id: 3, type: "Eksportgaranti (intern)", from: "Eksportkaution", role: "Modregnes mod kreditrisiko", amount: 3.2, scope: "70% af eksport-tilgodehavender", doc: null, status: "draft", limit: "70% dækning", note: "Ramme­garanti for Block-Island leverance" },
-    { id: 4, type: "Tilbagetrædelses­erklæring", from: "Anders Holding ApS", role: "Anpartshaver­lån 0,5M", amount: 0.5, scope: "Efterstillet alle øvrige kreditorer", doc: null, status: "missing", limit: "-", note: "AI fandt: dokument mangler i sagen" },
-  ];
+  // ÆNDRING 1: guarantees er nu state så toggle kan opdatere det
+  const [guarantees, setGuarantees] = React.useState([
+    { id: 1, type: "Personlig kaution", from: "Anders Christensen", role: "Stifter / CEO", amount: 0.5, scope: "Solidarisk · op til beløb", doc: "Personlig_kaution_AC.pdf", status: "signed", signed: true, limit: "Maks 0,5M", note: null },
+    { id: 2, type: "Selskabskaution", from: "Anders Holding ApS", role: "48,2% ejer", amount: 1.0, scope: "Solidarisk · op til beløb", doc: "Selskabskaution_AH.pdf", status: "signed", signed: true, limit: "Maks 1,0M", note: null },
+    { id: 3, type: "Eksportgaranti (intern)", from: "Eksportkaution", role: "Modregnes mod kreditrisiko", amount: 3.2, scope: "70% af eksport-tilgodehavender", doc: null, status: "draft", signed: false, limit: "70% dækning", note: "Ramme­garanti for Block-Island leverance" },
+    { id: 4, type: "Tilbagetrædelses­erklæring", from: "Anders Holding ApS", role: "Anpartshaver­lån 0,5M", amount: 0.5, scope: "Efterstillet alle øvrige kreditorer", doc: null, status: "missing", signed: false, limit: "-", note: null },
+  ]);
+
+  const toggleSigned = (id) => {
+    setGuarantees(prev => prev.map(g =>
+      g.id === id ? { ...g, signed: !g.signed } : g
+    ));
+  };
+
+  const addGuarantee = (g) => {
+    setGuarantees(prev => [...prev, { ...g, id: prev.length + 1, signed: false }]);
+  };
 
   const totalCredit = 4.5;
   const totalSecurityValue = securities.reduce((s, x) => s + (x.value || 0), 0);
@@ -53,7 +65,6 @@ function WSSecurity() {
             <div className="card-title">Sikkerhedsmæssig dækning</div>
             <div className="card-sub">Forhold mellem kreditbeløb og sikkerheder + kautioner</div>
           </div>
-          <button className="btn btn-sm btn-ghost">Forklar metode</button>
         </div>
         <div style={{ padding: '18px 22px' }}>
           <CoverageBar credit={totalCredit} security={totalSecurityValue} guarantee={totalGuaranteed}/>
@@ -118,11 +129,8 @@ function WSSecurity() {
                     {s.value === null ? '-' : `${s.value.toFixed(1)}M`}
                   </td>
                   <td><div style={{ fontSize: 12.5 }}>{s.valued}</div></td>
-                  <td>
-                    {s.status === 'tinglyst'
-                      ? <span className="pill success" style={{ fontSize: 11 }}><span className="pill-dot"/>Tinglyst</span>
-                      : <span className="pill warn" style={{ fontSize: 11 }}><span className="pill-dot"/>Ikke tinglyst</span>}
-                  </td>
+                  {/* ÆNDRING 3: TinglystCell med tooltip og PDF-knap */}
+                  <td><TinglystCell status={s.status}/></td>
                   <td>
                     {s.doc ? <span className="source" style={{ cursor: 'pointer' }}><I.File className="ic"/> {s.doc}</span> : <span className="muted" style={{ fontSize: 11.5 }}>-</span>}
                   </td>
@@ -139,10 +147,11 @@ function WSSecurity() {
         <div className="card">
           <div className="card-head">
             <div className="card-title">Kautioner og erklæringer</div>
-            <button className="btn btn-sm"><I.Plus className="ic"/> Tilføj</button>
+            {/* ÆNDRING 2: Tilføj-knap åbner nu modal */}
+            <button className="btn btn-sm" onClick={() => setShowAddGuarantee(true)}><I.Plus className="ic"/> Tilføj</button>
           </div>
           {guarantees.filter(g => filter !== 'issue' || g.status === 'missing' || g.status === 'draft').map((g, i) => (
-            <div key={g.id} style={{ padding: '14px 18px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'grid', gridTemplateColumns: '36px 1fr auto auto auto auto', gap: 12, alignItems: 'center' }}>
+            <div key={g.id} style={{ padding: '14px 18px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'grid', gridTemplateColumns: '36px 1fr 200px 86px 148px 84px', gap: 12, alignItems: 'center' }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: g.type.includes('Personlig') ? 'var(--c-surface-2)' : '#fff', border: '1px solid var(--c-line)', display: 'grid', placeItems: 'center', color: 'var(--c-text-2)' }}>
                 {g.type.includes('Personlig') ? <I.User size={14}/> : g.type.includes('Selskab') ? <I.Building size={14}/> : g.type.includes('Tilbage') ? <I.AlertTriangle size={14}/> : <I.Bookmark size={14}/>}
               </div>
@@ -161,10 +170,30 @@ function WSSecurity() {
                 <div className="mono num" style={{ fontSize: 14, fontWeight: 600 }}>{g.amount.toFixed(1)}M</div>
                 <div className="muted" style={{ fontSize: 11 }}>{g.limit}</div>
               </div>
+              {/* ÆNDRING 1: "Underskrevet" er nu en toggle-knap */}
               <div>
-                {g.status === 'signed' && <span className="pill success" style={{ fontSize: 11 }}><span className="pill-dot"/>Underskrevet</span>}
-                {g.status === 'draft' && <span className="pill outline" style={{ fontSize: 11 }}><span className="pill-dot"/>Udkast</span>}
-                {g.status === 'missing' && <span className="pill danger" style={{ fontSize: 11 }}><span className="pill-dot"/>Mangler</span>}
+                {g.status === 'signed' || g.status === 'draft' || g.status === 'missing'
+                  ? (
+                    <button
+                      onClick={() => toggleSigned(g.id)}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '3px 10px', borderRadius: 20, border: 'none',
+                        cursor: 'pointer', fontSize: 11, fontWeight: 500,
+                        background: g.signed ? 'color-mix(in srgb, var(--c-success) 15%, transparent)' : 'var(--c-surface-2)',
+                        color: g.signed ? 'var(--c-success)' : 'var(--c-text-3)',
+                        transition: 'background 0.15s, color 0.15s',
+                      }}
+                    >
+                      <span style={{
+                        width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+                        background: g.signed ? 'var(--c-success)' : 'var(--c-text-4)',
+                      }}/>
+                      {g.signed ? 'Underskrevet ✓' : 'Ikke underskrevet'}
+                    </button>
+                  )
+                  : null
+                }
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
                 {g.doc && <button className="btn btn-sm btn-ghost"><I.Eye className="ic"/></button>}
@@ -188,6 +217,232 @@ function WSSecurity() {
       </div>
 
       {showAddPant && <AddPantModal onClose={() => setShowAddPant(false)} onSave={(s) => { addSecurity(s); setShowAddPant(false); }}/>}
+      {/* ÆNDRING 2: AddGuaranteeModal */}
+      {showAddGuarantee && <AddGuaranteeModal onClose={() => setShowAddGuarantee(false)} onSave={(g) => { addGuarantee(g); setShowAddGuarantee(false); }}/>}
+    </div>
+  );
+}
+
+// ÆNDRING 3: TinglystCell — pill med ⓘ-tooltip og Åbn PDF-knap
+function TinglystCell({ status }) {
+  const [showTooltip, setShowTooltip] = React.useState(false);
+  const [showPdf, setShowPdf] = React.useState(false);
+  const isTinglyst = status === 'tinglyst';
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+      {isTinglyst ? (
+        <span className="pill success" style={{ fontSize: 11 }}>
+          <span className="pill-dot"/>Tinglyst
+        </span>
+      ) : (
+        <span className="pill warn" style={{ fontSize: 11 }}>
+          <span className="pill-dot"/>Ikke tinglyst
+        </span>
+      )}
+
+      {isTinglyst && (
+        <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          {/* ⓘ-ikon */}
+          <span
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+            style={{
+              fontSize: 13, color: 'var(--c-text-3)', cursor: 'default',
+              lineHeight: 1, userSelect: 'none',
+            }}
+          >ⓘ</span>
+          {/* Tooltip */}
+          {showTooltip && (
+            <span style={{
+              position: 'absolute', left: '50%', bottom: 'calc(100% + 6px)',
+              transform: 'translateX(-50%)',
+              background: 'var(--c-ink)', color: '#fff',
+              fontSize: 11, lineHeight: 1.4,
+              padding: '5px 9px', borderRadius: 6,
+              whiteSpace: 'nowrap', zIndex: 999,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+              pointerEvents: 'none',
+            }}>
+              Hentet automatisk fra Tinglysningsregistret pr. 23. maj 2026
+            </span>
+          )}
+        </span>
+      )}
+
+      {isTinglyst && (
+        <button
+          onClick={() => setShowPdf(true)}
+          className="btn btn-sm btn-ghost"
+          style={{ fontSize: 11, padding: '2px 7px' }}
+        >
+          <I.File className="ic"/> Åbn PDF
+        </button>
+      )}
+
+      {/* PDF-modal */}
+      {showPdf && (
+        <div className="scrim" onClick={() => setShowPdf(false)} style={{ zIndex: 1000 }}>
+          <div className="modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <div>
+                <div className="modal-title">Tinglysningsdokument</div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                  Hentet fra tinglysning.dk · 23. maj 2026
+                </div>
+              </div>
+              <button className="icon-btn" onClick={() => setShowPdf(false)}><I.X size={16}/></button>
+            </div>
+            <div className="modal-body" style={{ minHeight: 280 }}>
+              <div style={{
+                border: '1.5px dashed var(--c-line-strong)',
+                borderRadius: 10,
+                background: 'var(--c-surface-2)',
+                height: 240,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center',
+                gap: 10, color: 'var(--c-text-3)',
+              }}>
+                <I.File size={32} style={{ color: 'var(--c-text-4)' }}/>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-text-2)' }}>
+                  Tinglysningsdokument · Hentet fra tinglysning.dk · 23. maj 2026
+                </div>
+                <div style={{ fontSize: 12 }}>PDF-dokument placeholder</div>
+              </div>
+            </div>
+            <div className="modal-foot">
+              <div style={{ flex: 1 }}/>
+              <button className="btn btn-ghost" onClick={() => setShowPdf(false)}>Luk</button>
+              <button className="btn btn-primary"><I.File className="ic"/> Download PDF</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ÆNDRING 2: Ny AddGuaranteeModal til Kautioner og erklæringer
+function AddGuaranteeModal({ onClose, onSave }) {
+  const [form, setForm] = React.useState({
+    type: "Kaution",
+    from: "",
+    amount: "",
+    scope: "Solidarisk · op til beløb",
+    role: "",
+    limit: "-",
+    note: "",
+    doc: null,
+    status: "draft",
+  });
+
+  const canSubmit = form.from.trim().length > 0;
+
+  const submit = () => {
+    onSave({
+      type: form.type === "Kaution" ? "Personlig kaution"
+           : form.type === "Selvskyldnerkaution" ? "Selvskyldnerkaution"
+           : "Tilbagetrædelses­erklæring",
+      from: form.from,
+      role: form.role || "-",
+      amount: parseFloat(form.amount.replace(',', '.').replace('M', '')) || 0,
+      scope: form.scope,
+      doc: form.doc,
+      status: "draft",
+      limit: form.amount ? `Maks ${form.amount}M` : "-",
+      note: form.note || null,
+    });
+  };
+
+  return (
+    <div className="scrim" onClick={onClose} style={{ zIndex: 1000 }}>
+      <div className="modal" style={{ width: 520 }} onClick={e => e.stopPropagation()}>
+        <div className="modal-head">
+          <div>
+            <div className="modal-title">Tilføj kaution eller erklæring</div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Udfyld oplysninger om den nye post</div>
+          </div>
+          <button className="icon-btn" onClick={onClose}><I.X size={16}/></button>
+        </div>
+
+        <div className="modal-body" style={{ maxHeight: 480 }}>
+          <div className="vstack" style={{ gap: 14 }}>
+
+            {/* Navn/beskrivelse */}
+            <div className="field">
+              <label>Navn / beskrivelse</label>
+              <input
+                className="input input-lg"
+                autoFocus
+                value={form.from}
+                onChange={e => setForm({ ...form, from: e.target.value })}
+                placeholder="F.eks. Anders Christensen eller Anders Holding ApS"
+              />
+            </div>
+
+            {/* Type dropdown */}
+            <div className="field">
+              <label>Type</label>
+              <select
+                className="input input-lg"
+                value={form.type}
+                onChange={e => setForm({ ...form, type: e.target.value })}
+              >
+                <option value="Kaution">Kaution</option>
+                <option value="Selvskyldnerkaution">Selvskyldnerkaution</option>
+                <option value="Erklæring">Erklæring</option>
+              </select>
+            </div>
+
+            {/* Rolle */}
+            <div className="field">
+              <label>Rolle / relation (valgfri)</label>
+              <input
+                className="input"
+                value={form.role}
+                onChange={e => setForm({ ...form, role: e.target.value })}
+                placeholder="F.eks. Stifter / CEO eller 48% ejer"
+              />
+            </div>
+
+            {/* Beløb */}
+            <div className="field">
+              <label>Beløb (DKK M, valgfrit)</label>
+              <input
+                className="input mono"
+                value={form.amount}
+                onChange={e => setForm({ ...form, amount: e.target.value })}
+                placeholder="0,0"
+              />
+            </div>
+
+            {/* Note */}
+            <div className="field">
+              <label>Note (valgfri)</label>
+              <input
+                className="input"
+                value={form.note}
+                onChange={e => setForm({ ...form, note: e.target.value })}
+                placeholder="Eventuel bemærkning om omfang eller begrænsninger"
+              />
+            </div>
+
+          </div>
+        </div>
+
+        <div className="modal-foot">
+          <div style={{ flex: 1 }}/>
+          <button className="btn btn-ghost" onClick={onClose}>Annullér</button>
+          <button
+            className="btn btn-primary"
+            disabled={!canSubmit}
+            onClick={submit}
+            style={!canSubmit ? { opacity: 0.5, cursor: 'not-allowed' } : null}
+          >
+            <I.Check className="ic"/> Tilføj
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
   const scrollRef = React.useRef(null);
   const scrollMap = React.useRef({});
   const [confirmIndstil, setConfirmIndstil] = React.useState(false);
+  const [showCustomerStatus, setShowCustomerStatus] = React.useState(false);
 
   // Save current scroll position per tab; restore on tab change
   React.useEffect(() => {
@@ -27,7 +28,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
     { k: "documents", label: "Dokumenter", ic: <I.FileText className="ic"/>, badge: "12" },
     { k: "security", label: "Sikkerheder", ic: <I.Lock className="ic"/>, badge: "1" },
     { k: "questions", label: "Kundedialog", ic: <I.Help className="ic"/>, badge: "4" },
-    { k: "memo", label: "Memo", ic: <I.File className="ic"/> },
+    { k: "memo", label: "Credit memo", ic: <I.File className="ic"/> },
   ];
 
   return (
@@ -37,7 +38,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
         right={
           <>
             <button className="btn btn-sm btn-ghost"><I.Share className="ic"/> Del</button>
-            <button className="btn btn-sm" onClick={() => go("workspace:1:memo")}><I.FileText className="ic"/> Generer memo</button>
+            <button className="btn btn-sm" onClick={() => go("workspace:1:memo")}><I.FileText className="ic"/> Credit memo</button>
           </>
         }
       />
@@ -49,7 +50,6 @@ function WorkspaceShell({ tab, go, openMemo }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div className="ws-co-name">{co.name}</div>
               {statusPill(co.status)}
-              <span className="ai-hint" style={{ fontSize: 10.5 }}><I.Spark className="spark" size={10}/> 68% klar</span>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -57,6 +57,22 @@ function WorkspaceShell({ tab, go, openMemo }) {
               <div className="avatar" style={{ width: 20, height: 20, fontSize: 9 }}>ML</div>
               <span style={{ fontSize: 12, fontWeight: 500 }}>{co.responsible}</span>
             </div>
+            <button
+              onClick={() => setShowCustomerStatus(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                height: 30, padding: '0 11px',
+                border: '1.5px dashed var(--c-line-strong)', borderRadius: 7,
+                background: 'transparent', cursor: 'pointer',
+                fontSize: 12, color: 'var(--c-text-3)', fontFamily: 'inherit',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-primary)'; e.currentTarget.style.color = 'var(--c-primary)'; e.currentTarget.style.background = 'rgba(59,130,246,0.05)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-line-strong)'; e.currentTarget.style.color = 'var(--c-text-3)'; e.currentTarget.style.background = 'transparent'; }}
+              title="Se hvad kunden ser"
+            >
+              <I.Eye size={12}/> Kundeside
+            </button>
             <button className="btn btn-sm btn-primary" onClick={() => setConfirmIndstil(true)}>Indstil kunde <I.ArrowRight className="ic"/></button>
           </div>
         </div>
@@ -103,6 +119,37 @@ function WorkspaceShell({ tab, go, openMemo }) {
         {tab === "memo" && <WSMemo/>}
         {tab === "indstil" && <WSIndstil go={go}/>}
       </div>
+
+      {showCustomerStatus && (
+        <div
+          onClick={() => setShowCustomerStatus(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,20,0.55)', zIndex: 1100, display: 'flex', flexDirection: 'column' }}
+        >
+          {/* Preview bar */}
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              flexShrink: 0, display: 'flex', alignItems: 'center', gap: 12,
+              padding: '10px 20px', background: '#1a1d22', color: '#fff',
+            }}
+          >
+            <span style={{ fontSize: 10.5, letterSpacing: '0.07em', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Forhåndsvisning</span>
+            <span style={{ fontSize: 11.5, padding: '2px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 4, color: 'rgba(255,255,255,0.6)' }}>Hvad kunden ser</span>
+            <div style={{ flex: 1 }}/>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Nordhavn Composite A/S · Sagsnr. 2026-0184</span>
+            <button
+              onClick={() => setShowCustomerStatus(false)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
+            >
+              <I.X size={12}/> Luk
+            </button>
+          </div>
+          {/* Content */}
+          <div onClick={e => e.stopPropagation()} style={{ flex: 1, background: '#fff', overflowY: 'auto' }}>
+            <WSCustomerStatus/>
+          </div>
+        </div>
+      )}
 
       {confirmIndstil && (
         <div
@@ -287,14 +334,25 @@ function StageHero({ stage, setStage, go }) {
 
   const PROCESS = [
     { k: "public",   label: "Offentligt data",       sub: "Indsamlet automatisk" },
-    { k: "decision", label: "Rådgivers beslutning", sub: "Gå videre eller giv afslag" },
+    { k: "decision", label: "Vurdering af offentligt data", sub: "Godkend eller afslå sagen" },
     { k: "material", label: "Materialevalg",        sub: stage === 'ready-skip' ? "Markeret færdig" : "Vælg hvad kunden skal sende" },
-    { k: "customer", label: "Kundeinput",           sub: stage === 'ready-skip' ? "Sprunget over" : "Afventer kundens materiale" },
+    { k: "customer", label: "Kundeinput",           sub: (() => {
+        if (stage === 'ready-skip') return "Sprunget over";
+        if (stage === 'awaiting-customer') {
+          try {
+            const raw = localStorage.getItem(MATERIAL_SELECTION_KEY);
+            const s = raw ? { ...DEFAULT_MATERIAL_SELECTION, ...JSON.parse(raw) } : { ...DEFAULT_MATERIAL_SELECTION };
+            const pending = MATERIAL_GROUPS.reduce((acc, g) => acc + g.items.filter(it => s[it.id]).length, 0);
+            return `${pending} punkter afventer`;
+          } catch (e) { return "Afventer kundens materiale"; }
+        }
+        return "Afventer kundens materiale";
+      })() },
     { k: "memo",     label: "Klar til indstilling", sub: "Kreditmemo til komité" },
   ].map(s => ({ ...s, status: stepState(s.k) }));
 
   // Stage-aware narrative + actions
-  let eyebrow, title, body, actions;
+  let eyebrow, title, body, actions, publicFacts = null, progressBar = null;
   if (stage === 'declined') {
     eyebrow = "Status";
     title = "Sagen er stoppet";
@@ -341,6 +399,16 @@ function StageHero({ stage, setStage, go }) {
     eyebrow = "Sagens fremgang";
     title = "Anmodning sendt - afventer kunden";
     body = "Kunden har modtaget anmodningen. Status opdateres efterhånden som materiale uploades eller systemer kobles til.";
+    (() => {
+      try {
+        const raw = localStorage.getItem(MATERIAL_SELECTION_KEY);
+        const s = raw ? { ...DEFAULT_MATERIAL_SELECTION, ...JSON.parse(raw) } : { ...DEFAULT_MATERIAL_SELECTION };
+        const total = MATERIAL_GROUPS.reduce((acc, g) => acc + g.items.filter(it => s[it.id]).length, 0);
+        const received = 0; // i awaiting-customer er intet modtaget endnu
+        const pct = total > 0 ? Math.round((received / total) * 100) : 0;
+        progressBar = { received, total, pct };
+      } catch (e) {}
+    })();
     actions = (
       <>
         <button className="btn btn-primary" onClick={() => setStage('ready')}>Markér som modtaget</button>
@@ -377,6 +445,32 @@ function StageHero({ stage, setStage, go }) {
           </div>
           <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>{title}</div>
           <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.55, maxWidth: 640 }}>{body}</div>
+          {publicFacts && (
+            <ul style={{ listStyle: 'none', margin: '10px 0 0 0', padding: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {publicFacts.map((f, i) => (
+                <li key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8, fontSize: 12.5, color: 'var(--c-text)' }}>
+                  <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--c-primary)', flexShrink: 0, marginTop: 6 }}/>
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {progressBar && (
+            <div style={{ marginTop: 12, maxWidth: 360 }}>
+              <div style={{ fontSize: 12, color: 'var(--c-text-2)', marginBottom: 5, fontWeight: 500 }}>
+                {progressBar.received} af {progressBar.total} punkter modtaget
+              </div>
+              <div style={{ height: 6, borderRadius: 999, background: 'var(--c-line-strong)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 999,
+                  background: 'var(--c-success)',
+                  width: progressBar.pct + '%',
+                  minWidth: progressBar.pct > 0 ? 6 : 0,
+                  transition: 'width 300ms ease',
+                }}/>
+              </div>
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
             {actions}
           </div>
@@ -1419,6 +1513,14 @@ function MaterialSelector({ onCreateRequest, onBack }) {
     setTimeout(() => setSaved(false), 1500);
   };
 
+  const selectAllRecommended = () => {
+    setSel(s => {
+      const next = { ...s };
+      MATERIAL_GROUPS.forEach(g => g.items.forEach(it => { if (it.tag === 'Anbefalet') next[it.id] = true; }));
+      return next;
+    });
+  };
+
   return (
     <div className="card" style={{ padding: '4px 22px' }}>
       {MATERIAL_GROUPS.map((g, gi) => (
@@ -1429,7 +1531,16 @@ function MaterialSelector({ onCreateRequest, onBack }) {
             borderTop: gi === 0 ? 'none' : '1px solid var(--c-line-2)',
           }}
         >
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>{g.label}</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{g.label}</div>
+            <button
+              type="button"
+              onClick={selectAllRecommended}
+              style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer', fontSize: 12.5, color: 'var(--c-primary)', fontWeight: 500, whiteSpace: 'nowrap' }}
+            >
+              Vælg alle anbefalede
+            </button>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
             {g.items.map(it => (
               <label key={it.id} style={{

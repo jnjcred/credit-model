@@ -1,7 +1,156 @@
 // Documents + AI extraction
+
+/* ── Budget preview ───────────────────────────────────────────────────────── */
+function BudgetPreview() {
+  const co = DATA.COMPANY;
+
+  const years = ['2026', '2027', '2028'];
+  const rows = [
+    { label: 'Omsætning',          values: [22500, 26800, 31200], bold: false },
+    { label: 'Vareforbrug',         values: [-9500, -11200, -13100], bold: false },
+    { label: 'Bruttofortjeneste',   values: [13000, 15600, 18100], bold: true, sep: true },
+    { label: 'Personaleomkostninger', values: [-8500, -9800, -11400], bold: false },
+    { label: 'Andre driftsomkostninger', values: [-1200, -1400, -1600], bold: false },
+    { label: 'EBITDA',              values: [3300, 4400, 5100], bold: true, sep: true },
+    { label: 'Afskrivninger',       values: [-800, -900, -1000], bold: false },
+    { label: 'Finansieringsomkostninger', values: [-600, -650, -700], bold: false },
+    { label: 'Årets resultat',      values: [1900, 2850, 3400], bold: true, sep: true },
+  ];
+
+  const equityRows = [
+    { label: 'Egenkapital primo',   values: [4200, 6100, 8950], warn: 0 },
+    { label: 'Årets resultat',      values: [1900, 2850, 3400] },
+    { label: 'Egenkapital ultimo',  values: [6100, 8950, 12350], bold: true },
+  ];
+
+  const fmt = (v) => {
+    if (v == null) return '-';
+    const neg = v < 0;
+    const s = Math.abs(v).toLocaleString('da-DK');
+    return neg ? `(${s})` : s;
+  };
+
+  const ColHdr = ({ label }) => (
+    <th style={{ textAlign: 'right', fontFamily: 'ui-monospace, monospace', fontSize: 10, fontWeight: 600, color: '#5b6068', paddingBottom: 6, paddingLeft: 16, width: 90 }}>
+      {label}
+    </th>
+  );
+
+  const Row = ({ label, values, bold, sep, warn, note }) => (
+    <tr style={{
+      background: warn != null ? 'rgba(176,111,23,0.07)' : 'transparent',
+      borderTop: sep ? '1px solid #d3d6dc' : '1px solid #eef0f3',
+    }}>
+      <td style={{
+        padding: '5px 0', fontSize: 10.5, fontWeight: bold ? 600 : 400,
+        color: bold ? '#0d0f12' : '#1a1d22',
+        fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+      }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          {warn != null && <span title="Afvigelse fra årsrapport" style={{ fontSize: 12, color: 'var(--c-warn)', lineHeight: 1 }}>⚠</span>}
+          {label}
+        </span>
+      </td>
+      {values.map((v, i) => (
+        <td key={i} style={{
+          textAlign: 'right', padding: '5px 0 5px 16px',
+          fontFamily: 'ui-monospace, "SF Mono", monospace', fontSize: 10.5,
+          fontWeight: bold ? 600 : 400,
+          color: warn != null && i === warn ? '#b06f17' : (v < 0 ? '#5b6068' : '#0d0f12'),
+        }}>
+          {fmt(v)}
+        </td>
+      ))}
+    </tr>
+  );
+
+  return (
+    <div style={{
+      width: '100%', maxWidth: 600,
+      background: '#fff',
+      boxShadow: '0 4px 20px rgba(15,17,20,0.08), 0 1px 3px rgba(15,17,20,0.06)',
+      borderRadius: 2,
+      fontFamily: 'ui-sans-serif, system-ui, sans-serif',
+      color: '#1a1d22',
+      fontSize: 11,
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{ padding: '28px 32px 16px', borderBottom: '1px solid #eef0f3' }}>
+        <div style={{ fontSize: 9, letterSpacing: '0.14em', color: '#5b6068', textTransform: 'uppercase', marginBottom: 4 }}>
+          Budget · {co.name}
+        </div>
+        <div style={{ fontSize: 18, fontWeight: 700, color: '#0d0f12', letterSpacing: '-0.01em' }}>
+          Budget 2026–2028
+        </div>
+        <div style={{ fontSize: 10.5, color: '#5b6068', marginTop: 4 }}>
+          Version 3 · Udarbejdet 24. maj 2026 · Beløb i DKK 1.000
+        </div>
+      </div>
+
+      {/* Deviation banner */}
+      <div style={{
+        margin: '16px 32px',
+        padding: '12px 14px',
+        background: 'rgba(176,111,23,0.08)',
+        border: '1px solid rgba(176,111,23,0.3)',
+        borderRadius: 7,
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+      }}>
+        <span style={{ fontSize: 16, color: '#b06f17', lineHeight: 1.2, flexShrink: 0 }}>⚠</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: '#7a4d0f', marginBottom: 3 }}>
+            Afvigelse fundet — primo egenkapital 2026
+          </div>
+          <div style={{ fontSize: 11, color: '#8a5e20', lineHeight: 1.55 }}>
+            Budgettets primo egenkapital 2026 er <b>4.200 tkr.</b>, men årsrapporten 2025 viser en slutegenkapital på <b>6.200 tkr.</b> — difference på <b>2.000 tkr.</b>
+          </div>
+        </div>
+      </div>
+
+      {/* Budget table */}
+      <div style={{ padding: '0 32px 32px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', fontSize: 10, fontWeight: 600, color: '#5b6068', paddingBottom: 6, letterSpacing: '0.05em' }}>
+                DKK 1.000
+              </th>
+              {years.map(y => <ColHdr key={y} label={y}/>)}
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colSpan={4} style={{ padding: '10px 0 4px', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#5b6068' }}>Resultatopgørelse</td></tr>
+            {rows.map((r, i) => <Row key={i} {...r}/>)}
+          </tbody>
+        </table>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 20 }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left', fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#5b6068', paddingBottom: 6 }}>Egenkapital</th>
+              {years.map(y => <th key={y} style={{ width: 90 }}/>)}
+            </tr>
+          </thead>
+          <tbody>
+            {equityRows.map((r, i) => <Row key={i} {...r}/>)}
+          </tbody>
+        </table>
+
+        <div style={{ marginTop: 20, paddingTop: 12, borderTop: '1px solid #eef0f3', fontSize: 10, color: '#8a9099', lineHeight: 1.5 }}>
+          Udarbejdet af CFO Lise Sørensen · Godkendt 24. maj 2026 · v3 erstatter v2 (18. maj 2026)
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WSDocuments() {
   const [uploaded, setUploaded] = React.useState([]); // advisor-uploaded docs (session)
-  const allDocs = React.useMemo(() => [...uploaded, ...DATA.DOCS], [uploaded]);
+  const allDocs = React.useMemo(
+    () => [...uploaded, ...DATA.DOCS.filter(d => d.type !== 'Periodetal')],
+    [uploaded]
+  );
 
   const [selected, setSelected] = React.useState(allDocs[0]);
   const [q, setQ] = React.useState("");
@@ -96,6 +245,7 @@ function WSDocuments() {
   };
 
   return (
+    <React.Fragment>
     <div className="page page-wide" style={{ maxWidth: 1320 }}>
       <div className="grid" style={{ gridTemplateColumns: '420px 1fr', gap: 16 }}>
         <div className="card" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -265,6 +415,8 @@ function WSDocuments() {
             }}>
               {selected?.type === 'Årsrapport' ? (
                 <AnnualReportPreview doc={selected}/>
+              ) : selected?.type === 'Budget' ? (
+                <BudgetPreview/>
               ) : (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -296,11 +448,16 @@ function WSDocuments() {
         </div>
       </div>
     </div>
+
+    </React.Fragment>
   );
 }
 
 function DocRow({ d, selected, onSelect, latestPerType }) {
   const [showOlder, setShowOlder] = React.useState(false);
+  const isBudgetLatest = d.type === 'Budget' && d.status === 'Afvigelse fundet';
+  // Only show status when it's meaningful (not "Analyseret")
+  const visibleStatus = d.status === 'Analyseret' ? null : d.status;
   return (
     <>
       <div className="doc-item" onClick={() => onSelect(d)} style={{ background: selected?.name === d.name ? 'var(--c-surface-2)' : 'transparent' }}>
@@ -319,8 +476,30 @@ function DocRow({ d, selected, onSelect, latestPerType }) {
             </button>
           )}
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 11.5, color: d.status === 'Afvigelse fundet' ? 'var(--c-warn)' : d.status === 'Erstattet' ? 'var(--c-text-4)' : 'var(--c-text-3)' }}>{d.status}</div>
+        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+          {isBudgetLatest && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onSelect(d); }}
+              title="Afvigelse fundet — klik for detaljer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: 'var(--c-warn-bg, #fff8ec)',
+                border: '1px solid var(--c-warn)',
+                borderRadius: 5,
+                padding: '2px 7px',
+                cursor: 'pointer',
+                fontSize: 11.5,
+                color: 'var(--c-warn)',
+                fontWeight: 500,
+                lineHeight: 1.4,
+              }}
+            >
+              <span style={{ fontSize: 13 }}>⚠</span> Se afvigelse
+            </button>
+          )}
+          {visibleStatus && !isBudgetLatest && (
+            <div style={{ fontSize: 11.5, color: d.status === 'Erstattet' ? 'var(--c-text-4)' : 'var(--c-text-3)' }}>{visibleStatus}</div>
+          )}
           <div className="muted" style={{ fontSize: 10.5 }}>{d.uploaded}</div>
         </div>
       </div>

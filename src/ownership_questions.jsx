@@ -291,28 +291,63 @@ function OwnershipTree({ variant = "uploaded" }) {
 }
 
 function WSQuestions() {
+  const [questions, setQuestions] = React.useState(
+    DATA.QUESTIONS_TO_CUST.filter(q => q.status === 'draft')
+  );
+  const [adding, setAdding] = React.useState(false);
+  const [newText, setNewText] = React.useState('');
+
+  function removeQuestion(id) {
+    setQuestions(qs => qs.filter(q => q.id !== id));
+  }
+
+  function addQuestion() {
+    if (!newText.trim()) return;
+    setQuestions(qs => [...qs, { id: Date.now(), q: newText.trim(), source: 'Manuelt tilføjet', priority: 'med', status: 'draft' }]);
+    setNewText('');
+    setAdding(false);
+  }
+
   return (
     <div className="page page-wide" style={{ maxWidth: 980 }}>
       <div className="card" style={{ marginBottom: 16, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <span className="ai-hint"><I.Spark className="spark"/> AI-foreslået</span>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 500 }}>4 spørgsmål til afklaring</div>
+          <div style={{ fontSize: 13.5, fontWeight: 500 }}>{questions.length} spørgsmål til afklaring</div>
           <div className="muted" style={{ fontSize: 12 }}>Foreslået baseret på findings og dokumenter. Du kan redigere, fjerne eller tilføje før afsendelse.</div>
         </div>
-        <button className="btn btn-sm btn-primary"><I.Send className="ic"/> Send valgte (4)</button>
+        <button className="btn btn-sm btn-primary"><I.Send className="ic"/> Send valgte ({questions.length})</button>
       </div>
 
       <div className="card">
         <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--c-line-2)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span className="label-mini" style={{ marginLeft: 4 }}>Til afsendelse</span>
-          <span className="muted" style={{ fontSize: 11.5 }}>· 4</span>
+          <span className="muted" style={{ fontSize: 11.5 }}>· {questions.length}</span>
           <div style={{ marginLeft: 'auto' }}>
-            <button className="btn btn-sm btn-ghost"><I.Plus className="ic"/> Tilføj spørgsmål</button>
+            <button className="btn btn-sm btn-ghost" onClick={() => { setAdding(true); setNewText(''); }}><I.Plus className="ic"/> Tilføj spørgsmål</button>
           </div>
         </div>
-        {DATA.QUESTIONS_TO_CUST.filter(q => q.status === 'draft').map((q, i) => (
-          <QuestionRow key={q.id} q={q}/>
+        {questions.map((q) => (
+          <QuestionRow key={q.id} q={q} onRemove={() => removeQuestion(q.id)}/>
         ))}
+        {adding && (
+          <div style={{ padding: '14px 18px', borderTop: questions.length > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <textarea
+                autoFocus
+                value={newText}
+                onChange={e => setNewText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addQuestion(); if (e.key === 'Escape') setAdding(false); }}
+                placeholder="Skriv spørgsmål til kunden…"
+                rows={2}
+                style={{ width: '100%', border: '1px solid var(--c-line-strong)', borderRadius: 6, padding: 8, fontSize: 13, fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+              <button className="btn btn-sm btn-primary" onClick={addQuestion}>Tilføj</button>
+              <button className="btn btn-sm btn-ghost" onClick={() => setAdding(false)}>Annuller</button>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
@@ -333,7 +368,7 @@ function WSQuestions() {
   );
 }
 
-function QuestionRow({ q }) {
+function QuestionRow({ q, onRemove }) {
   const [checked, setChecked] = React.useState(true);
   const [edit, setEdit] = React.useState(false);
   const [text, setText] = React.useState(q.q);
@@ -354,7 +389,7 @@ function QuestionRow({ q }) {
       </div>
       <div style={{ display: 'flex', gap: 4 }}>
         <button className="btn btn-sm btn-ghost" onClick={() => setEdit(!edit)}>{edit ? 'Færdig' : <I.Edit className="ic"/>}</button>
-        <button className="btn btn-sm btn-ghost"><I.X className="ic"/></button>
+        <button className="btn btn-sm btn-ghost" onClick={onRemove}><I.X className="ic"/></button>
       </div>
     </div>
   );

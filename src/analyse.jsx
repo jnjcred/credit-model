@@ -350,6 +350,7 @@ function PortfolioAnalyse({ go }) {
   const [sortDir, setSortDir]     = React.useState("desc");
   const [results, setResults]     = React.useState(null);
   const [loading, setLoading]     = React.useState(false);
+  const [selectedYear, setSelectedYear] = React.useState("2025");
 
   React.useEffect(() => {
     setLoading(true);
@@ -601,18 +602,44 @@ function PortfolioAnalyse({ go }) {
                   )}
                 </div>
               </div>
+              {/* Periode-filter toolbar */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderBottom: "1px solid var(--c-line-2)", background: "var(--c-surface-1)" }}>
+                <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--c-text-2)", flexShrink: 0 }}>Periode:</span>
+                {["2023", "2024", "2025"].map(yr => {
+                  const active = selectedYear === yr;
+                  return (
+                    <button
+                      key={yr}
+                      onClick={() => setSelectedYear(yr)}
+                      style={{
+                        height: 30, padding: "0 12px", borderRadius: 999,
+                        border: "1px solid " + (active ? "var(--c-accent)" : "var(--c-line-strong)"),
+                        background: active ? "var(--c-accent)" : "#fff",
+                        color: active ? "#fff" : "var(--c-ink)",
+                        fontSize: 12.5, fontWeight: active ? 600 : 400,
+                        cursor: "pointer", transition: "all 0.1s",
+                      }}
+                    >
+                      {yr}
+                    </button>
+                  );
+                })}
+                <span style={{ fontSize: 11.5, color: "var(--c-text-3)", marginLeft: 8 }}>
+                  Data baseret på seneste tilgængelige årsregnskab per selskab
+                </span>
+              </div>
               <table className="tbl" style={{ tableLayout: "fixed", width: "100%", fontSize: 12 }}>
                 <thead>
                   <tr>
-                    <SortTh col="name"      label="Kundenavn"    title="Virksomhedens navn"                                                         align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="20%"/>
-                    <SortTh col="dept"      label="Afdeling"     title="Ansvarlig afdeling"                                                         align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="branche"   label="Branche"      title="Branche / sektor"                                                           align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
-                    <SortTh col="rev12"     label="Omsætning"    title="Samlet omsætning de seneste 12 måneder (kr.)"                               align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="revPct"    label="Oms. %"       title="Omsætningsvækst i % - seneste 12 mdr. ift. foregående 12 mdr."             align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
-                    <SortTh col="ebitda12"  label="EBITDA"       title="EBITDA de seneste 12 måneder (kr.)"                                        align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="ebitdaPct" label="EBITDA %"     title="EBITDA-ændring i % - seneste 12 mdr. ift. foregående 12 mdr."              align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
-                    <SortTh col="equity"    label="Egenkapital"  title="Bogført egenkapital (kr.)"                                                  align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="bigCust"   label="Største kunde" title="Andel af omsætning fra største enkelt kunde - gennemsnit seneste 24 mdr. (%)" align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
+                    <SortTh col="name"      label="Kundenavn"                         title="Virksomhedens navn"                                                         align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="20%"/>
+                    <SortTh col="dept"      label="Afdeling"                          title="Ansvarlig afdeling"                                                         align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
+                    <SortTh col="branche"   label="Branche"                           title="Branche / sektor"                                                           align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
+                    <SortTh col="rev12"     label={"Omsætning " + selectedYear}       title={"Samlet omsætning " + selectedYear + " (kr.)"}                              align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
+                    <SortTh col="revPct"    label="Oms. %"                            title="Omsætningsvækst i % - seneste 12 mdr. ift. foregående 12 mdr."             align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
+                    <SortTh col="ebitda12"  label={"EBITDA " + selectedYear}          title={"EBITDA " + selectedYear + " (kr.)"}                                        align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
+                    <SortTh col="ebitdaPct" label="EBITDA %"                          title="EBITDA-ændring i % - seneste 12 mdr. ift. foregående 12 mdr."              align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
+                    <SortTh col="equity"    label={"Egenkapital " + selectedYear}     title={"Bogført egenkapital " + selectedYear + " (kr.)"}                           align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
+                    <SortTh col="bigCust"   label="Største kunde"                     title="Andel af omsætning fra største enkelt kunde - gennemsnit seneste 24 mdr. (%)" align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
                   </tr>
                 </thead>
                 <tbody>

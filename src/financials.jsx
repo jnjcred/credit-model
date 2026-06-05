@@ -7,6 +7,54 @@ const FIN_VIEWS = [
   { k: "findings",   l: "Findings" },
 ];
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Genbrugelig Modal-overlay komponent
+   ──────────────────────────────────────────────────────────────────────── */
+function FinModal({ open, onClose, title, children, width }) {
+  if (!open) return null;
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(10,12,16,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: '#fff', borderRadius: 12,
+        boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
+        width: width || 480, maxWidth: '100%',
+        maxHeight: '85vh', overflow: 'auto',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '16px 20px', borderBottom: '1px solid var(--c-line)',
+          position: 'sticky', top: 0, background: '#fff', zIndex: 1,
+        }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--c-ink)' }}>{title}</div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              width: 28, height: 28, border: 0, background: 'var(--c-surface-2)',
+              borderRadius: 6, cursor: 'pointer', display: 'grid', placeItems: 'center',
+              color: 'var(--c-text-2)',
+            }}
+          >
+            <I.X size={13}/>
+          </button>
+        </div>
+        <div style={{ padding: '20px' }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const FIN_FINDINGS_STORAGE = 'kabul:fin-findings:nordhavn';
 
 function loadCustomFindings() {
@@ -128,13 +176,13 @@ function WSFinancials({ go }) {
         title="Datagrundlag"
         sub="Vurderingen bygger på officielle årsregnskaber fra CVR. Periodetal og budget hentes når kunden har afleveret materialet."
       >
+        <div className="card" style={{ padding: '14px 18px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <DataBasisCard
             title="Årsregnskaber"
             description="Officielle regnskaber fra CVR. Bruges til historik, kapitalstruktur og langsigtet udvikling."
             chips={["2023", "2024", "2025"]}
             source="CVR-registret"
-            status="Modtaget"
           />
           <div style={{
             borderRadius: 8,
@@ -151,99 +199,18 @@ function WSFinancials({ go }) {
             </div>
           </div>
         </div>
+        </div>
       </FinSection>
       )}
 
       {/* Trustpilot */}
       {show("market") && <TrustpilotSection/>}
 
-      {/* 5. Marked og branche - kontekst, ikke findings */}
-      {show("market") && (
-      <FinSection
-        title="Marked og branche"
-        sub="Kontekst for branche, marked og makro. Kreditrelevante observationer ligger under Findings øverst."
-      >
-        {/* Markedssignaler - top numbers */}
-        <div className="card" style={{ padding: '14px 18px', marginBottom: 14 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
-            {[
-              { label: "Branchevækst 2025",   value: "+6,8%",    note: "DK vindkomponenter" },
-              { label: "Ordreindgang",         value: "Stabil",   note: "Sektoren i Q2 2026" },
-              { label: "Konkurrenceniveau",   value: "Moderat",  note: "5-7 spillere i DK-segment" },
-            ].map((m, i) => (
-              <div key={i} style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 11, color: 'var(--c-text-2)' }}>{m.label}</div>
-                <div className="mono" style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)', marginTop: 3 }}>{m.value}</div>
-                <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2 }}>{m.note}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* PEST analyse */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>PEST-analyse</div>
-          <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>· kort overblik over makroforhold</div>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-          {[
-            {
-              k: "Politisk",
-              desc: "EU's Green Deal og dansk vindkraftpolitik støtter sektoren. Følg evt. handelsbarrierer på import af kompositmaterialer.",
-            },
-            {
-              k: "Økonomisk",
-              desc: "Stabil branchevækst og lave finansieringsomkostninger. DKK/EUR-følsomhed pga. høj eksportandel kan påvirke marginer.",
-            },
-            {
-              k: "Socialt",
-              desc: "Stigende efterspørgsel efter vedvarende energi understøtter pipeline. Kompetencemangel i komposit-faget kan presse lønninger.",
-            },
-            {
-              k: "Teknologisk",
-              desc: "Genanvendelige kompositter og automatisering skaber muligheder, men kræver kapitalinvesteringer for at følge med.",
-            },
-          ].map((p, i) => (
-            <div key={i} className="card" style={{
-              padding: '12px 14px',
-              minWidth: 0,
-            }}>
-              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--c-primary)' }}>
-                {p.k}
-              </div>
-              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.5 }}>{p.desc}</div>
-            </div>
-          ))}
-        </div>
-      </FinSection>
-      )}
+      {/* 5. Produkt, marked og branche - kontekst, ikke findings */}
+      {show("market") && <MarketSection/>}
 
       {/* 6. Ejerskab og finansielle bindinger - træ-visualisering */}
-      {show("ownership") && (
-      <FinSection
-        title="Ejerskab og finansielle bindinger"
-        sub="Ejerstruktur fra CVR. Kreditrelevante observationer ligger under Findings øverst."
-      >
-        <SimpleOwnershipTree/>
-
-        <div className="card" style={{ padding: '4px 18px', marginTop: 14 }}>
-          {[
-            { label: "Bestyrelse", value: "3 medlemmer · ingen PEP" },
-            { label: "Koncernforhold", value: "Selvstændigt selskab - ingen intercompany-balancer" },
-            { label: "Anpartshaverlån", value: "0,5M (note 14)" },
-          ].map((o, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-              gap: 16, padding: '10px 0',
-              borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)',
-            }}>
-              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>{o.label}</div>
-              <div style={{ fontSize: 13, color: 'var(--c-ink)', fontWeight: 500, textAlign: 'right' }}>{o.value}</div>
-            </div>
-          ))}
-        </div>
-      </FinSection>
-      )}
+      {show("ownership") && <OwnershipSection/>}
 
     </div>
   );
@@ -267,9 +234,7 @@ function FinSection({ title, sub, badge, children }) {
         </div>
         {badge}
       </div>
-      <div className="card" style={{ padding: '14px 18px' }}>
-        {children}
-      </div>
+      {children}
     </section>
   );
 }
@@ -312,8 +277,7 @@ function DataBasisCard({ title, description, chips, source, status, stamp }) {
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, fontSize: 11.5, color: 'var(--c-text-3)', flexWrap: 'wrap' }}>
         <span>Kilde: <b style={{ color: 'var(--c-text-2)', fontWeight: 500 }}>{source}</b></span>
-        <span>·</span>
-        <StatusTag kind="success">{status}</StatusTag>
+        {status && <><span>·</span><StatusTag kind="success">{status}</StatusTag></>}
         {stamp && <><span>·</span><span>{stamp}</span></>}
       </div>
     </div>
@@ -371,6 +335,457 @@ function SignalRow({ title, body, isFirst }) {
       <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>{title}</div>
       <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 3, lineHeight: 1.5 }}>{body}</div>
     </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Produkt, marked og branche — med upload-markedsnotat
+   ──────────────────────────────────────────────────────────────────────── */
+function MarketSection() {
+  const [uploadState, setUploadState] = React.useState('idle'); // 'idle' | 'uploaded'
+  const [uploadModalOpen, setUploadModalOpen] = React.useState(false);
+  const [docModalOpen, setDocModalOpen] = React.useState(false);
+
+  return (
+    <>
+      <FinSection
+        title="Produkt, marked og branche"
+        sub="Kontekst for branche, marked og makro. Kreditrelevante observationer ligger under Findings øverst."
+      >
+        {/* Markedssignaler - top numbers */}
+        <div className="card" style={{ padding: '14px 18px', marginBottom: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+            {[
+              { label: "Branchevækst 2025",   value: "+6,8%",    note: "DK vindkomponenter" },
+              { label: "Ordreindgang",         value: "Stabil",   note: "Sektoren i Q2 2026" },
+              { label: "Konkurrenceniveau",   value: "Moderat",  note: "5-7 spillere i DK-segment" },
+            ].map((m, i) => (
+              <div key={i} style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: 'var(--c-text-2)' }}>{m.label}</div>
+                <div className="mono" style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)', marginTop: 3 }}>{m.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2 }}>{m.note}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* PEST analyse */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>PEST-analyse</div>
+          <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>· kort overblik over makroforhold</div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+          {[
+            { k: "Politisk",    desc: "EU's Green Deal og dansk vindkraftpolitik støtter sektoren. Følg evt. handelsbarrierer på import af kompositmaterialer." },
+            { k: "Økonomisk",   desc: "Stabil branchevækst og lave finansieringsomkostninger. DKK/EUR-følsomhed pga. høj eksportandel kan påvirke marginer." },
+            { k: "Socialt",     desc: "Stigende efterspørgsel efter vedvarende energi understøtter pipeline. Kompetencemangel i komposit-faget kan presse lønninger." },
+            { k: "Teknologisk", desc: "Genanvendelige kompositter og automatisering skaber muligheder, men kræver kapitalinvesteringer for at følge med." },
+          ].map((p, i) => (
+            <div key={i} className="card" style={{ padding: '12px 14px', minWidth: 0 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--c-primary)' }}>
+                {p.k}
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.5 }}>{p.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Produktbeskrivelse */}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--c-line-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>Produktbeskrivelse</div>
+              <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>· hentet automatisk fra web</div>
+            </div>
+            {uploadState === 'uploaded' ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '5px 10px',
+                  background: 'var(--c-surface-2)', border: '1px solid var(--c-line)',
+                  borderRadius: 7,
+                }}>
+                  <I.File size={12} style={{ color: 'var(--c-primary)', flexShrink: 0 }}/>
+                  <div>
+                    <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--c-ink)' }}>produktblad_nordhavn.pdf</div>
+                    <div style={{ fontSize: 10.5, color: 'var(--c-text-3)' }}>Uploadet 4. jun 2026</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => setDocModalOpen(true)}
+                    style={{ marginLeft: 2, fontSize: 11.5 }}
+                  >
+                    Åbn
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setUploadState('idle')}
+                  style={{ color: 'var(--c-text-3)', fontSize: 11.5 }}
+                >
+                  Fjern
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={() => setUploadModalOpen(true)}
+                style={{ flexShrink: 0 }}
+              >
+                <I.File size={12} style={{ marginRight: 5 }}/> Upload produktdokumentation
+              </button>
+            )}
+          </div>
+
+          {/* Description card */}
+          <div className="card" style={{ padding: '14px 18px', position: 'relative' }}>
+            {uploadState === 'uploaded' && (
+              <div style={{
+                position: 'absolute', top: 12, right: 14,
+                fontSize: 10.5, fontWeight: 500, color: 'var(--c-success)',
+                background: 'var(--c-success-bg)', border: '1px solid #cfe6d8',
+                padding: '1px 7px', borderRadius: 999,
+              }}>
+                Suppleret af upload
+              </div>
+            )}
+            <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.65, maxWidth: 760 }}>
+              {uploadState === 'uploaded' ? (
+                <>
+                  NordHavn Composites A/S producerer avancerede kompositelementer til vindmølleindustrien med speciale i store offshore-vinger (80-115 m). Selskabets kernekompetence er high-precision finishing og tolerancestyring, der adskiller dem fra lavpriskonkurrenter i Østeuropa.
+                  {' '}<span style={{ color: 'var(--c-ink)', fontWeight: 500 }}>Tre ankerkunder (Vestas, Siemens Gamesa, Ørsted) udgør ca. 80% af omsætningen.</span>{' '}
+                  Selskabet investerer i 2026 i automatiseret NDT-scanning og planlægger kapacitetsudvidelse på 20% frem mod 2027.
+                </>
+              ) : (
+                <>
+                  NordHavn Composites A/S producerer avancerede kompositelementer til vindmølleindustrien med speciale i store offshore-vinger (80-115 m). Selskabets kernekompetence er high-precision finishing og tolerancestyring, der adskiller dem fra lavpriskonkurrenter i Østeuropa. Faciliteter i Esbjerg med kapacitet til vinger op til 115 m og levering til de største globale OEM'er.
+                </>
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--c-text-4)', marginTop: 8 }}>
+              Kilde: nordhavncomposites.dk · CVR — hentet 4. jun 2026
+            </div>
+          </div>
+        </div>
+      </FinSection>
+
+      {/* Upload modal */}
+      <FinModal
+        open={uploadModalOpen}
+        onClose={() => setUploadModalOpen(false)}
+        title="Upload produktdokumentation"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.6 }}>
+            Upload produktblad, brochure, markedsnotat eller andet materiale om virksomhedens produkt og markedsposition. Dokumentet supplerer den automatisk hentede produktbeskrivelse.
+          </div>
+          <div style={{
+            border: '2px dashed var(--c-line-strong)',
+            borderRadius: 8, padding: '28px 20px',
+            textAlign: 'center',
+            background: 'var(--c-surface-2)',
+          }}>
+            <I.File size={24} style={{ color: 'var(--c-text-3)', marginBottom: 8 }}/>
+            <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginBottom: 4 }}>
+              PDF, Word eller PowerPoint — maks. 20 MB
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginBottom: 14 }}>
+              Produktblad, brochure, markedsnotat eller lignende
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm btn-primary"
+              onClick={() => {
+                setUploadState('uploaded');
+                setUploadModalOpen(false);
+              }}
+            >
+              Vælg fil
+            </button>
+          </div>
+        </div>
+      </FinModal>
+
+      {/* Dokument preview modal */}
+      <FinModal
+        open={docModalOpen}
+        onClose={() => setDocModalOpen(false)}
+        title="produktblad_nordhavn.pdf — råvisning"
+        width={560}
+      >
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.8, color: 'var(--c-text-2)', whiteSpace: 'pre-wrap' }}>
+{`PRODUKTBLAD — NordHavn Composites A/S
+Udarbejdet: Maj 2026
+
+PRODUKT
+Fremstilling af store komposit-vindmøllevinger til offshore-
+installation. Specialisering i vinger fra 80-115 m med focus
+på præcisionsfremstilling og overfladebehandling.
+
+NØGLEKOMPETENCER
+- High-precision finishing og tolerancestyring
+- NDT-inspektion (non-destructive testing) in-house
+- Certificeret til IEC 61400-5 og DNV GL-standarder
+
+KUNDER
+Tre ankerkunder udgør ca. 80% af omsætningen:
+  - Vestas Wind Systems (langtidsaftale til 2028)
+  - Siemens Gamesa (rammeaftale, fornyes Q3 2026)
+  - Ørsted (pilotleverandør, to projekter)
+
+KAPACITET OG VÆKST
+Produktion i Esbjerg, 28 medarbejdere. Investering i
+automatiseret NDT-scanning planlagt H2 2026.
+Kapacitetsudvidelse på 20% frem mod 2027.
+
+[Dokument fortsætter — 8 sider i alt]`}
+        </div>
+      </FinModal>
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Ejerskab og finansielle bindinger — med bestyrelse-modal, ejerbog,
+   og nøglepersoner
+   ──────────────────────────────────────────────────────────────────────── */
+function OwnershipSection() {
+  const [boardModalOpen, setBoardModalOpen] = React.useState(false);
+  const [pepInfoOpen, setPepInfoOpen] = React.useState(false);
+  const [ownershipUploaded, setOwnershipUploaded] = React.useState(false);
+  const [showCvrAfterUpload, setShowCvrAfterUpload] = React.useState(false);
+  const [comment, setComment] = React.useState('');
+
+  const boardMembers = [
+    { name: "Anders Nielsen", role: "Formand",        pep: false },
+    { name: "Lise Sørensen",  role: "Næstformand",    pep: false },
+    { name: "Peter Madsen",   role: "Menigt medlem",  pep: false },
+  ];
+
+  const uploadedOwnershipFiles = [
+    { name: "ejerbog_2026.pdf",       date: "4. jun 2026" },
+    { name: "ejerdiagram_2026.pdf",   date: "4. jun 2026" },
+  ];
+
+  return (
+    <>
+      <FinSection
+        title="Ejerskab og finansielle bindinger"
+        sub="Ejerstruktur fra CVR. Upload ejerbog eller ejerdiagram for at overskrive."
+      >
+        {/* Ejerstruktur — CVR eller upload */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>Ejerstruktur</div>
+            <div style={{ fontSize: 11, color: ownershipUploaded ? 'var(--c-success)' : 'var(--c-text-3)' }}>
+              · {ownershipUploaded ? 'eget upload' : 'fra CVR'}
+            </div>
+          </div>
+          {ownershipUploaded ? (
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => setOwnershipUploaded(false)}
+              style={{ color: 'var(--c-text-3)', fontSize: 12 }}
+            >
+              Gendan CVR-data
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => setOwnershipUploaded(true)}
+            >
+              <I.File size={12} style={{ marginRight: 5 }}/> Upload ejerbog / ejerdiagram
+            </button>
+          )}
+        </div>
+
+        {/* Ejerstruktur — CVR-træ eller uploadede filer */}
+        {ownershipUploaded ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {uploadedOwnershipFiles.map((f, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                border: '1px solid var(--c-line)', borderRadius: 8, padding: '10px 14px',
+                background: 'var(--c-surface)',
+              }}>
+                <I.File size={14} style={{ color: 'var(--c-primary)', flexShrink: 0 }}/>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>{f.name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>Uploadet {f.date}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <SimpleOwnershipTree/>
+        )}
+
+        {/* Bestyrelse / koncernforhold — altid vist uden upload, kan genvises med upload */}
+        {(!ownershipUploaded || showCvrAfterUpload) && (
+          <div className="card" style={{ padding: '4px 18px', marginTop: 14 }}>
+            {ownershipUploaded && (
+              <div style={{
+                padding: '6px 0 4px',
+                borderBottom: '1px solid var(--c-line-2)',
+                fontSize: 10.5, fontWeight: 500, color: 'var(--c-text-3)',
+                letterSpacing: '0.04em',
+              }}>
+                Fra Virk
+              </div>
+            )}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              gap: 16, padding: '10px 0',
+            }}>
+              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>Bestyrelse</div>
+              <button
+                type="button"
+                onClick={() => setBoardModalOpen(true)}
+                style={{
+                  background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  fontSize: 13, color: 'var(--c-primary)', fontWeight: 500,
+                }}
+              >
+                3 medlemmer · ingen PEP
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 16, height: 16, borderRadius: '50%',
+                  background: 'var(--c-primary-bg)', border: '1px solid var(--c-primary-border)',
+                  fontSize: 10, fontWeight: 700, color: 'var(--c-primary)', flexShrink: 0,
+                }}>ⓘ</span>
+              </button>
+            </div>
+            <div style={{
+              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+              gap: 16, padding: '10px 0', borderTop: '1px solid var(--c-line-2)',
+            }}>
+              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>Koncernforhold</div>
+              <div style={{ fontSize: 13, color: 'var(--c-ink)', fontWeight: 500, textAlign: 'right' }}>Selvstændigt selskab - ingen intercompany-balancer</div>
+            </div>
+          </div>
+        )}
+
+        {/* Vis/skjul CVR-data knap + kommentarfelt — kun efter upload */}
+        {ownershipUploaded && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={() => setShowCvrAfterUpload(v => !v)}
+              style={{ alignSelf: 'flex-start', color: 'var(--c-text-2)', fontSize: 12 }}
+            >
+              {showCvrAfterUpload ? 'Skjul Virk-data' : 'Vis Virk-data (bestyrelse og koncernforhold)'}
+            </button>
+            <div style={{ position: 'relative' }}>
+              <textarea
+                value={comment}
+                onChange={e => setComment(e.target.value)}
+                placeholder="Tilføj kommentar om ejerskab…"
+                rows={2}
+                style={{
+                  width: '100%', resize: 'vertical', padding: '8px 10px',
+                  border: '1px solid var(--c-line)', borderRadius: 7,
+                  fontSize: 12.5, background: 'var(--c-surface)', color: 'var(--c-ink)',
+                  outline: 'none', fontFamily: 'inherit', lineHeight: 1.5,
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+          </div>
+        )}
+      </FinSection>
+
+      {/* Bestyrelse modal */}
+      <FinModal
+        open={boardModalOpen}
+        onClose={() => setBoardModalOpen(false)}
+        title="Bestyrelse — PEP-tjek"
+        width={520}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <StatusTag kind="success">Ingen PEP-match</StatusTag>
+            <button
+              type="button"
+              onClick={() => setPepInfoOpen(true)}
+              style={{
+                background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                fontSize: 12, color: 'var(--c-primary)',
+              }}
+            >
+              Hvad er PEP? <span style={{ fontSize: 14 }}>ⓘ</span>
+            </button>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--c-text-3)' }}>
+            Automatisk opslag i PEP-register pr. 23. maj 2026
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {boardMembers.map((m, i) => (
+            <div key={i} style={{
+              padding: '12px 0',
+              borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <span style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: 'var(--c-surface-2)', border: '1px solid var(--c-line)',
+                display: 'grid', placeItems: 'center', color: 'var(--c-text-2)',
+                flexShrink: 0, fontSize: 11, fontWeight: 700,
+              }}>
+                {m.name.split(' ').map(n => n[0]).join('')}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{m.name}</div>
+                <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 1 }}>{m.role}</div>
+              </div>
+              <StatusTag kind="success">Ingen PEP-match</StatusTag>
+            </div>
+          ))}
+        </div>
+
+        <div style={{
+          marginTop: 16, padding: '10px 12px',
+          background: 'var(--c-surface-2)', borderRadius: 6,
+          fontSize: 11.5, color: 'var(--c-text-3)', lineHeight: 1.5,
+        }}>
+          Opslag udført automatisk mod EU's konsoliderede sanktionsliste samt nationale PEP-registre. Seneste kontrol: 23. maj 2026.
+        </div>
+      </FinModal>
+
+      {/* PEP info modal */}
+      <FinModal
+        open={pepInfoOpen}
+        onClose={() => setPepInfoOpen(false)}
+        title="Hvad er PEP?"
+        width={440}
+      >
+        <div style={{ fontSize: 13.5, color: 'var(--c-ink)', fontWeight: 600, marginBottom: 8 }}>
+          Politisk Eksponeret Person (PEP)
+        </div>
+        <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.7 }}>
+          En PEP er en person, der beklæder eller har beklædt en fremtrædende offentlig stilling —
+          fx statsledere, ministre, parlamentsmedlemmer, højtstående embedsmænd eller ledende
+          personer i internationale organisationer.
+        </div>
+        <div style={{ marginTop: 12, fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.7 }}>
+          PEP-kontrol er lovpligtig under hvidvasklovens §§ 14–18 og kræver skærpet kundekendskab
+          (Enhanced Due Diligence) ved konstatering af PEP-status. Crediwire foretager automatisk
+          opslag og gemmer tidsstemplet kontrol-log.
+        </div>
+        <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--c-surface-2)', borderRadius: 6, fontSize: 12, color: 'var(--c-text-3)' }}>
+          Kilde: Lov om forebyggende foranstaltninger mod hvidvask og finansiering af terrorisme (hvidvaskloven), jf. Europa-Parlamentets direktiv (EU) 2015/849.
+        </div>
+      </FinModal>
+    </>
   );
 }
 
@@ -478,6 +893,7 @@ function UnifiedFindings({ customFindings, onAdd, onRemove }) {
       title="Findings og opmærksomhedspunkter"
       sub={`${counts.warn} kræver afklaring · ${counts.followup} bør følges op · ${counts.ok} til orientering`}
     >
+      <div className="card" style={{ padding: '4px 18px' }}>
       {FINDING_CATEGORIES.map((cat, ci) => {
         const items = all.filter(f => f.category === cat.key);
         if (items.length === 0) return null;
@@ -507,6 +923,7 @@ function UnifiedFindings({ customFindings, onAdd, onRemove }) {
       })}
       <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--c-line-2)' }}>
         <CustomFindingForm onAdd={onAdd}/>
+      </div>
       </div>
     </FinSection>
   );
@@ -940,46 +1357,45 @@ function AnnualReportSection({ go }) {
       title="Årsregnskaber - 3 års overblik"
       sub="Officielle årsrapporter fra CVR. Saldobalance 2026 hentes når kunden har afleveret materialet."
     >
-      {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        <div style={{ flex: 1 }}/>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', padding: 2,
-          background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 7,
-        }}>
-          {[
-            { k: 'mio',      l: 'DKK mio.' },
-            { k: 'thousand', l: 'DKK t.' },
-          ].map(u => {
-            const active = unit === u.k;
-            return (
-              <button
-                key={u.k}
-                onClick={() => setUnit(u.k)}
-                style={{
-                  height: 22, padding: '0 10px',
-                  border: 0,
-                  background: active ? '#fff' : 'transparent',
-                  color: active ? 'var(--c-ink)' : 'var(--c-text-2)',
-                  fontSize: 11.5, fontWeight: 500,
-                  borderRadius: 5, cursor: 'pointer',
-                  boxShadow: active ? '0 1px 2px rgba(15,17,20,0.06)' : 'none',
-                }}
-              >
-                {u.l}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {(
         <>
           <div className="card" style={{ overflow: 'hidden' }}>
             <table className="tbl" style={{ fontSize: 12.5, width: '100%' }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', fontWeight: 600, color: 'var(--c-text-2)' }}>Regnskabspost</th>
+                  <th style={{ textAlign: 'left', fontWeight: 600, color: 'var(--c-text-2)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span>Regnskabspost</span>
+                      <div style={{
+                        display: 'inline-flex', alignItems: 'center', padding: 2,
+                        background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 7,
+                      }}>
+                        {[
+                          { k: 'mio',      l: 'DKK mio.' },
+                          { k: 'thousand', l: 'DKK t.' },
+                        ].map(u => {
+                          const active = unit === u.k;
+                          return (
+                            <button
+                              key={u.k}
+                              onClick={() => setUnit(u.k)}
+                              style={{
+                                height: 22, padding: '0 10px',
+                                border: 0,
+                                background: active ? '#fff' : 'transparent',
+                                color: active ? 'var(--c-ink)' : 'var(--c-text-2)',
+                                fontSize: 11.5, fontWeight: 500,
+                                borderRadius: 5, cursor: 'pointer',
+                                boxShadow: active ? '0 1px 2px rgba(15,17,20,0.06)' : 'none',
+                              }}
+                            >
+                              {u.l}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </th>
                   {ANNUAL_REPORT.years.map((y, i) => {
                     if (i === ytdIdx) {
                       return (
@@ -1104,14 +1520,18 @@ function AnnualReportSection({ go }) {
               fontSize: 11, color: 'var(--c-text-3)', flexWrap: 'wrap', gap: 8,
             }}>
               <span>Kilder: Årsrapport 2023 · Årsrapport 2024 · Årsrapport 2025 · CVR</span>
-              <button
+              <a
+                href="https://www.vestas.com/content/dam/vestas-com/global/en/investor/reports-and-presentations/financial/2025/fy-2025/Vestas%20Annual%20Report%202025.pdf.coredownload.inline.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
                 style={{
                   background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
                   color: 'var(--c-primary)', fontSize: 11.5, fontWeight: 500,
+                  textDecoration: 'none',
                 }}
               >
                 Åbn årsrapport
-              </button>
+              </a>
             </div>
           </div>
 
@@ -1234,6 +1654,7 @@ function TrustpilotSection() {
       title="Trustpilot"
       sub="Kundeanmeldelser fra Trustpilot. Soft signal - bør sammenholdes med faktisk kundefastholdelse og ordrebog."
     >
+      <div className="card" style={{ padding: '14px 18px' }}>
       <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         {/* Score overview */}
         <div style={{
@@ -1274,6 +1695,7 @@ function TrustpilotSection() {
             <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.5 }}>{r.text}</div>
           </div>
         ))}
+      </div>
       </div>
     </FinSection>
   );
