@@ -195,8 +195,8 @@ function CustomerPortal({ back }) {
   const [screen, setScreen] = React.useState("welcome"); // welcome | hub | upload | connect | pep | trade | followup | done
   const [items, setItems] = React.useState([
     { id: "annual", l: "Seneste årsrapport", kind: "upload", st: "done", note: "Hentet automatisk fra CVR-registret · Årsrapport 2024", auto: true, min: 1 },
-    { id: "interim", l: "Periodetal Q1 2026", kind: "connect", st: "open", note: "Vi henter automatisk fra e-conomic", min: 0 },
-    { id: "budget", l: "Budget 2026-2028", kind: "upload", st: "open", note: "Træk budget PDF/Excel ind", min: 1 },
+    { id: "interim", l: "Periodetal", kind: "connect", st: "open", note: "Forbind bogføringssystem eller upload råbalance", min: 0 },
+    { id: "budget", l: "Budget", kind: "upload", st: "open", note: "Træk budget PDF/Excel ind", min: 1 },
     { id: "ownership", l: "Ejerbog", kind: "upload", st: "open", note: "Træk ejerbog-PDF ind", min: 1 },
     { id: "loans", l: "Eksisterende låneaftaler", kind: "upload", st: "open", note: "Træk PDF'er ind", min: 2 },
     { id: "security", l: "Sikkerheds­dokumenter", kind: "upload", st: "open", note: "Pantebreve, kautionserklæringer", min: 2 },
@@ -422,10 +422,9 @@ function PortalHubRow({ x, isFirst, onOpen, onReopen, onTakeBack, onOpenBundle }
         <div style={{ fontSize: 14.5, fontWeight: 500, color: x.st === 'done' || x.st === 'skipped' ? 'var(--c-text-3)' : 'var(--c-ink)' }}>
           {x.l}
           {x.optional && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-3)' }}>Valgfri</span>}
-          {(x.kind === 'connect' || x.auto) && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-2)' }}>Auto</span>}
+          {x.auto && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-2)' }}>Auto</span>}
           {x.st === 'accountant' && <span className="tag" style={{ fontSize: 10, marginLeft: 7, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>Afventer revisor</span>}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 2 }}>{x.note}</div>
       </div>
       {x.st === 'open' && (
         <I.ChevronRight size={16} style={{ color: 'var(--c-text-3)' }}/>
@@ -573,11 +572,11 @@ function PortalConnect({ item, onBack, onDone }) {
   const [drag, setDrag] = React.useState(false);
 
   const sources = [
-    { id: "ec", name: "e-conomic", desc: "Bogføring, regnskab, kontoplan" },
-    { id: "bi", name: "Billy", desc: "Bogføring og fakturering" },
-    { id: "di", name: "Dinero", desc: "Regnskab og fakturering" },
-    { id: "md", name: "Microsoft Dynamics", desc: "ERP / økonomi" },
-    { id: "xe", name: "Xena", desc: "Bogføring og økonomi" },
+    { id: "ec", name: "e-conomic" },
+    { id: "bi", name: "Billy" },
+    { id: "di", name: "Dinero" },
+    { id: "md", name: "Microsoft Dynamics" },
+    { id: "xe", name: "Xena" },
   ];
 
   const startConnect = (s) => {
@@ -620,11 +619,7 @@ function PortalConnect({ item, onBack, onDone }) {
               {connectedId === s.id ? <I.Check size={16}/> : s.name.slice(0, 2).toUpperCase()}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 500 }}>
-                {s.name}
-                {s.primary && <span className="tag" style={{ fontSize: 10, marginLeft: 6, background: 'var(--c-primary)', color: '#fff', border: 'none' }}>Anbefalet</span>}
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 1 }}>{s.desc}</div>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>{s.name}</div>
             </div>
             {connectedId === s.id
               ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--c-success)', fontSize: 12.5, fontWeight: 500 }}><I.Check size={13}/> Forbundet</span>
