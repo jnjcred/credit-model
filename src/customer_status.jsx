@@ -50,9 +50,9 @@ function WSCustomerStatus() {
     { name: "GE_Vernova_kontrakt.pdf",    status: "ok",      note: "Modtaget 26. maj" },
     { name: "CVR_udtraek_2026-05-30.pdf", status: "ok",      note: "Automatisk fra CVR" },
     { name: "PEP-erklæring",             status: "ok",      note: "Signeret 24. maj med MitID" },
-    { name: "Pantebrev_maskiner.pdf",     status: "pending", note: "Afventer upload" },
-    { name: "Personlig_kaution_AC.pdf",   status: "pending", note: "Afventer underskrift" },
-    { name: "Tilbagetrædelseserklæring",  status: "missing", note: "Anmodet - mangler" },
+    { name: "Pantebrev_maskiner.pdf",     status: "ok",      note: "Modtaget 28. maj" },
+    { name: "Personlig_kaution_AC.pdf",   status: "ok",      note: "Modtaget 28. maj" },
+    { name: "Tilbagetrædelseserklæring",  status: "ok",      note: "Modtaget 28. maj" },
   ];
 
   const [docs, setDocs] = React.useState(DOCS_INIT);
@@ -114,10 +114,6 @@ function WSCustomerStatus() {
               <span>Ansvarlig: Mette Larsen</span>
             </div>
           </div>
-          <div style={{ padding: '6px 14px', borderRadius: 999, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', fontSize: 12.5, fontWeight: 600, color: 'var(--c-primary)', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--c-primary)' }}/>
-            Afventer svar fra dig
-          </div>
         </div>
 
         {/* ── Progress timeline ── */}
@@ -144,14 +140,7 @@ function WSCustomerStatus() {
         {/* ── Questions / Dialog ── */}
         <div className="card" style={{ marginBottom: 20 }}>
           <div className="card-head" style={{ borderBottom: '1px solid var(--c-line-2)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div className="card-title">Spørgsmål fra kreditafdelingen</div>
-              {unanswered > 0 && (
-                <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(176,111,23,0.12)', color: 'var(--c-warn)', border: '1px solid rgba(176,111,23,0.2)' }}>
-                  {unanswered} afventer svar
-                </span>
-              )}
-            </div>
+            <div className="card-title">Spørgsmål fra kreditafdelingen</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--c-text-3)' }}>
               <div className="avatar" style={{ width: 22, height: 22, fontSize: 9 }}>ML</div>
               Mette Larsen
@@ -159,7 +148,7 @@ function WSCustomerStatus() {
           </div>
 
           <div>
-            {QUESTIONS.map((q, i) => {
+            {false && QUESTIONS.map((q, i) => {
               const isAnswered = submitted.has(q.id);
               const isOpen = activeReply === q.id;
               const replyText = replies[q.id] || '';
@@ -267,85 +256,8 @@ function WSCustomerStatus() {
               );
             })}
 
-            {/* Customer's own questions */}
-            {customerQuestions.map((cq, i) => (
-              <div key={'cq-' + i} style={{ borderTop: '1px solid var(--c-line-2)', padding: '18px 20px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', marginTop: 5, flexShrink: 0, background: 'var(--c-text-3)' }}/>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                      <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>Dit spørgsmål</span>
-                      <span style={{ fontSize: 11, color: 'var(--c-text-4)' }}>Sendt nu</span>
-                      <span style={{ fontSize: 11, padding: '1px 7px', background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 999, color: 'var(--c-text-3)' }}>Afventer svar</span>
-                    </div>
-                    <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.65 }}>{cq.text}</div>
-                    {cq.files.length > 0 && (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                        {cq.files.map((f, fi) => (
-                          <div key={fi} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 9px', background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 5, fontSize: 11.5 }}>
-                            <I.File size={11} style={{ color: 'var(--c-text-3)' }}/> {f.name}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            {/* Add question footer */}
-            <div style={{ borderTop: '1px solid var(--c-line-2)', padding: '14px 20px' }}>
-              {!addingQuestion ? (
-                <button
-                  className="btn btn-sm btn-ghost"
-                  style={{ color: 'var(--c-text-3)' }}
-                  onClick={() => setAddingQuestion(true)}
-                >
-                  <I.Plus size={13}/> Stil et spørgsmål til kreditafdelingen
-                </button>
-              ) : (
-                <div>
-                  <textarea
-                    value={newQuestion}
-                    onChange={e => setNewQuestion(e.target.value)}
-                    rows={3}
-                    autoFocus
-                    placeholder="Hvad vil du gerne vide?"
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--c-line-strong)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.55, color: 'var(--c-text)', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                  {newQuestionFiles.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                      {newQuestionFiles.map((f, fi) => (
-                        <div key={fi} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px 4px 10px', background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 6, fontSize: 12 }}>
-                          <I.File size={11} style={{ color: 'var(--c-text-3)' }}/> {f.name}
-                          <button onClick={() => setNewQuestionFiles(fs => fs.filter((_, i) => i !== fi))} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--c-text-3)', padding: '0 2px', display: 'flex', alignItems: 'center' }}><I.X size={11}/></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                    <button className="btn btn-sm btn-ghost" onClick={() => setNewQuestionFiles(fs => [...fs, { name: 'Bilag.pdf', size: '188 KB' }])}>
-                      <I.Upload size={12}/> Vedhæft fil
-                    </button>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn btn-sm btn-ghost" onClick={() => { setAddingQuestion(false); setNewQuestion(''); setNewQuestionFiles([]); }}>Annullér</button>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        disabled={!newQuestion.trim() && !newQuestionFiles.length}
-                        onClick={() => {
-                          setCustomerQuestions(qs => [...qs, { text: newQuestion, files: newQuestionFiles }]);
-                          setNewQuestion('');
-                          setNewQuestionFiles([]);
-                          setAddingQuestion(false);
-                        }}
-                        style={(newQuestion.trim() || newQuestionFiles.length) ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.45, cursor: 'not-allowed' }}
-                      >
-                        <I.Send size={12}/> Send
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+            <div style={{ padding: '28px 20px', textAlign: 'center', color: 'var(--c-text-3)', fontSize: 13 }}>
+              Ingen spørgsmål på nuværende tidspunkt
             </div>
           </div>
         </div>

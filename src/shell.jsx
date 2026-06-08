@@ -26,6 +26,23 @@ function Sidebar({ route, go, openNewCase }) {
         </button>
       </div>
 
+      <div style={{ margin: '8px 0 4px', padding: '0 4px' }}>
+        <button
+          onClick={() => go("portal")}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+            padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+            border: '1.5px dashed var(--c-line-strong)', background: 'transparent',
+            fontSize: 12.5, color: 'var(--c-text-3)', fontFamily: 'inherit',
+            transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-primary)'; e.currentTarget.style.color = 'var(--c-primary)'; e.currentTarget.style.background = 'rgba(59,130,246,0.04)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-line-strong)'; e.currentTarget.style.color = 'var(--c-text-3)'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          <I.User size={13}/> Kundeportal (demo)
+        </button>
+      </div>
+
       <div className="sidebar-foot">
         <button className="nav-item" onClick={() => go("settings")}>
           <I.Settings className="ic"/> Indstillinger

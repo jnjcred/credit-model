@@ -194,19 +194,19 @@ function NewCaseModal({ close, go }) {
 function CustomerPortal({ back }) {
   const [screen, setScreen] = React.useState("welcome"); // welcome | hub | upload | connect | pep | trade | followup | done
   const [items, setItems] = React.useState([
-    { id: "annual", l: "Seneste årsrapport", kind: "upload", st: "done", note: "Aarsrapport_2025.pdf · uploadet i går", min: 1 },
-    { id: "interim", l: "Periodetal Q1 2026", kind: "connect", st: "done", note: "Hentet automatisk fra e-conomic", min: 0 },
-    { id: "budget", l: "Budget 2026-2028", kind: "upload", st: "done", note: "Budget_2026-28_v3.xlsx · uploadet i dag", min: 1, hasFollowup: true },
-    { id: "ownership", l: "Ejerbog", kind: "upload", st: "done", note: "Ejerbog.pdf · uploadet i går", min: 1 },
+    { id: "annual", l: "Seneste årsrapport", kind: "upload", st: "done", note: "Hentet automatisk fra CVR-registret · Årsrapport 2024", auto: true, min: 1 },
+    { id: "interim", l: "Periodetal Q1 2026", kind: "connect", st: "open", note: "Vi henter automatisk fra e-conomic", min: 0 },
+    { id: "budget", l: "Budget 2026-2028", kind: "upload", st: "open", note: "Træk budget PDF/Excel ind", min: 1 },
+    { id: "ownership", l: "Ejerbog", kind: "upload", st: "open", note: "Træk ejerbog-PDF ind", min: 1 },
     { id: "loans", l: "Eksisterende låneaftaler", kind: "upload", st: "open", note: "Træk PDF'er ind", min: 2 },
     { id: "security", l: "Sikkerheds­dokumenter", kind: "upload", st: "open", note: "Pantebreve, kautionserklæringer", min: 2 },
-    { id: "pep", l: "PEP-erklæring", kind: "pep", st: "open", note: "1 minut · digital signatur", min: 1 },
     { id: "trade", l: "Samhandelslande", kind: "trade", st: "open", note: "Vælg fra liste", min: 1 },
-    { id: "shareholder", l: "Ejeraftale", kind: "upload", st: "skipped", note: "Markeret som ikke relevant", optional: true, min: 1 },
+    { id: "shareholder", l: "Ejeraftale", kind: "upload", st: "open", note: "Træk ejeraftale-PDF ind", optional: true, min: 1 },
   ]);
   const [activeItem, setActiveItem] = React.useState(null);
   const [followupAnswered, setFollowupAnswered] = React.useState(false);
-  const [delegateOpen, setDelegateOpen] = React.useState(null); // item being delegated
+  const [bundleOpen, setBundleOpen] = React.useState(false);
+  const [bundlePreselect, setBundlePreselect] = React.useState(null); // item id to pre-select
 
   const done = items.filter(x => x.st === "done").length;
   const skipped = items.filter(x => x.st === "skipped").length;
@@ -227,6 +227,11 @@ function CustomerPortal({ back }) {
     setScreen("hub");
   };
 
+  const skipItem = (id) => {
+    setItems(prev => prev.map(x => x.id === id ? { ...x, st: "skipped" } : x));
+    setScreen("hub");
+  };
+
   const reopenItem = (item) => {
     setItems(prev => prev.map(x => x.id === item.id ? { ...x, st: "open" } : x));
     setActiveItem({ ...item, st: "open" });
@@ -236,13 +241,19 @@ function CustomerPortal({ back }) {
     else if (item.kind === "trade") setScreen("trade");
   };
 
-  const delegateToAccountant = (item, email) => {
-    setItems(prev => prev.map(x => x.id === item.id ? { ...x, st: "accountant", note: "Sendt til revisor (" + email + ") · afventer svar" } : x));
-    setDelegateOpen(null);
+  const delegateToAccountant = (itemIds, email) => {
+    setItems(prev => prev.map(x => itemIds.includes(x.id) ? { ...x, st: "accountant", note: "Anmodet fra revisor (" + email + ") · afventer svar" } : x));
+    setBundleOpen(false);
+    setBundlePreselect(null);
   };
 
   const takeBack = (item) => {
-    setItems(prev => prev.map(x => x.id === item.id ? { ...x, st: "open", note: x.note.replace(/^Sendt til revisor.*$/, "Klar til upload") } : x));
+    setItems(prev => prev.map(x => x.id === item.id ? { ...x, st: "open", note: "Klar til upload" } : x));
+  };
+
+  const openBundle = (preselect) => {
+    setBundlePreselect(preselect || null);
+    setBundleOpen(true);
   };
 
   return (
@@ -274,18 +285,28 @@ function CustomerPortal({ back }) {
         <I.ArrowLeft size={12}/> Tilbage til rådgiver-visning
       </button>
 
+      {/* Demo shortcut */}
+      <button onClick={() => { setItems(prev => prev.map(x => x.st === 'done' ? x : { ...x, st: 'done', note: 'Udfyldt til demo' })); setScreen('hub'); }} style={{ position: 'fixed', bottom: 18, right: 18, background: 'transparent', color: 'var(--c-text-4)', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11 }}>
+        Udfyld alt (demo)
+      </button>
+
       <div style={{ flex: 1, padding: '32px 24px' }}>
         {screen === "welcome" && <PortalWelcome onStart={() => setScreen("hub")}/>}
-        {screen === "hub" && <PortalHub items={items} pct={pct} done={done} total={total} accountant={accountant} onOpen={openItem} onReopen={reopenItem} onWaitAccountant={(item) => item.st === 'accountant' ? takeBack(item) : setDelegateOpen(item)} onSubmit={() => setScreen("done")} onFollowup={() => setScreen("followup")} followupAnswered={followupAnswered}/>}
-        {screen === "upload" && <PortalUpload item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
+        {screen === "hub" && <PortalHub items={items} pct={pct} done={done} total={total} accountant={accountant} onOpen={openItem} onReopen={reopenItem} onTakeBack={takeBack} onOpenBundle={openBundle} onSubmit={() => setScreen("done")} onFollowup={() => setScreen("followup")} followupAnswered={followupAnswered}/>}
+        {screen === "upload" && <PortalUpload item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)} onSkip={() => skipItem(activeItem.id)}/>}
         {screen === "connect" && <PortalConnect item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
-        {screen === "pep" && <PortalPep item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
         {screen === "trade" && <PortalTrade item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
         {screen === "followup" && <PortalFollowup onBack={() => setScreen("hub")} onSubmit={() => { setFollowupAnswered(true); setItems(prev => prev.map(x => x.hasFollowup ? { ...x, hasFollowup: false, note: x.note + " · spørgsmål besvaret" } : x)); setScreen("hub"); }}/>}
-        {screen === "done" && <PortalDone onBack={() => setScreen("hub")}/>}
+        {screen === "done" && <PortalDone onBack={() => setScreen("hub")} onStatus={() => setScreen("status")}/>}
+        {screen === "status" && (
+          <div style={{ maxWidth: 760, margin: '0 auto' }}>
+            <button onClick={() => setScreen("done")} className="btn btn-sm btn-ghost" style={{ marginBottom: 18 }}><I.ArrowLeft className="ic"/> Tilbage</button>
+            <WSCustomerStatus/>
+          </div>
+        )}
       </div>
 
-      {delegateOpen && <DelegateAccountantModal item={delegateOpen} onClose={() => setDelegateOpen(null)} onSend={(email) => delegateToAccountant(delegateOpen, email)}/>}
+      {bundleOpen && <DelegateBundleModal items={items} preselect={bundlePreselect} onClose={() => { setBundleOpen(false); setBundlePreselect(null); }} onSend={(itemIds, email) => delegateToAccountant(itemIds, email)}/>}
     </div>
   );
 }
@@ -324,14 +345,19 @@ function PortalWelcome({ onStart }) {
   );
 }
 
-function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onWaitAccountant, onSubmit, onFollowup, followupAnswered }) {
+function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onTakeBack, onOpenBundle, onSubmit, onFollowup, followupAnswered }) {
   const allDone = items.every(x => x.st === "done" || x.st === "skipped");
   const hasFollowup = items.some(x => x.hasFollowup);
+  const canDelegate = items.some(x => x.st === "open");
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
-      <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>Materiale til kreditafdelingen</div>
-      <div style={{ fontSize: 13.5, color: 'var(--c-text-2)', marginTop: 4 }}>
-        {done} af {total} elementer afleveret · {allDone ? "alt klar - du kan indsende nu" : "fortsæt hvor du vil"}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em', flex: 1 }}>Materiale til kreditafdelingen</div>
+        {canDelegate && (
+          <button onClick={() => onOpenBundle(null)} className="btn btn-sm btn-ghost" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <I.User size={13}/> Anmod revisor om hjælp
+          </button>
+        )}
       </div>
 
       {/* Followup card */}
@@ -352,7 +378,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onWa
 
       <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', marginTop: 18, overflow: 'hidden' }}>
         {items.map((x, i) => (
-          <PortalHubRow key={x.id} x={x} isFirst={i === 0} onOpen={onOpen} onReopen={onReopen} onWaitAccountant={onWaitAccountant}/>
+          <PortalHubRow key={x.id} x={x} isFirst={i === 0} onOpen={onOpen} onReopen={onReopen} onTakeBack={onTakeBack} onOpenBundle={onOpenBundle}/>
         ))}
       </div>
 
@@ -362,6 +388,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onWa
           <div style={{ flex: 1 }}>
             <b>{accountant}</b> {accountant === 1 ? 'element afventer' : 'elementer afventer'} jeres revisor. Kreditafdelingen ser status og kan kontakte revisor direkte hvis nødvendigt.
           </div>
+          <button onClick={() => onOpenBundle(null)} className="btn btn-sm btn-ghost" style={{ fontSize: 11.5 }}>Rediger</button>
         </div>
       )}
 
@@ -378,7 +405,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onWa
   );
 }
 
-function PortalHubRow({ x, isFirst, onOpen, onReopen, onWaitAccountant }) {
+function PortalHubRow({ x, isFirst, onOpen, onReopen, onTakeBack, onOpenBundle }) {
   const [menu, setMenu] = React.useState(false);
   const interactive = x.st !== 'done' && x.st !== 'accountant';
   return (
@@ -395,33 +422,17 @@ function PortalHubRow({ x, isFirst, onOpen, onReopen, onWaitAccountant }) {
         <div style={{ fontSize: 14.5, fontWeight: 500, color: x.st === 'done' || x.st === 'skipped' ? 'var(--c-text-3)' : 'var(--c-ink)' }}>
           {x.l}
           {x.optional && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-3)' }}>Valgfri</span>}
-          {x.kind === 'connect' && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-2)' }}>Auto</span>}
+          {(x.kind === 'connect' || x.auto) && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-2)' }}>Auto</span>}
           {x.st === 'accountant' && <span className="tag" style={{ fontSize: 10, marginLeft: 7, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>Afventer revisor</span>}
         </div>
         <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 2 }}>{x.note}</div>
       </div>
       {x.st === 'open' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button onClick={(e) => { e.stopPropagation(); onWaitAccountant(x); }} className="btn btn-sm btn-ghost" style={{ fontSize: 11.5 }}>
-            <I.User className="ic"/> Send til revisor
-          </button>
-          <I.ChevronRight size={16} style={{ color: 'var(--c-text-3)' }}/>
-        </div>
+        <I.ChevronRight size={16} style={{ color: 'var(--c-text-3)' }}/>
       )}
       {x.st === 'accountant' && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button onClick={(e) => { e.stopPropagation(); onOpen(x); }} className="btn btn-sm">Tag tilbage</button>
-          <button onClick={(e) => { e.stopPropagation(); setMenu(!menu); }} className="btn btn-sm btn-ghost" style={{ padding: '0 6px' }}><I.MoreH className="ic"/></button>
-          {menu && (
-            <div onMouseLeave={() => setMenu(false)} style={{ position: 'absolute', top: 'calc(100% - 4px)', right: 14, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 8, boxShadow: 'var(--shadow-lg)', zIndex: 20, padding: 4, minWidth: 200 }}>
-              <button onClick={(e) => { e.stopPropagation(); setMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
-                <I.Send size={13}/> Send påmindelse til revisor
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
-                <I.Mail size={13}/> Skift revisor
-              </button>
-            </div>
-          )}
+          <button onClick={(e) => { e.stopPropagation(); onTakeBack(x); }} className="btn btn-sm">Tag tilbage</button>
         </div>
       )}
       {x.st === 'done' && (
@@ -435,10 +446,6 @@ function PortalHubRow({ x, isFirst, onOpen, onReopen, onWaitAccountant }) {
               <button onClick={(e) => { e.stopPropagation(); setMenu(false); onReopen(x); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
                 <I.Refresh size={13}/> {x.kind === 'upload' ? 'Upload igen' : x.kind === 'pep' ? 'Underskriv igen' : x.kind === 'trade' ? 'Rediger svar' : 'Genåbn'}
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setMenu(false); onWaitAccountant(x); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
-                <I.User size={13}/> Send til revisor
               </button>
               <button onClick={(e) => { e.stopPropagation(); setMenu(false); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
@@ -457,17 +464,36 @@ function PortalHubRow({ x, isFirst, onOpen, onReopen, onWaitAccountant }) {
   );
 }
 
-function PortalUpload({ item, onBack, onDone }) {
+function PortalUpload({ item, onBack, onDone, onSkip }) {
   const [drag, setDrag] = React.useState(false);
   const [files, setFiles] = React.useState([]);
+  const [completing, setCompleting] = React.useState(false);
+  const doneRef = React.useRef(false);
+
+  const fakeFiles = {
+    loans: [
+      { name: "Laaneaftale_Nordea_2022.pdf", size: "412 KB", type: "Låneaftale" },
+      { name: "Laaneaftale_Jyske_2024.pdf",  size: "287 KB", type: "Låneaftale" },
+    ],
+    security: [
+      { name: "Pantebrev_maskiner.pdf",        size: "156 KB", type: "Pantebrev" },
+      { name: "Selskabskaution_AH.pdf",         size: "98 KB",  type: "Kautionserklæring" },
+    ],
+  };
 
   const handleDrop = () => {
     setDrag(false);
-    // simulate file added
-    const newFile = item.id === 'loans'
-      ? { name: "Laaneaftale_Nordea_2022.pdf", size: "412 KB", type: "Låneaftale" }
-      : { name: "Pantebrev_maskiner.pdf", size: "156 KB", type: "Pantebrev" };
-    setFiles(prev => [...prev, newFile]);
+    setFiles(prev => {
+      const pool = fakeFiles[item.id] || [{ name: item.l.replace(/\s+/g, '_') + ".pdf", size: "210 KB", type: "Dokument" }];
+      const next = [...prev, pool[prev.length % pool.length]];
+      const min = item.min || 1;
+      if (next.length >= min && !doneRef.current) {
+        doneRef.current = true;
+        setCompleting(true);
+        setTimeout(() => onDone(next.length + " dokumenter uploadet"), 900);
+      }
+      return next;
+    });
   };
 
   return (
@@ -480,92 +506,269 @@ function PortalUpload({ item, onBack, onDone }) {
         {item.id === 'loans' ? "Træk PDF'er ind med jeres nuværende låneaftaler. Vi har brug for at se renter, hovedstol, afdragsprofil og evt. covenants." : "Pantebreve, kautionserklæringer og andre dokumenter som beskriver sikkerhederne i sagen."}
       </p>
 
-      <div
-        onDragOver={e => { e.preventDefault(); setDrag(true); }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={e => { e.preventDefault(); handleDrop(); }}
-        onClick={handleDrop}
-        style={{
-          border: '2px dashed ' + (drag ? 'var(--c-primary)' : 'var(--c-line-strong)'),
-          background: drag ? 'rgba(29,6,216,0.06)' : '#fff',
-          borderRadius: 14, padding: '42px 24px',
-          textAlign: 'center', cursor: 'pointer',
-          transition: 'all 150ms',
-        }}>
-        <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--c-surface-2)', margin: '0 auto 14px', display: 'grid', placeItems: 'center', color: 'var(--c-text-2)' }}>
-          <I.Upload size={22}/>
+      {completing ? (
+        <div style={{ textAlign: 'center', padding: '36px 0' }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--c-success-bg)', color: 'var(--c-success)', display: 'grid', placeItems: 'center', margin: '0 auto 14px' }}>
+            <I.Check size={24}/>
+          </div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)' }}>Uploadet!</div>
+          <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>Går tilbage til oversigten...</div>
         </div>
-        <div style={{ fontSize: 15.5, fontWeight: 500, color: 'var(--c-ink)' }}>Træk filer hertil - eller klik for at vælge</div>
-        <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 6 }}>PDF, Excel, Word, billeder · max 50 MB pr. fil</div>
-      </div>
-
-      {files.length > 0 && (
-        <div style={{ marginTop: 18, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden' }}>
-          {files.map((f, i) => (
-            <div key={i} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div className="doc-ic" style={{ width: 30, height: 36 }}/>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 500 }}>{f.name}</div>
-                <div className="muted" style={{ fontSize: 11.5 }}>{f.type} · {f.size}</div>
-              </div>
-              <span style={{ color: 'var(--c-success)', fontSize: 11.5, display: 'inline-flex', gap: 5, alignItems: 'center' }}><I.Check size={12}/> Uploadet</span>
-              <button className="btn btn-sm btn-ghost"><I.X className="ic"/></button>
+      ) : (
+        <>
+          <div
+            onDragOver={e => { e.preventDefault(); setDrag(true); }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={e => { e.preventDefault(); handleDrop(); }}
+            onClick={handleDrop}
+            style={{
+              border: '2px dashed ' + (drag ? 'var(--c-primary)' : 'var(--c-line-strong)'),
+              background: drag ? 'rgba(29,6,216,0.06)' : '#fff',
+              borderRadius: 14, padding: '42px 24px',
+              textAlign: 'center', cursor: 'pointer',
+              transition: 'all 150ms',
+            }}>
+            <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--c-surface-2)', margin: '0 auto 14px', display: 'grid', placeItems: 'center', color: 'var(--c-text-2)' }}>
+              <I.Upload size={22}/>
             </div>
-          ))}
-        </div>
-      )}
+            <div style={{ fontSize: 15.5, fontWeight: 500, color: 'var(--c-ink)' }}>Træk filer hertil - eller klik for at vælge</div>
+            <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 6 }}>PDF, Excel, Word, billeder · max 50 MB pr. fil</div>
+          </div>
 
-      <div style={{ marginTop: 22, display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
-        <button className="btn btn-ghost"><I.X className="ic"/> Ikke relevant - spring over</button>
-        <button onClick={() => onDone(files.length + " dokumenter uploadet i dag")} disabled={files.length < (item.min || 1)}
-          className="btn btn-primary"
-          style={files.length < (item.min || 1) ? { opacity: 0.5, cursor: 'not-allowed' } : { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
-          Færdig <I.Check className="ic"/>
-        </button>
-      </div>
+          {files.length > 0 && (
+            <div style={{ marginTop: 18, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden' }}>
+              {files.map((f, i) => (
+                <div key={i} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="doc-ic" style={{ width: 30, height: 36 }}/>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500 }}>{f.name}</div>
+                    <div className="muted" style={{ fontSize: 11.5 }}>{f.type} · {f.size}</div>
+                  </div>
+                  <span style={{ color: 'var(--c-success)', fontSize: 11.5, display: 'inline-flex', gap: 5, alignItems: 'center' }}><I.Check size={12}/> Uploadet</span>
+                </div>
+              ))}
+              {item.min > 1 && files.length < item.min && (
+                <div style={{ padding: '10px 16px', borderTop: '1px solid var(--c-line-2)', fontSize: 12, color: 'var(--c-text-3)' }}>
+                  Tilføj {item.min - files.length} fil mere for at fortsætte
+                </div>
+              )}
+            </div>
+          )}
+
+          <div style={{ marginTop: 22, display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+            <button className="btn btn-ghost" onClick={onSkip}><I.X className="ic"/> Ikke relevant - spring over</button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
 function PortalConnect({ item, onBack, onDone }) {
-  const [connecting, setConnecting] = React.useState(false);
+  const [connectingId, setConnectingId] = React.useState(null);
+  const [connectedId, setConnectedId] = React.useState(null);
+  const [showOauth, setShowOauth] = React.useState(null); // source being oauth'd
+  const [oauthStep, setOauthStep] = React.useState(0); // 0=creds, 1=loading, 2=done
+  const [uploadedFile, setUploadedFile] = React.useState(null);
+  const [drag, setDrag] = React.useState(false);
+
   const sources = [
-    { id: "ec", name: "e-conomic", desc: "Bogføring, regnskab, kontoplan", connected: true, primary: true },
-    { id: "dn", name: "Danske Bank · Business Online", desc: "Kontoudtog, transaktioner", connected: false },
-    { id: "vi", name: "Visma Business", desc: "ERP / økonomi", connected: false },
-    { id: "manual", name: "Upload manuelt", desc: "Hvis I ikke bruger ovenstående", connected: false },
+    { id: "ec", name: "e-conomic", desc: "Bogføring, regnskab, kontoplan" },
+    { id: "bi", name: "Billy", desc: "Bogføring og fakturering" },
+    { id: "di", name: "Dinero", desc: "Regnskab og fakturering" },
+    { id: "md", name: "Microsoft Dynamics", desc: "ERP / økonomi" },
+    { id: "xe", name: "Xena", desc: "Bogføring og økonomi" },
   ];
+
+  const startConnect = (s) => {
+    setShowOauth(s);
+    setOauthStep(0);
+  };
+
+  const doConnect = () => {
+    const srcName = showOauth.name;
+    setOauthStep(1);
+    setTimeout(() => {
+      setOauthStep(2);
+      setTimeout(() => {
+        onDone("Periodetal hentet automatisk fra " + srcName);
+      }, 1100);
+    }, 1400);
+  };
+
+  const handleDrop = () => {
+    setDrag(false);
+    const f = { name: "Råbalance_Q1_2026.xlsx", size: "84 KB" };
+    setUploadedFile(f);
+    setTimeout(() => onDone("Råbalance uploadet manuelt · " + f.name), 800);
+  };
+
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 14 }}><I.ArrowLeft className="ic"/> Tilbage</button>
       <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>FORBIND DATA</div>
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '6px 0 6px' }}>{item.l}</h1>
       <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 18 }}>
-        Vi henter periodetal direkte fra jeres bogføringssystem. Det kræver kun et engangs-samtykke - I kan trække det tilbage når som helst.
+        Forbind jeres bogføringssystem direkte, eller upload en råbalance manuelt.
       </p>
 
+      {/* ERP list */}
       <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden' }}>
         {sources.map((s, i) => (
-          <div key={s.id} style={{ padding: '16px 18px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 11, color: 'var(--c-text-2)' }}>{s.name.slice(0,2).toUpperCase()}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 500 }}>{s.name} {s.primary && <span className="tag" style={{ fontSize: 10, marginLeft: 6, background: 'var(--c-primary)', color: '#fff', border: 'none' }}>Anbefalet</span>}</div>
-              <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 2 }}>{s.desc}</div>
+          <div key={s.id} style={{ padding: '14px 18px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: connectedId === s.id ? 'var(--c-success-bg)' : 'var(--c-surface-2)', border: '1px solid ' + (connectedId === s.id ? 'var(--c-success)' : 'var(--c-line)'), display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 11, color: connectedId === s.id ? 'var(--c-success)' : 'var(--c-text-2)', flexShrink: 0 }}>
+              {connectedId === s.id ? <I.Check size={16}/> : s.name.slice(0, 2).toUpperCase()}
             </div>
-            {s.connected
-              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--c-success)', fontSize: 12 }}><I.Check size={13}/> Tilsluttet</span>
-              : <button className="btn btn-sm">Forbind</button>}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 500 }}>
+                {s.name}
+                {s.primary && <span className="tag" style={{ fontSize: 10, marginLeft: 6, background: 'var(--c-primary)', color: '#fff', border: 'none' }}>Anbefalet</span>}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 1 }}>{s.desc}</div>
+            </div>
+            {connectedId === s.id
+              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--c-success)', fontSize: 12.5, fontWeight: 500 }}><I.Check size={13}/> Forbundet</span>
+              : connectedId
+              ? null
+              : <button className="btn btn-sm" onClick={() => startConnect(s)}>Forbind</button>}
           </div>
         ))}
       </div>
 
-      <div style={{ marginTop: 20, padding: 14, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10, fontSize: 12, color: 'var(--c-text-2)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <I.Lock size={14} style={{ marginTop: 1, color: 'var(--c-text-3)' }}/>
-        <div>Kreditafdelingen ser kun de specifikke felter de har brug for til kreditvurderingen. Adgangen logges, og I kan til enhver tid se hvad der er hentet.</div>
+      {/* Divider */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+        <div style={{ flex: 1, height: 1, background: 'var(--c-line-2)' }}/>
+        <span style={{ fontSize: 12, color: 'var(--c-text-3)', fontWeight: 500 }}>eller</span>
+        <div style={{ flex: 1, height: 1, background: 'var(--c-line-2)' }}/>
       </div>
 
-      <div style={{ marginTop: 22, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-        <button onClick={() => onDone("Q1 2026 hentet automatisk fra e-conomic")} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>Færdig <I.Check className="ic"/></button>
+      {/* Manual upload */}
+      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>Upload råbalance manuelt</div>
+      {uploadedFile ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10 }}>
+          <div className="doc-ic" style={{ width: 28, height: 34 }}/>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 500 }}>{uploadedFile.name}</div>
+            <div className="muted" style={{ fontSize: 11.5 }}>{uploadedFile.size}</div>
+          </div>
+          <span style={{ color: 'var(--c-success)', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}><I.Check size={12}/> Uploadet</span>
+          <button className="btn btn-sm btn-ghost" onClick={() => setUploadedFile(null)}><I.X className="ic"/></button>
+        </div>
+      ) : (
+        <div
+          onDragOver={e => { e.preventDefault(); setDrag(true); }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={e => { e.preventDefault(); handleDrop(); }}
+          onClick={handleDrop}
+          style={{ border: '2px dashed ' + (drag ? 'var(--c-primary)' : 'var(--c-line-strong)'), background: drag ? 'rgba(59,130,246,0.04)' : '#fff', borderRadius: 10, padding: '22px 18px', textAlign: 'center', cursor: 'pointer', transition: 'all 150ms' }}>
+          <I.Upload size={18} style={{ color: 'var(--c-text-3)', marginBottom: 6 }}/>
+          <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>Træk råbalance hertil - eller klik</div>
+          <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 4 }}>Excel eller CSV · eksportér fra jeres bogføringssystem</div>
+        </div>
+      )}
+
+      <div style={{ marginTop: 16, padding: 12, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10, fontSize: 12, color: 'var(--c-text-2)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+        <I.Lock size={13} style={{ marginTop: 1, color: 'var(--c-text-3)', flexShrink: 0 }}/>
+        <div>Kreditafdelingen ser kun de felter de har brug for. Adgangen logges og kan til enhver tid trækkes tilbage.</div>
+      </div>
+
+      {/* OAuth modal */}
+      {showOauth && (
+        <div className="scrim" onClick={() => oauthStep === 0 && setShowOauth(null)}>
+          <div className="modal" style={{ width: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <div className="modal-title">Forbind {showOauth.name}</div>
+              {oauthStep === 0 && <button className="icon-btn" onClick={() => setShowOauth(null)}><I.X size={16}/></button>}
+            </div>
+            <div className="modal-body">
+              {oauthStep === 0 && (
+                <OauthForm onConnect={doConnect} onCancel={() => setShowOauth(null)} srcName={showOauth.name}/>
+              )}
+              {oauthStep === 1 && (
+                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid var(--c-line-2)', borderTopColor: 'var(--c-primary)', margin: '0 auto 14px', animation: 'spin 0.8s linear infinite' }}/>
+                  <div style={{ fontSize: 14, color: 'var(--c-text-2)' }}>Forbinder til {showOauth.name}...</div>
+                  <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                </div>
+              )}
+              {oauthStep === 2 && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--c-success-bg)', color: 'var(--c-success)', display: 'grid', placeItems: 'center', margin: '0 auto 12px' }}>
+                    <I.Check size={22}/>
+                  </div>
+                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--c-ink)' }}>Forbundet!</div>
+                  <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>Periodetal hentes nu automatisk.</div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OauthForm({ onConnect, onCancel, srcName }) {
+  const [consentType, setConsentType] = React.useState("unlimited");
+  const defaultDate = (() => {
+    const d = new Date(); d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  const [expiryDate, setExpiryDate] = React.useState(defaultDate);
+
+  return (
+    <div className="vstack" style={{ gap: 14 }}>
+      <div style={{ padding: '11px 14px', background: 'var(--c-surface-2)', borderRadius: 8, fontSize: 12.5, color: 'var(--c-text-2)', display: 'flex', gap: 10, alignItems: 'center' }}>
+        <I.Lock size={13} style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
+        <div>Vi beder kun om <b>læseadgang</b> til kontoplan og periodetal - aldrig skriveadgang.</div>
+      </div>
+
+      <div className="field">
+        <label>Brugernavn / Email</label>
+        <input className="input" defaultValue="anders@nordhavn-composite.dk"/>
+      </div>
+      <div className="field">
+        <label>Adgangskode</label>
+        <input className="input" type="password" defaultValue="••••••••"/>
+      </div>
+
+      <div>
+        <div className="label-mini" style={{ marginBottom: 8 }}>Samtykkets varighed</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { v: "unlimited", l: "Ubegrænset", desc: "Kreditafdelingen kan hente data løbende - kan trækkes tilbage til enhver tid" },
+            { v: "expiry",    l: "Engangsadgang t.o.m. en dato", desc: null },
+          ].map(o => (
+            <label key={o.v} onClick={() => setConsentType(o.v)}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 13px', border: '1px solid ' + (consentType === o.v ? 'var(--c-primary)' : 'var(--c-line)'), borderRadius: 8, cursor: 'pointer', background: consentType === o.v ? 'rgba(59,130,246,0.04)' : '#fff' }}>
+              <span style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid ' + (consentType === o.v ? 'var(--c-primary)' : 'var(--c-line-strong)'), display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
+                {consentType === o.v && <span style={{ width: 8, height: 8, background: 'var(--c-primary)', borderRadius: '50%' }}/>}
+              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {o.l}
+                  {o.v === 'unlimited' && <span className="tag" style={{ fontSize: 10, background: 'var(--c-primary)', color: '#fff', border: 'none' }}>Anbefalet</span>}
+                </div>
+                {o.v === 'expiry' && consentType === 'expiry' ? (
+                  <div style={{ marginTop: 8 }}>
+                    <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)}
+                      onClick={e => e.stopPropagation()}
+                      className="input mono" style={{ width: 160, fontSize: 13 }}/>
+                  </div>
+                ) : o.desc ? (
+                  <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 2 }}>{o.desc}</div>
+                ) : null}
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="modal-foot" style={{ margin: '4px -22px -22px', padding: '12px 22px', borderTop: '1px solid var(--c-line)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <button className="btn btn-ghost" onClick={onCancel}>Annullér</button>
+        <button className="btn btn-primary" onClick={onConnect} style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
+          Log ind og forbind <I.ArrowRight className="ic"/>
+        </button>
       </div>
     </div>
   );
@@ -634,32 +837,68 @@ function PortalPep({ item, onBack, onDone }) {
   );
 }
 
-function PortalTrade({ item, onBack, onDone }) {
-  const initialCountries = [
-    { c: "DE", n: "Tyskland", v: 28 },
-    { c: "US", n: "USA", v: 24 },
-    { c: "DK", n: "Danmark", v: 22 },
-    { c: "NL", n: "Holland", v: 18 },
-    { c: "UK", n: "Storbritannien", v: 5 },
-    { c: "ES", n: "Spanien", v: 3 },
-    { c: "SE", n: "Sverige", v: 0 },
-    { c: "NO", n: "Norge", v: 0 },
-    { c: "FR", n: "Frankrig", v: 0 },
-    { c: "PL", n: "Polen", v: 0 },
-    { c: "OTHER", n: "Øvrige", v: 0, isOther: true },
-  ];
-  const [countries, setCountries] = React.useState(initialCountries);
-  const [selected, setSelected] = React.useState(["DE", "US", "DK", "NL", "UK", "ES"]);
+const ALL_COUNTRIES = [
+  { c: "DK", n: "Danmark" }, { c: "SE", n: "Sverige" }, { c: "NO", n: "Norge" },
+  { c: "FI", n: "Finland" }, { c: "DE", n: "Tyskland" }, { c: "NL", n: "Holland" },
+  { c: "FR", n: "Frankrig" }, { c: "GB", n: "Storbritannien" }, { c: "US", n: "USA" },
+  { c: "ES", n: "Spanien" }, { c: "IT", n: "Italien" }, { c: "PL", n: "Polen" },
+  { c: "BE", n: "Belgien" }, { c: "AT", n: "Østrig" }, { c: "CH", n: "Schweiz" },
+  { c: "PT", n: "Portugal" }, { c: "CZ", n: "Tjekkiet" }, { c: "HU", n: "Ungarn" },
+  { c: "RO", n: "Rumænien" }, { c: "IE", n: "Irland" }, { c: "CA", n: "Canada" },
+  { c: "AU", n: "Australien" }, { c: "JP", n: "Japan" }, { c: "CN", n: "Kina" },
+  { c: "IN", n: "Indien" }, { c: "BR", n: "Brasilien" }, { c: "MX", n: "Mexico" },
+  { c: "ZA", n: "Sydafrika" }, { c: "AE", n: "UAE" }, { c: "SG", n: "Singapore" },
+  { c: "KR", n: "Sydkorea" }, { c: "TR", n: "Tyrkiet" }, { c: "SA", n: "Saudi-Arabien" },
+  { c: "NZ", n: "New Zealand" }, { c: "GR", n: "Grækenland" }, { c: "SK", n: "Slovakiet" },
+  { c: "HR", n: "Kroatien" }, { c: "RS", n: "Serbien" }, { c: "UA", n: "Ukraine" },
+  { c: "EE", n: "Estland" }, { c: "LV", n: "Letland" }, { c: "LT", n: "Litauen" },
+];
 
-  const toggle = (c) => setSelected(s => s.includes(c) ? s.filter(x => x !== c) : [...s, c]);
-  const updateVal = (c, v) => {
-    const num = parseFloat(v.replace(',', '.').replace('%', '')) || 0;
-    setCountries(prev => prev.map(x => x.c === c ? { ...x, v: num } : x));
+function PortalTrade({ item, onBack, onDone }) {
+  const [selected, setSelected] = React.useState([{ c: "DK", n: "Danmark", v: "100" }]); // [{ c, n, v: "" }]
+  const [q, setQ] = React.useState("");
+  const [dropOpen, setDropOpen] = React.useState(false);
+  const [hover, setHover] = React.useState(0);
+  const wrapRef = React.useRef(null);
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setDropOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+
+  const selectedCodes = selected.map(x => x.c);
+  const filtered = ALL_COUNTRIES.filter(c =>
+    !selectedCodes.includes(c.c) &&
+    (c.n.toLowerCase().includes(q.toLowerCase()) || c.c.toLowerCase().includes(q.toLowerCase()))
+  ).slice(0, 8);
+
+  const addCountry = (country) => {
+    setSelected(prev => [...prev, { ...country, v: "" }]);
+    setQ("");
+    setDropOpen(false);
+    setHover(0);
+    inputRef.current && inputRef.current.focus();
   };
 
-  const sum = countries.filter(c => selected.includes(c.c)).reduce((s, x) => s + (x.v || 0), 0);
-  const sumOk = Math.abs(sum - 100) < 0.5;
+  const removeCountry = (code) => setSelected(prev => prev.filter(x => x.c !== code));
+
+  const updateVal = (code, v) => {
+    setSelected(prev => prev.map(x => x.c === code ? { ...x, v: v.replace(/[^0-9.,]/g, '') } : x));
+  };
+
+  const sum = selected.reduce((s, x) => s + (parseFloat(x.v.replace(',', '.')) || 0), 0);
+  const sumOk = selected.length > 0 && Math.abs(sum - 100) < 0.5;
   const sumWarn = sum > 0 && !sumOk;
+
+  const onKey = (e) => {
+    if (!dropOpen || filtered.length === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setHover(h => Math.min(h + 1, filtered.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setHover(h => Math.max(h - 1, 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (filtered[hover]) addCountry(filtered[hover]); }
+    else if (e.key === 'Escape') { setDropOpen(false); }
+  };
 
   return (
     <div style={{ maxWidth: 620, margin: '0 auto' }}>
@@ -667,59 +906,91 @@ function PortalTrade({ item, onBack, onDone }) {
       <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>SPØRGESKEMA</div>
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '6px 0 6px' }}>{item.l}</h1>
       <p style={{ fontSize: 14, color: 'var(--c-text-2)', marginBottom: 18 }}>
-        Hvilke lande sælger I til i dag? Marker dem og angiv en omtrentlig andel af omsætningen. Summen skal være <b>100%</b>.
+        Hvilke lande sælger I til i dag? Tilføj lande og angiv en omtrentlig andel af omsætningen. Summen skal være <b>100%</b>.
       </p>
 
-      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 4 }}>
-        {countries.map((c, i) => (
-          <label key={c.c} onClick={() => toggle(c.c)}
-            style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', cursor: 'pointer', borderRadius: 6, background: selected.includes(c.c) ? 'var(--c-surface-2)' : 'transparent', borderTop: i > 0 && c.isOther ? '1px solid var(--c-line-2)' : 'none', marginTop: c.isOther ? 4 : 0 }}>
-            <input type="checkbox" checked={selected.includes(c.c)} readOnly style={{ width: 16, height: 16 }}/>
-            <div style={{ width: 28, height: 20, background: c.isOther ? 'var(--c-ink)' : 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 3, display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 600, color: c.isOther ? '#fff' : 'var(--c-text-2)' }}>
-              {c.isOther ? "+" : c.c}
-            </div>
-            <div style={{ flex: 1, fontSize: 13.5, color: c.isOther ? 'var(--c-text-2)' : 'var(--c-ink)', fontStyle: c.isOther ? 'italic' : 'normal' }}>
-              {c.n}
-              {c.isOther && <span className="muted" style={{ fontSize: 11, marginLeft: 6, fontStyle: 'normal' }}>Hvis I sælger til lande ikke listet ovenfor</span>}
-            </div>
-            {selected.includes(c.c) && (
+      {/* Country search dropdown */}
+      <div ref={wrapRef} style={{ position: 'relative', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', height: 40, border: '1px solid ' + (dropOpen ? 'var(--c-primary)' : 'var(--c-line)'), borderRadius: 8, background: '#fff', cursor: 'text' }}
+          onClick={() => { inputRef.current && inputRef.current.focus(); setDropOpen(true); }}>
+          <I.Search size={13} style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
+          <input
+            ref={inputRef}
+            value={q}
+            onChange={e => { setQ(e.target.value); setDropOpen(true); setHover(0); }}
+            onFocus={() => setDropOpen(true)}
+            onKeyDown={onKey}
+            placeholder="Tilføj et land..."
+            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13.5, background: 'transparent', color: 'var(--c-ink)' }}
+          />
+        </div>
+        {dropOpen && filtered.length > 0 && (
+          <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 8, boxShadow: 'var(--shadow-lg)', zIndex: 100, overflow: 'hidden' }}>
+            {filtered.map((c, i) => (
+              <button key={c.c}
+                onMouseEnter={() => setHover(i)}
+                onMouseDown={(e) => { e.preventDefault(); addCountry(c); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', border: 'none', borderBottom: i < filtered.length - 1 ? '1px solid var(--c-line-2)' : 'none', background: hover === i ? 'var(--c-surface-2)' : '#fff', cursor: 'pointer', textAlign: 'left' }}>
+                <div style={{ width: 26, height: 18, background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 3, display: 'grid', placeItems: 'center', fontSize: 9.5, fontWeight: 600, color: 'var(--c-text-2)', flexShrink: 0 }}>{c.c}</div>
+                <span style={{ fontSize: 13.5, color: 'var(--c-ink)' }}>{c.n}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {dropOpen && filtered.length === 0 && q.trim() !== "" && (
+          <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 8, boxShadow: 'var(--shadow-lg)', zIndex: 100, padding: '12px 14px', fontSize: 13, color: 'var(--c-text-3)' }}>
+            Ingen lande matcher "{q}"
+          </div>
+        )}
+      </div>
+
+      {/* Selected countries list */}
+      {selected.length > 0 && (
+        <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
+          {selected.map((x, i) => (
+            <div key={x.c} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none' }}>
+              <div style={{ width: 28, height: 20, background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 3, display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 600, color: 'var(--c-text-2)', flexShrink: 0 }}>{x.c}</div>
+              <div style={{ flex: 1, fontSize: 13.5, color: 'var(--c-ink)', fontWeight: 500 }}>{x.n}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <input
                   type="text"
-                  value={c.v || ''}
-                  onChange={e => updateVal(c.c, e.target.value)}
-                  onClick={e => e.stopPropagation()}
+                  value={x.v}
+                  onChange={e => updateVal(x.c, e.target.value)}
                   placeholder="0"
                   className="mono"
-                  style={{ width: 56, padding: '4px 8px', border: '1px solid var(--c-line)', borderRadius: 5, fontSize: 12.5, textAlign: 'right' }}/>
-                <span className="mono" style={{ fontSize: 12, color: 'var(--c-text-3)' }}>%</span>
+                  style={{ width: 60, padding: '5px 8px', border: '1px solid var(--c-line)', borderRadius: 5, fontSize: 13, textAlign: 'right' }}
+                />
+                <span className="mono" style={{ fontSize: 12, color: 'var(--c-text-3)', width: 14 }}>%</span>
               </div>
-            )}
-          </label>
-        ))}
+              <button onClick={() => removeCountry(x.c)} style={{ width: 24, height: 24, borderRadius: 5, border: 'none', background: 'transparent', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--c-text-3)' }}>
+                <I.X size={13}/>
+              </button>
+            </div>
+          ))}
 
-        {/* Sum row */}
-        <div style={{
-          marginTop: 6, padding: '12px 14px',
-          borderTop: '1px solid var(--c-line)',
-          background: sumOk ? 'var(--c-success-bg)' : sumWarn ? 'var(--c-warn-bg)' : 'var(--c-surface-2)',
-          borderRadius: '0 0 8px 8px',
-          display: 'flex', alignItems: 'center', gap: 12,
-        }}>
-          {sumOk ? <I.Check size={16} style={{ color: 'var(--c-success)' }}/>
-            : sumWarn ? <I.AlertCircle size={16} style={{ color: 'var(--c-warn)' }}/>
-            : <I.Circle size={16} style={{ color: 'var(--c-text-3)' }}/>}
-          <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: sumOk ? 'var(--c-success)' : sumWarn ? 'var(--c-warn)' : 'var(--c-text-2)' }}>
-            {sumOk ? "Summen passer · 100%" : sumWarn ? (sum < 100 ? `Mangler ${(100 - sum).toFixed(1)} procentpoint` : `${(sum - 100).toFixed(1)} procentpoint for meget`) : "Vælg lande og angiv andele"}
-          </div>
-          <div className="mono num" style={{ fontSize: 16, fontWeight: 600, color: sumOk ? 'var(--c-success)' : sumWarn ? 'var(--c-warn)' : 'var(--c-text-3)' }}>
-            {sum.toFixed(1)}%
+          {/* Sum row */}
+          <div style={{ padding: '11px 14px', borderTop: '1px solid var(--c-line)', background: sumOk ? 'var(--c-success-bg)' : sumWarn ? 'var(--c-warn-bg)' : 'var(--c-surface-2)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            {sumOk ? <I.Check size={15} style={{ color: 'var(--c-success)' }}/>
+              : sumWarn ? <I.AlertCircle size={15} style={{ color: 'var(--c-warn)' }}/>
+              : <I.Circle size={15} style={{ color: 'var(--c-text-3)' }}/>}
+            <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: sumOk ? 'var(--c-success)' : sumWarn ? 'var(--c-warn)' : 'var(--c-text-2)' }}>
+              {sumOk ? "Summen passer · 100%" : sumWarn ? (sum < 100 ? `Mangler ${(100 - sum).toFixed(1)} procentpoint` : `${(sum - 100).toFixed(1)} procentpoint for meget`) : "Angiv andele for hvert land"}
+            </div>
+            <div className="mono num" style={{ fontSize: 15, fontWeight: 600, color: sumOk ? 'var(--c-success)' : sumWarn ? 'var(--c-warn)' : 'var(--c-text-3)', marginRight: 38 }}>
+              {sum.toFixed(1)}%
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div style={{ marginTop: 22, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-        <button onClick={() => onDone(selected.length + " lande angivet" + (sumOk ? "" : " · sum " + sum.toFixed(0) + "%"))}
+      {selected.length === 0 && (
+        <div style={{ padding: '28px 0', textAlign: 'center', color: 'var(--c-text-3)', fontSize: 13 }}>
+          Søg og tilføj lande ovenfor
+        </div>
+      )}
+
+      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+        <button onClick={() => onDone(selected.length + " lande angivet")}
           disabled={!sumOk}
           className="btn btn-primary"
           style={sumOk ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
@@ -816,7 +1087,7 @@ function PortalFollowup({ onBack, onSubmit }) {
   );
 }
 
-function PortalDone({ onBack }) {
+function PortalDone({ onBack, onStatus }) {
   return (
     <div style={{ maxWidth: 560, margin: '60px auto 0', textAlign: 'center' }}>
       <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', margin: '0 auto 18px', display: 'grid', placeItems: 'center' }}>
@@ -827,49 +1098,63 @@ function PortalDone({ onBack }) {
         Materialet er indsendt til kreditafdelingen. Mette får besked nu og vender tilbage senest <b style={{ color: 'var(--c-ink)' }}>29. maj</b>.
       </p>
 
-      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 20, textAlign: 'left', marginBottom: 18 }}>
-        <div className="label-mini" style={{ marginBottom: 10 }}>Sammenfatning</div>
-        {[
-          { l: "Dokumenter uploadet", v: "7" },
-          { l: "Data hentet automatisk", v: "e-conomic + CVR" },
-          { l: "PEP-erklæring signeret", v: "MitID · 24. maj" },
-          { l: "Spørgsmål besvaret", v: "1 / 1" },
-        ].map((x, i) => (
-          <div key={i} style={{ display: 'flex', padding: '8px 0', borderBottom: i < 3 ? '1px solid var(--c-line-2)' : 'none', fontSize: 13 }}>
-            <div style={{ flex: 1, color: 'var(--c-text-2)' }}>{x.l}</div>
-            <div style={{ fontWeight: 500 }}>{x.v}</div>
-          </div>
-        ))}
+<div style={{ fontSize: 12.5, color: 'var(--c-text-3)' }}>I modtager en kvittering på <b style={{ color: 'var(--c-ink)' }}>an@nordhavn-composite.dk</b></div>
+      <div style={{ marginTop: 18, display: 'flex', justifyContent: 'center', gap: 8 }}>
+        <button onClick={onBack} className="btn btn-ghost">Se oversigt igen</button>
+        <button onClick={onStatus} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
+          Se status på ansøgningen <I.ArrowRight className="ic"/>
+        </button>
       </div>
-
-      <div style={{ fontSize: 12.5, color: 'var(--c-text-3)' }}>I modtager en kvittering på <b style={{ color: 'var(--c-ink)' }}>an@nordhavn-composite.dk</b></div>
-      <button onClick={onBack} className="btn btn-ghost" style={{ marginTop: 18 }}>Se oversigt igen</button>
     </div>
   );
 }
 
-function DelegateAccountantModal({ item, onClose, onSend }) {
+function DelegateBundleModal({ items, preselect, onClose, onSend }) {
+  const eligible = items.filter(x => x.st === 'open' || x.st === 'accountant');
+  const [selected, setSelected] = React.useState(
+    preselect ? [preselect] : eligible.filter(x => x.st === 'open').map(x => x.id)
+  );
   const [email, setEmail] = React.useState("jan@revisor-nordkysten.dk");
   const [name, setName] = React.useState("Jan Holmgaard");
-  const [msg, setMsg] = React.useState("Hej Jan,\n\nKan du sende denne dokumentation direkte til kreditafdelingen via det vedhæftede link? Det er en del af vores ansøgning om kreditfacilitet.\n\nMvh Anders");
+  const [msg, setMsg] = React.useState("Hej Jan,\n\nKan du sende nedenstående dokumentation direkte til kreditafdelingen via det vedhæftede link? Det er en del af vores ansøgning om kreditfacilitet.\n\nMvh Anders");
+
+  const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
+  const allChecked = eligible.length > 0 && eligible.every(x => selected.includes(x.id));
+  const toggleAll = () => setSelected(allChecked ? [] : eligible.map(x => x.id));
 
   return (
     <div className="scrim" onClick={onClose}>
-      <div className="modal" style={{ width: 540 }} onClick={e => e.stopPropagation()}>
+      <div className="modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
         <div className="modal-head">
           <div>
-            <div className="modal-title">Send til revisor</div>
-            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{item.l}</div>
+            <div className="modal-title">Anmod revisor om hjælp</div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Revisoren får ét samlet link til de valgte punkter</div>
           </div>
           <button className="icon-btn" onClick={onClose}><I.X size={16}/></button>
         </div>
         <div className="modal-body">
-          <div style={{ display: 'flex', gap: 12, padding: '12px 14px', background: 'var(--c-surface-2)', borderRadius: 8, marginBottom: 16, alignItems: 'center' }}>
-            <I.User size={14} style={{ color: 'var(--c-text-2)' }}/>
-            <div style={{ flex: 1, fontSize: 12.5 }}>
-              Jeres revisor får et begrænset link kun til <b>{item.l.toLowerCase()}</b> - ikke andre dele af jeres ansøgning.
-            </div>
+          <div className="label-mini" style={{ marginBottom: 6 }}>Vælg punkter revisoren skal hjælpe med</div>
+          <div style={{ border: '1px solid var(--c-line)', borderRadius: 8, overflow: 'hidden', marginBottom: 16 }}>
+            {eligible.length === 0 && (
+              <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--c-text-3)' }}>Ingen åbne punkter at delegere</div>
+            )}
+            {eligible.length > 1 && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', background: 'var(--c-surface-2)', borderBottom: '1px solid var(--c-line)' }}
+                onClick={toggleAll}>
+                <input type="checkbox" checked={allChecked} readOnly style={{ width: 15, height: 15 }}/>
+                <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-text-2)' }}>Vælg alle</span>
+              </label>
+            )}
+            {eligible.map((x, i) => (
+              <label key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: i > 0 || eligible.length > 1 ? '1px solid var(--c-line-2)' : 'none', cursor: 'pointer', background: selected.includes(x.id) ? 'rgba(59,130,246,0.04)' : '#fff' }}
+                onClick={() => toggle(x.id)}>
+                <input type="checkbox" checked={selected.includes(x.id)} readOnly style={{ width: 15, height: 15 }}/>
+                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>{x.l}</div>
+                {x.st === 'accountant' && <span className="tag" style={{ fontSize: 10, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>Afventer allerede</span>}
+              </label>
+            ))}
           </div>
+
           <div className="vstack" style={{ gap: 12 }}>
             <div className="grid g-2" style={{ gap: 10 }}>
               <div className="field">
@@ -883,17 +1168,25 @@ function DelegateAccountantModal({ item, onClose, onSend }) {
             </div>
             <div className="field">
               <label>Besked til revisor</label>
-              <textarea className="input" rows={5} value={msg} onChange={e => setMsg(e.target.value)} style={{ height: 'auto', padding: 10, resize: 'vertical' }}/>
+              <textarea className="input" rows={4} value={msg} onChange={e => setMsg(e.target.value)} style={{ height: 'auto', padding: 10, resize: 'vertical' }}/>
+            </div>
+            <div style={{ background: 'var(--c-surface-2)', padding: '10px 14px', borderRadius: 8 }}>
+              <div className="label-mini" style={{ marginBottom: 3 }}>Revisoren modtager ét samlet link</div>
+              <div className="mono" style={{ fontSize: 12.5, color: 'var(--c-text)' }}>crediwire.app/r/nh-rev-4Kp2</div>
+              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Giver kun adgang til de {selected.length} valgte punkter · udløber om 14 dage</div>
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <I.Lock size={11}/> Revisor får et sikkert link. Du kan trække anmodningen tilbage når som helst.
+              <I.Lock size={11}/> Revisoren ser kun de valgte punkter, ikke resten af ansøgningen.
             </div>
           </div>
         </div>
         <div className="modal-foot">
           <div style={{ flex: 1 }}/>
           <button className="btn btn-ghost" onClick={onClose}>Annullér</button>
-          <button className="btn btn-primary" onClick={() => onSend(email)}><I.Send className="ic"/> Send til revisor</button>
+          <button className="btn btn-primary" disabled={selected.length === 0} onClick={() => onSend(selected, email)}
+            style={selected.length === 0 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>
+            <I.Send className="ic"/> Send til revisor
+          </button>
         </div>
       </div>
     </div>
