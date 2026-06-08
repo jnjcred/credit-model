@@ -39,7 +39,7 @@ function Sidebar({ route, go, openNewCase }) {
           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-primary)'; e.currentTarget.style.color = 'var(--c-primary)'; e.currentTarget.style.background = 'rgba(59,130,246,0.04)'; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-line-strong)'; e.currentTarget.style.color = 'var(--c-text-3)'; e.currentTarget.style.background = 'transparent'; }}
         >
-          <I.User size={13}/> Kundeportal (demo)
+          <I.User size={13}/> Indhentningsflow
         </button>
       </div>
 
