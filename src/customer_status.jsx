@@ -106,9 +106,6 @@ function WSCustomerStatus() {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>{co.name}</div>
             <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 3, display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
-              <span>Eksportkaution + driftskredit</span>
-              <span className="mono" style={{ fontWeight: 600, color: 'var(--c-ink)' }}>DKK 4,5M</span>
-              <span style={{ color: 'var(--c-line-strong)' }}>·</span>
               <span>Sagsnr. 2026-0184</span>
               <span style={{ color: 'var(--c-line-strong)' }}>·</span>
               <span>Ansvarlig: Mette Larsen</span>
