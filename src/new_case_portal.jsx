@@ -192,7 +192,7 @@ function NewCaseModal({ close, go }) {
 
 // External customer-facing upload portal - multi-screen flow
 function CustomerPortal({ back }) {
-  const [screen, setScreen] = React.useState("welcome"); // welcome | hub | upload | connect | pep | trade | followup | done
+  const [screen, setScreen] = React.useState("welcome"); // welcome | terms | agreement | hub | upload | connect | trade | followup | done | status
   const [items, setItems] = React.useState([
     { id: "annual", l: "Seneste årsrapport", kind: "upload", st: "done", note: "Hentet automatisk fra CVR-registret · Årsrapport 2024", auto: true, min: 1 },
     { id: "interim", l: "Periodetal", kind: "connect", st: "open", note: "Forbind bogføringssystem eller upload råbalance", min: 0 },
@@ -291,8 +291,10 @@ function CustomerPortal({ back }) {
       </button>
 
       <div style={{ flex: 1, padding: '32px 24px' }}>
-        {screen === "welcome" && <PortalWelcome onStart={() => setScreen("hub")}/>}
-        {screen === "hub" && <PortalHub items={items} pct={pct} done={done} total={total} accountant={accountant} onOpen={openItem} onReopen={reopenItem} onTakeBack={takeBack} onOpenBundle={openBundle} onSubmit={() => setScreen("done")} onFollowup={() => setScreen("followup")} followupAnswered={followupAnswered}/>}
+        {screen === "welcome" && <PortalWelcome onStart={() => setScreen("terms")}/>}
+        {screen === "terms" && <PortalTerms onNext={() => setScreen("agreement")} onBack={() => setScreen("welcome")}/>}
+        {screen === "agreement" && <PortalAgreement onBack={() => setScreen("terms")} onNext={() => setScreen("hub")}/>}
+        {screen === "hub" && <PortalHub items={items} pct={pct} done={done} total={total} accountant={accountant} onOpen={openItem} onReopen={reopenItem} onTakeBack={takeBack} onOpenBundle={openBundle} onSubmit={() => setScreen("done")} onClose={back} onBack={() => setScreen("agreement")} onFollowup={() => setScreen("followup")} followupAnswered={followupAnswered}/>}
         {screen === "upload" && <PortalUpload item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)} onSkip={() => skipItem(activeItem.id)}/>}
         {screen === "connect" && <PortalConnect item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
         {screen === "trade" && <PortalTrade item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
@@ -311,13 +313,127 @@ function CustomerPortal({ back }) {
   );
 }
 
+function PortalTerms({ onNext, onBack }) {
+  const [accepted, setAccepted] = React.useState(false);
+  const [marketing, setMarketing] = React.useState(false);
+  return (
+    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 20 }}><I.ArrowLeft className="ic"/> Gå tilbage</button>
+      <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '0 0 10px' }}>Vilkår og betingelser</h1>
+      <p style={{ fontSize: 14.5, color: 'var(--c-text-2)', lineHeight: 1.65, marginBottom: 28 }}>
+        For at sikre nem og sikker deling har vi indgået et partnerskab med Crediwire ApS.
+      </p>
+
+      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: '20px 22px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }} onClick={() => setAccepted(v => !v)}>
+          <div style={{ width: 20, height: 20, borderRadius: 4, border: '1.5px solid ' + (accepted ? 'var(--c-primary)' : 'var(--c-line-strong)'), background: accepted ? 'var(--c-primary)' : '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
+            {accepted && <I.Check size={12} style={{ color: '#fff' }}/>}
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.6 }}>
+            Jeg accepterer Crediwire ApS's <span style={{ color: 'var(--c-primary)', textDecoration: 'underline' }}>Vilkår og betingelser</span> og <span style={{ color: 'var(--c-primary)', textDecoration: 'underline' }}>Databehandleraftale</span>. <span style={{ color: '#e53935' }}>*</span>
+          </div>
+        </label>
+        <div style={{ height: 1, background: 'var(--c-line-2)' }}/>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }} onClick={() => setMarketing(v => !v)}>
+          <div style={{ width: 20, height: 20, borderRadius: 4, border: '1.5px solid ' + (marketing ? 'var(--c-primary)' : 'var(--c-line-strong)'), background: marketing ? 'var(--c-primary)' : '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
+            {marketing && <I.Check size={12} style={{ color: '#fff' }}/>}
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.6 }}>
+            Ja, jeg vil gerne modtage markedsføringsmateriale fra Crediwire ApS om produktopdateringer, arrangementer og serviceopdateringer via e-mail
+          </div>
+        </label>
+      </div>
+
+      <p style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginBottom: 28, lineHeight: 1.6 }}>
+        Vi behandler dine personoplysninger i overensstemmelse med vores Privatlivspolitik.
+      </p>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <button onClick={onNext} disabled={!accepted} className="btn btn-primary"
+          style={accepted ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.4, cursor: 'not-allowed' }}>
+          Næste <I.ArrowRight className="ic"/>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PortalAgreement({ onBack, onNext }) {
+  const [showFaq, setShowFaq] = React.useState(false);
+  return (
+    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 20 }}><I.ArrowLeft className="ic"/> Gå tilbage</button>
+      <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '0 0 10px' }}>Din aftale med EIFO</h1>
+
+      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: '22px 24px', marginBottom: 24 }}>
+        <p style={{ fontSize: 14.5, color: 'var(--c-text-2)', lineHeight: 1.65, margin: '0 0 16px' }}>
+          Ved at tilslutte din virksomhed accepterer du at dele råbalancetal og debitordata med EIFO.
+        </p>
+        <p style={{ fontSize: 14.5, color: 'var(--c-text-2)', lineHeight: 1.65, margin: '0 0 20px' }}>
+          Disse data kan opbevares og bruges til at styrke kundedialogen, identificere finansielle behov og gennemføre løbende kreditvurderinger.
+        </p>
+        <span onClick={() => setShowFaq(true)} style={{ color: 'var(--c-primary)', fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+          <I.Help size={13}/> FAQ: Hvilke data deler du?
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button onClick={onBack} className="btn">Tilbage</button>
+        <button onClick={onNext} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
+          Næste <I.ArrowRight className="ic"/>
+        </button>
+      </div>
+
+      {showFaq && (
+        <div className="scrim" onClick={() => setShowFaq(false)}>
+          <div className="modal" style={{ width: 420 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(59,130,246,0.1)', color: 'var(--c-primary)', display: 'grid', placeItems: 'center' }}>
+                  <I.Help size={14}/>
+                </div>
+                <div className="modal-title">FAQ: Hvilke data deler du?</div>
+              </div>
+              <button className="icon-btn" onClick={() => setShowFaq(false)}><I.X size={16}/></button>
+            </div>
+            <div className="modal-body" style={{ paddingTop: 4 }}>
+              <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.65, margin: '0 0 20px' }}>
+                EIFO modtager generelt de samme data som tidligere er sendt på email, nu bare digitalt og på en nemmere og mere sikker måde.
+              </p>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>Vi modtager følgende:</div>
+                <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {["Råbalancetal", "Debitordata"].map(item => (
+                    <li key={item} style={{ fontSize: 13.5, color: 'var(--c-text-2)' }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <div style={{ marginBottom: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>Vi modtager IKKE:</div>
+                <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {["Posteringer", "Bilag"].map(item => (
+                    <li key={item} style={{ fontSize: 13.5, color: 'var(--c-text-2)' }}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <div className="modal-foot" style={{ justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowFaq(false)} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>Okay</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PortalWelcome({ onStart }) {
   return (
     <div style={{ maxWidth: 560, margin: '40px auto 0', textAlign: 'left' }}>
       <div style={{ display: 'inline-block', padding: '4px 10px', background: 'var(--c-surface-2)', borderRadius: 999, fontSize: 11, color: 'var(--c-text-2)', fontWeight: 500 }}>MAJ 2026</div>
-      <h1 style={{ fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '18px 0 10px', lineHeight: 1.15 }}>Hej Anders.<br/>Vi mangler lidt materiale for at gå videre.</h1>
+      <h1 style={{ fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '18px 0 10px', lineHeight: 1.15 }}>Kære Anders,</h1>
       <p style={{ fontSize: 15, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 24 }}>
-        Mette fra kreditafdelingen vurderer jeres ansøgning om <b style={{ color: 'var(--c-ink)' }}>eksportkaution + driftskredit på DKK 45M</b>. Vi har samlet alt det vi har brug for i ét sted, så I slipper for at lede i mails og dokumenter.
+        Tak for din ansøgning hos EIFO. For at vi kan behandle din ansøgning, har vi samlet alt det vi har brug for i ét sted, så I slipper for at lede i mails og dokumenter.
       </p>
 
       <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
@@ -326,7 +442,7 @@ function PortalWelcome({ onStart }) {
           { ic: <I.Clock size={14}/>, t: "Ca. 10 minutter samlet - det meste er upload" },
           { ic: <I.Refresh size={14}/>, t: "Vend tilbage senere - fremgang er gemt automatisk" },
           { ic: <I.Lock size={14}/>, t: "Krypteret forbindelse · ingen login krævet" },
-          { ic: <I.Spark size={14}/>, t: "Vi henter data fra e-conomic og CVR automatisk hvor vi kan" },
+          { ic: <I.Spark size={14}/>, t: "Vi henter data fra dit økonomisystem og CVR automatisk hvor vi kan" },
         ].map((x, i) => (
           <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 0', alignItems: 'center', fontSize: 13.5 }}>
             <div style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--c-surface-2)', display: 'grid', placeItems: 'center', color: 'var(--c-text-2)', flexShrink: 0 }}>{x.ic}</div>
@@ -345,12 +461,13 @@ function PortalWelcome({ onStart }) {
   );
 }
 
-function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onTakeBack, onOpenBundle, onSubmit, onFollowup, followupAnswered }) {
+function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onTakeBack, onOpenBundle, onSubmit, onClose, onBack, onFollowup, followupAnswered }) {
   const allDone = items.every(x => x.st === "done" || x.st === "skipped");
   const hasFollowup = items.some(x => x.hasFollowup);
   const canDelegate = items.some(x => x.st === "open");
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 16 }}><I.ArrowLeft className="ic"/> Gå tilbage</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em', flex: 1 }}>Materiale til kreditafdelingen</div>
         {canDelegate && (
@@ -397,9 +514,9 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onTa
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>{allDone ? "Klar til at indsende" : "Fortsæt senere"}</div>
           <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 2 }}>{allDone ? "Mette får besked automatisk når du indsender" : "Vi gemmer automatisk · du kan vende tilbage via det samme link"}</div>
         </div>
-        <button onClick={onSubmit} disabled={!allDone} className={"btn " + (allDone ? "btn-primary" : "")} style={allDone ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
-          {allDone ? "Indsend til kreditafdelingen" : "Gem og luk"} <I.ArrowRight className="ic"/>
-        </button>
+        {allDone && (
+          <button onClick={onSubmit} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>Indsend til kreditafdelingen <I.ArrowRight className="ic"/></button>
+        )}
       </div>
     </div>
   );
@@ -664,7 +781,7 @@ function PortalConnect({ item, onBack, onDone }) {
 
       <div style={{ marginTop: 16, padding: 12, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10, fontSize: 12, color: 'var(--c-text-2)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         <I.Lock size={13} style={{ marginTop: 1, color: 'var(--c-text-3)', flexShrink: 0 }}/>
-        <div>Kreditafdelingen ser kun de felter de har brug for. Adgangen logges og kan til enhver tid trækkes tilbage.</div>
+        <div>Kreditafdelingen ser kun de felter de har brug for.</div>
       </div>
 
       {/* OAuth modal */}
