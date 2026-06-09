@@ -292,9 +292,8 @@ function CustomerPortal({ back }) {
 
       <div style={{ flex: 1, padding: '32px 24px' }}>
         {screen === "welcome" && <PortalWelcome onStart={() => setScreen("terms")}/>}
-        {screen === "terms" && <PortalTerms onNext={() => setScreen("agreement")} onBack={() => setScreen("welcome")}/>}
-        {screen === "agreement" && <PortalAgreement onBack={() => setScreen("terms")} onNext={() => setScreen("hub")}/>}
-        {screen === "hub" && <PortalHub items={items} pct={pct} done={done} total={total} accountant={accountant} onOpen={openItem} onReopen={reopenItem} onTakeBack={takeBack} onOpenBundle={openBundle} onSubmit={() => setScreen("done")} onClose={back} onBack={() => setScreen("agreement")} onFollowup={() => setScreen("followup")} followupAnswered={followupAnswered}/>}
+        {screen === "terms" && <PortalTerms onNext={() => setScreen("hub")} onBack={() => setScreen("welcome")}/>}
+        {screen === "hub" && <PortalHub items={items} pct={pct} done={done} total={total} accountant={accountant} onOpen={openItem} onReopen={reopenItem} onTakeBack={takeBack} onOpenBundle={openBundle} onSubmit={() => setScreen("done")} onClose={back} onBack={() => setScreen("terms")} onFollowup={() => setScreen("followup")} followupAnswered={followupAnswered}/>}
         {screen === "upload" && <PortalUpload item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)} onSkip={() => skipItem(activeItem.id)}/>}
         {screen === "connect" && <PortalConnect item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
         {screen === "trade" && <PortalTrade item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
@@ -687,6 +686,7 @@ function PortalConnect({ item, onBack, onDone }) {
   const [oauthStep, setOauthStep] = React.useState(0); // 0=creds, 1=loading, 2=done
   const [uploadedFile, setUploadedFile] = React.useState(null);
   const [drag, setDrag] = React.useState(false);
+  const [pendingConnect, setPendingConnect] = React.useState(null); // source awaiting agreement
 
   const sources = [
     { id: "ec", name: "e-conomic" },
@@ -719,6 +719,10 @@ function PortalConnect({ item, onBack, onDone }) {
     setTimeout(() => onDone("Råbalance uploadet manuelt · " + f.name), 800);
   };
 
+  if (pendingConnect) {
+    return <PortalAgreement onBack={() => setPendingConnect(null)} onNext={() => { startConnect(pendingConnect); setPendingConnect(null); }}/>;
+  }
+
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 14 }}><I.ArrowLeft className="ic"/> Tilbage</button>
@@ -742,7 +746,7 @@ function PortalConnect({ item, onBack, onDone }) {
               ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--c-success)', fontSize: 12.5, fontWeight: 500 }}><I.Check size={13}/> Forbundet</span>
               : connectedId
               ? null
-              : <button className="btn btn-sm" onClick={() => startConnect(s)}>Forbind</button>}
+              : <button className="btn btn-sm" onClick={() => setPendingConnect(s)}>Forbind</button>}
           </div>
         ))}
       </div>
