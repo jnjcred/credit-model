@@ -867,7 +867,7 @@ function StamoplysningerCard() {
    ──────────────────────────────────────────────────────────────────────── */
 const AUTO_SOURCES = [
   { src: "CVR-registret", what: "Selskab, vedtægter, bestyrelse, årsrapporter (offentlige)", last: "23. maj" },
-  { src: "Branche­opslag", what: "Markedsdata DK vindkomponent +6,8%", last: "23. maj" },
+  { src: "Branche­opslag", what: "Markedsdata", last: "23. maj" },
   { src: "Soft signals", what: "Trustpilot, hjemmeside, presse, virksomhedsbeskrivelser", last: "i dag" },
 ];
 
