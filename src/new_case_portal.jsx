@@ -613,15 +613,21 @@ function PortalUpload({ item, onBack, onDone, onSkip }) {
     });
   };
 
+  const uploadDescs = {
+    loans: "Træk PDF'er ind med jeres nuværende låneaftaler. Vi har brug for at se renter, hovedstol, afdragsprofil og evt. covenants.",
+    security: "Pantebreve, kautionserklæringer og andre dokumenter som beskriver sikkerhederne i sagen.",
+    pitchdeck: "Upload jeres pitch deck — en præsentation af virksomheden, forretningsmodellen og vækstplanen.",
+  };
+
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 14 }}><I.ArrowLeft className="ic"/> Tilbage til oversigten</button>
 
-      <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>UPLOAD · trin {item.id === 'loans' ? '5' : '6'} af 9</div>
+      <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>UPLOAD</div>
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '6px 0 6px' }}>{item.l}</h1>
-      <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 22 }}>
-        {item.id === 'loans' ? "Træk PDF'er ind med jeres nuværende låneaftaler. Vi har brug for at se renter, hovedstol, afdragsprofil og evt. covenants." : "Pantebreve, kautionserklæringer og andre dokumenter som beskriver sikkerhederne i sagen."}
-      </p>
+      {uploadDescs[item.id] && (
+        <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 22 }}>{uploadDescs[item.id]}</p>
+      )}
 
       {completing ? (
         <div style={{ textAlign: 'center', padding: '36px 0' }}>
