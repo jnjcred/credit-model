@@ -6,6 +6,7 @@ function statusPill(s) {
     "Data received": ["ink", "Til gennemgang"],
     "Needs review": ["ink", "Til gennemgang"],
     "Credit memo ready": ["success", "Memo klar"],
+    "Indstillet": ["success", "Indstillet"],
     "Approved": ["success", "Godkendt"],
     "Rejected": ["danger", "Afvist"],
   };

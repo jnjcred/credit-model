@@ -5,6 +5,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
   const scrollMap = React.useRef({});
   const [confirmIndstil, setConfirmIndstil] = React.useState(false);
   const [showCustomerStatus, setShowCustomerStatus] = React.useState(false);
+  const [indstillet, setIndstillet] = React.useState(true);
 
   // Save current scroll position per tab; restore on tab change
   React.useEffect(() => {
@@ -49,7 +50,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div className="ws-co-name">{co.name}</div>
-              {statusPill(co.status)}
+              {tab === "indstil" && indstillet ? statusPill("Indstillet") : statusPill(co.status)}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -117,7 +118,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
         {tab === "security" && <WSSecurity/>}
         {tab === "questions" && <WSQuestions/>}
         {tab === "memo" && <WSMemo/>}
-        {tab === "indstil" && <WSIndstil go={go}/>}
+        {tab === "indstil" && <WSIndstil go={go} indstillet={indstillet} onIndstil={() => setIndstillet(true)} onReset={() => setIndstillet(false)}/>}
       </div>
 
       {showCustomerStatus && (
@@ -1729,15 +1730,54 @@ function CustomerStatusBlock({ stage, go, onMarkReady }) {
   );
 }
 
-function WSIndstil({ go }) {
+function WSIndstil({ go, indstillet, onIndstil, onReset }) {
+  if (indstillet) {
+    return (
+      <div className="page page-wide" style={{ maxWidth: 780, padding: '48px 32px 80px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16, marginBottom: 36 }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--c-success)', color: '#fff', display: 'grid', placeItems: 'center' }}>
+            <I.Check size={26}/>
+          </div>
+          <div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.02em' }}>Sagen er indstillet</div>
+            <div style={{ fontSize: 14, color: 'var(--c-text-2)', marginTop: 6, lineHeight: 1.55, maxWidth: 480 }}>
+              Indstillingen er sendt til kreditkomitéen d. 9. juni 2026. Kreditkomitéen behandler sagen og vender tilbage med beslutning.
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: '16px 22px', marginBottom: 24 }}>
+          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Indstillingsoversigt</div>
+              {[
+                { label: "Indstillet af", value: "Mette Larsen" },
+                { label: "Dato", value: "9. juni 2026 · 11:42" },
+                { label: "Sagsnr.", value: "2026-0184" },
+                { label: "Kreditmemo", value: "Vedhæftet indstillingen" },
+              ].map((r, i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, padding: '7px 0', borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)', fontSize: 13.5 }}>
+                  <span style={{ color: 'var(--c-text-3)', width: 130, flexShrink: 0 }}>{r.label}</span>
+                  <span style={{ color: 'var(--c-ink)', fontWeight: 500 }}>{r.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center', marginTop: 8 }}>
+          <button onClick={onReset} style={{ background: 'transparent', border: 'none', fontSize: 12, color: 'var(--c-text-4)', cursor: 'pointer', textDecoration: 'underline' }}>
+            Nulstil (demo)
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="page page-wide" style={{ maxWidth: 780, padding: '48px 32px 80px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16, marginBottom: 40 }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: '50%',
-          background: 'var(--c-success)', color: '#fff',
-          display: 'grid', placeItems: 'center',
-        }}>
+        <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--c-success)', color: '#fff', display: 'grid', placeItems: 'center' }}>
           <I.Check size={26}/>
         </div>
         <div>
@@ -1748,24 +1788,15 @@ function WSIndstil({ go }) {
         </div>
       </div>
 
-      {/* Checklist */}
       <div className="card" style={{ padding: '6px 22px', marginBottom: 16 }}>
         {[
-          { label: "Finansielt overblik gennemgået", done: true },
-          { label: "Sikkerheder vurderet", done: true },
-          { label: "Kreditmemo udfyldt", done: true },
-          { label: "Kundedialog afsluttet", done: true },
+          { label: "Finansielt overblik gennemgået" },
+          { label: "Sikkerheder vurderet" },
+          { label: "Kreditmemo udfyldt" },
+          { label: "Kundedialog afsluttet" },
         ].map((it, i) => (
-          <div key={i} style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '13px 0',
-            borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)',
-          }}>
-            <span style={{
-              width: 20, height: 20, borderRadius: '50%',
-              background: 'var(--c-success)', color: '#fff',
-              display: 'grid', placeItems: 'center', flexShrink: 0,
-            }}>
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 0', borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)' }}>
+            <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--c-success)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
               <I.Check size={11}/>
             </span>
             <span style={{ fontSize: 13.5, color: 'var(--c-ink)', fontWeight: 500 }}>{it.label}</span>
@@ -1773,23 +1804,11 @@ function WSIndstil({ go }) {
         ))}
       </div>
 
-      {/* Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button
-          className="btn btn-primary"
-          style={{ flex: 1, justifyContent: 'center', height: 40, fontSize: 14 }}
-          onClick={() => go && go("workspace:1:memo")}
-        >
+        <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', height: 40, fontSize: 14 }} onClick={() => go && go("workspace:1:memo")}>
           <I.FileText className="ic"/> Åbn kreditmemo
         </button>
-        <button
-          style={{
-            flex: 1, height: 40, fontSize: 14, fontWeight: 600,
-            background: 'var(--c-success)', color: '#fff',
-            border: 'none', borderRadius: 7, cursor: 'pointer',
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          }}
-        >
+        <button onClick={onIndstil} style={{ flex: 1, height: 40, fontSize: 14, fontWeight: 600, background: 'var(--c-success)', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <I.Check size={15}/> Send til kreditkomité
         </button>
       </div>
