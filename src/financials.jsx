@@ -1,10 +1,10 @@
 // Financials - credit-case financial overview (public data only - periodetal/budget not yet received)
 const FIN_VIEWS = [
   { k: "all",        l: "Alle" },
-  { k: "kpi",        l: "Nøgletal" },
-  { k: "market",     l: "Marked" },
-  { k: "ownership",  l: "Ejerskab" },
   { k: "findings",   l: "Findings" },
+  { k: "kpi",        l: "Finansielle tal" },
+  { k: "market",     l: "Marked og produkt" },
+  { k: "ownership",  l: "Ejerskab" },
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -170,38 +170,6 @@ function WSFinancials({ go }) {
       )}
 
 
-      {/* Datagrundlag - flyttet under tallene */}
-      {view === "all" && (
-      <FinSection
-        title="Datagrundlag"
-        sub="Vurderingen bygger på officielle årsregnskaber fra CVR. Periodetal og budget hentes når kunden har afleveret materialet."
-      >
-        <div className="card" style={{ padding: '14px 18px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <DataBasisCard
-            title="Årsregnskaber"
-            description="Officielle regnskaber fra CVR. Bruges til historik, kapitalstruktur og langsigtet udvikling."
-            chips={["2023", "2024", "2025"]}
-            source="CVR-registret"
-          />
-          <div style={{
-            borderRadius: 8,
-            background: 'var(--c-surface-2)',
-            border: '1px dashed var(--c-line-strong)',
-            padding: '12px 14px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-text-2)' }}>Periodetal og budget</div>
-              <StatusTag kind="warn">Afventer kunden</StatusTag>
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 4, lineHeight: 1.5 }}>
-              Q1 2026 fra e-conomic eller upload + budget 2026 indgår, så snart kunden har afleveret materialet.
-            </div>
-          </div>
-        </div>
-        </div>
-      </FinSection>
-      )}
 
       {/* Trustpilot */}
       {show("market") && <TrustpilotSection/>}
