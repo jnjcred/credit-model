@@ -1348,7 +1348,7 @@ function CustomerRequestComposer({ docs, questions, onClose }) {
           <section>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 6 }}>Besked til kunden (forhåndsudfyldt)</div>
             <textarea
-              defaultValue={`Hej,\n\nFor at færdiggøre kreditvurderingen mangler vi følgende. Du kan uploade/svare via linket nedenfor.\n\nVenlig hilsen\nMette L. · Crediwire`}
+              defaultValue={`Hej,\n\nFor at færdiggøre kreditvurderingen mangler vi følgende. Du kan uploade/svare via linket nedenfor.\n\nVenlig hilsen\nMette L. · EIFO`}
               rows={5}
               style={{
                 width: '100%', resize: 'vertical',
@@ -1484,7 +1484,7 @@ function loadMaterialRequestDraft() {
     name: recipient.name || '',
     role: role.trim(),
     email: recipient.email || '',
-    message: `Hej ${recipient.name ? recipient.name.split(' ')[0] : ''},\n\nFor at færdiggøre kreditvurderingen mangler vi nedenstående materiale. Du kan uploade/svare via linket nedenfor.\n\nVenlig hilsen\nMette L. · Crediwire`,
+    message: `Hej ${recipient.name ? recipient.name.split(' ')[0] : ''},\n\nFor at færdiggøre kreditvurderingen mangler vi nedenstående materiale. Du kan uploade/svare via linket nedenfor.\n\nVenlig hilsen\nMette L. · EIFO`,
   };
   try {
     const raw = localStorage.getItem(MATERIAL_REQUEST_DRAFT_KEY);

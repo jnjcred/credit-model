@@ -8,7 +8,7 @@ function Sidebar({ route, go, openNewCase }) {
       <div className="brand">
         <div className="brand-mark">cw</div>
         <div>
-          <div className="brand-name">Crediwire</div>
+          <div className="brand-name">EIFO</div>
           <div className="brand-org">Kreditafdeling</div>
         </div>
       </div>
