@@ -1771,11 +1771,6 @@ function WSIndstil({ go, indstillet, indstilletAt, onIndstil, onReset }) {
           </div>
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 8 }}>
-          <button onClick={onReset} style={{ background: 'transparent', border: 'none', fontSize: 12, color: 'var(--c-text-4)', cursor: 'pointer', textDecoration: 'underline' }}>
-            Nulstil (demo)
-          </button>
-        </div>
       </div>
     );
   }
