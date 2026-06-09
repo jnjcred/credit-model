@@ -6,6 +6,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
   const [confirmIndstil, setConfirmIndstil] = React.useState(false);
   const [showCustomerStatus, setShowCustomerStatus] = React.useState(false);
   const [indstillet, setIndstillet] = React.useState(true);
+  const [indstilletAt, setIndstilletAt] = React.useState(new Date());
 
   // Save current scroll position per tab; restore on tab change
   React.useEffect(() => {
@@ -74,7 +75,10 @@ function WorkspaceShell({ tab, go, openMemo }) {
             >
               <I.Eye size={12}/> Kundeside
             </button>
-            <button className="btn btn-sm btn-primary" onClick={() => setConfirmIndstil(true)}>Indstil kunde <I.ArrowRight className="ic"/></button>
+            {tab === "indstil" && indstillet
+              ? <button className="btn btn-sm" style={{ background: 'var(--c-success)', borderColor: 'var(--c-success)', color: '#fff' }}><I.Check className="ic"/> Indstillet</button>
+              : <button className="btn btn-sm btn-primary" onClick={() => setConfirmIndstil(true)}>Indstil kunde <I.ArrowRight className="ic"/></button>
+            }
           </div>
         </div>
       </div>
@@ -118,7 +122,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
         {tab === "security" && <WSSecurity/>}
         {tab === "questions" && <WSQuestions/>}
         {tab === "memo" && <WSMemo/>}
-        {tab === "indstil" && <WSIndstil go={go} indstillet={indstillet} onIndstil={() => setIndstillet(true)} onReset={() => setIndstillet(false)}/>}
+        {tab === "indstil" && <WSIndstil go={go} indstillet={indstillet} indstilletAt={indstilletAt} onIndstil={() => { setIndstilletAt(new Date()); setIndstillet(true); }} onReset={() => setIndstillet(false)}/>}
       </div>
 
       {showCustomerStatus && (
@@ -1730,8 +1734,12 @@ function CustomerStatusBlock({ stage, go, onMarkReady }) {
   );
 }
 
-function WSIndstil({ go, indstillet, onIndstil, onReset }) {
+function WSIndstil({ go, indstillet, indstilletAt, onIndstil, onReset }) {
   if (indstillet) {
+    const d = indstilletAt || new Date();
+    const dateStr = d.toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' });
+    const timeStr = d.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' });
+
     return (
       <div className="page page-wide" style={{ maxWidth: 780, padding: '48px 32px 80px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 16, marginBottom: 36 }}>
@@ -1741,27 +1749,25 @@ function WSIndstil({ go, indstillet, onIndstil, onReset }) {
           <div>
             <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.02em' }}>Sagen er indstillet</div>
             <div style={{ fontSize: 14, color: 'var(--c-text-2)', marginTop: 6, lineHeight: 1.55, maxWidth: 480 }}>
-              Indstillingen er sendt til kreditkomitéen d. 9. juni 2026. Kreditkomitéen behandler sagen og vender tilbage med beslutning.
+              Indstillingen er sendt til kreditkomitéen d. {dateStr}. Kreditkomitéen behandler sagen og vender tilbage med beslutning.
             </div>
           </div>
         </div>
 
         <div className="card" style={{ padding: '16px 22px', marginBottom: 24 }}>
-          <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Indstillingsoversigt</div>
-              {[
-                { label: "Indstillet af", value: "Mette Larsen" },
-                { label: "Dato", value: "9. juni 2026 · 11:42" },
-                { label: "Sagsnr.", value: "2026-0184" },
-                { label: "Kreditmemo", value: "Vedhæftet indstillingen" },
-              ].map((r, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, padding: '7px 0', borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)', fontSize: 13.5 }}>
-                  <span style={{ color: 'var(--c-text-3)', width: 130, flexShrink: 0 }}>{r.label}</span>
-                  <span style={{ color: 'var(--c-ink)', fontWeight: 500 }}>{r.value}</span>
-                </div>
-              ))}
-            </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Indstillingsoversigt</div>
+            {[
+              { label: "Indstillet af", value: "Mette Larsen" },
+              { label: "Dato", value: dateStr + ' · ' + timeStr },
+              { label: "Sagsnr.", value: "2026-0184" },
+              { label: "Kreditmemo", value: "Vedhæftet indstillingen" },
+            ].map((r, i) => (
+              <div key={i} style={{ display: 'flex', gap: 12, padding: '7px 0', borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)', fontSize: 13.5 }}>
+                <span style={{ color: 'var(--c-text-3)', width: 130, flexShrink: 0 }}>{r.label}</span>
+                <span style={{ color: 'var(--c-ink)', fontWeight: 500 }}>{r.value}</span>
+              </div>
+            ))}
           </div>
         </div>
 
