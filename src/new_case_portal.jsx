@@ -616,7 +616,7 @@ function PortalUpload({ item, onBack, onDone, onSkip }) {
   const uploadDescs = {
     loans: "Træk PDF'er ind med jeres nuværende låneaftaler. Vi har brug for at se renter, hovedstol, afdragsprofil og evt. covenants.",
     security: "Pantebreve, kautionserklæringer og andre dokumenter som beskriver sikkerhederne i sagen.",
-    pitchdeck: "Upload jeres pitch deck — en præsentation af virksomheden, forretningsmodellen og vækstplanen.",
+    pitchdeck: "Upload jeres pitch deck - en præsentation af virksomheden, forretningsmodellen og vækstplanen.",
   };
 
   return (
