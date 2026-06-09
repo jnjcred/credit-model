@@ -195,6 +195,7 @@ function CustomerPortal({ back }) {
   const [screen, setScreen] = React.useState("welcome"); // welcome | terms | agreement | hub | upload | connect | trade | followup | done | status
   const [items, setItems] = React.useState([
     { id: "annual", l: "Seneste årsrapport", kind: "upload", st: "done", note: "Hentet automatisk fra CVR-registret · Årsrapport 2024", auto: true, min: 1 },
+    { id: "internal_annual", l: "Intern årsrapport", kind: "upload", st: "open", min: 1 },
     { id: "interim", l: "Periodetal", kind: "connect", st: "open", note: "Forbind bogføringssystem eller upload råbalance", min: 0 },
     { id: "budget", l: "Budget", kind: "upload", st: "open", note: "Træk budget PDF/Excel ind", min: 1 },
     { id: "ownership", l: "Ejerbog", kind: "upload", st: "open", note: "Træk ejerbog-PDF ind", min: 1 },
