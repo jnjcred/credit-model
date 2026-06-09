@@ -198,6 +198,7 @@ function CustomerPortal({ back }) {
     { id: "internal_annual", l: "Intern årsrapport", kind: "upload", st: "open", min: 1 },
     { id: "interim", l: "Periodetal", kind: "connect", st: "open", note: "Forbind bogføringssystem eller upload råbalance", min: 0 },
     { id: "budget", l: "Budget", kind: "upload", st: "open", note: "Træk budget PDF/Excel ind", min: 1 },
+    { id: "pitchdeck", l: "Pitch deck", kind: "upload", st: "open", min: 1 },
     { id: "ownership", l: "Ejerbog", kind: "upload", st: "open", note: "Træk ejerbog-PDF ind", min: 1 },
     { id: "loans", l: "Eksisterende låneaftaler", kind: "upload", st: "open", note: "Træk PDF'er ind", min: 2 },
     { id: "security", l: "Sikkerheds­dokumenter", kind: "upload", st: "open", note: "Pantebreve, kautionserklæringer", min: 2 },
