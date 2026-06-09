@@ -33,7 +33,7 @@ const CASE_TASKS = {
   ],
   3: [
     { id: "a", action: "Gennemgå", obj: "modtaget materiale", urgent: false, due: "31 maj", kind: "review" },
-    { id: "b", action: "Indsamle", obj: "soft signals (LinkedIn, presse)", urgent: false, due: "31 maj", kind: "data" },
+    { id: "b", action: "Indsamle", obj: "soft signals (Trustpilot, hjemmeside, presse)", urgent: false, due: "31 maj", kind: "data" },
   ],
   4: [
     { id: "a", action: "Indsend", obj: "credit memo til komite", urgent: false, due: "27 maj", kind: "submit" },
