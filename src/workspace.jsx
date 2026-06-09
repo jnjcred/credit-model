@@ -1749,7 +1749,7 @@ function WSIndstil({ go, indstillet, indstilletAt, onIndstil, onReset }) {
           <div>
             <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.02em' }}>Sagen er indstillet</div>
             <div style={{ fontSize: 14, color: 'var(--c-text-2)', marginTop: 6, lineHeight: 1.55, maxWidth: 480 }}>
-              Indstillingen er sendt til kreditkomitéen d. {dateStr}. Kreditkomitéen behandler sagen og vender tilbage med beslutning.
+              Indstillingen er sendt til kreditkomitéen d. {dateStr}. Kreditkomitéen behandler sagen og vender tilbage med en beslutning.
             </div>
           </div>
         </div>
