@@ -425,7 +425,7 @@ function PortfolioAnalyse({ go }) {
             {/* Templates */}
             <div style={{ padding: "14px 20px", borderBottom: "1px solid #E5E7EB", background: "#f9fafb" }}>
               <div style={{ fontSize: 10.5, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10 }}>
-                Skabeloner
+                Vælg skabelon
               </div>
               <div style={{ display: "flex", gap: 0 }}>
                 {/* Good group */}
