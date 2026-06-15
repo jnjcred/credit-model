@@ -624,9 +624,6 @@ function PortfolioAnalyse({ go }) {
                     </button>
                   );
                 })}
-                <span style={{ fontSize: 11.5, color: "var(--c-text-3)", marginLeft: 8 }}>
-                  Data baseret på seneste tilgængelige årsregnskab per selskab
-                </span>
               </div>
               <table className="tbl" style={{ tableLayout: "fixed", width: "100%", fontSize: 12 }}>
                 <thead>
