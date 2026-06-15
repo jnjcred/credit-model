@@ -1,20 +1,20 @@
 // Portfolio screening / analyse side
 
 const ANALYSE_CASES = [
-  { id: 1,  cvr: "38427156", name: "Nordhavn Composite ApS",      dept: "Frederikshavn Erhverv", branche: "Industri",             rev12: 18500000,  revPct: 32,  ebitda12: 2400000,  ebitdaPct: 13,  equity: 6200000,  bigCust: 41 },
-  { id: 2,  cvr: "41902384", name: "Vendia Bio ApS",              dept: "Esbjerg Erhverv",        branche: "Medicinal og biotek",  rev12: 9200000,   revPct: 28,  ebitda12: 1100000,  ebitdaPct: 12,  equity: 3100000,  bigCust: 22 },
-  { id: 3,  cvr: "27156089", name: "Marstal Maritime ApS",        dept: "Svendborg Erhverv",      branche: "Transport og logistik",rev12: 42100000,  revPct: -8,  ebitda12: -2400000, ebitdaPct: -6,  equity: 11400000, bigCust: 58 },
-  { id: 4,  cvr: "39184725", name: "Skagen Klima ApS",            dept: "Skagen Erhverv",         branche: "Energi og forsyning",  rev12: 5800000,   revPct: 27,  ebitda12: 800000,   ebitdaPct: 14,  equity: 1900000,  bigCust: 33 },
-  { id: 5,  cvr: "16284715", name: "Lyngbæk Industrier ApS",      dept: "Herning Erhverv",        branche: "Industri",             rev12: 28400000,  revPct: -12, ebitda12: -4100000, ebitdaPct: -14, equity: -1200000, bigCust: 71 },
-  { id: 6,  cvr: "42937180", name: "Aalborg Hydrogen A/S",        dept: "Aalborg Erhverv",        branche: "Energi og forsyning",  rev12: 61300000,  revPct: 45,  ebitda12: 9200000,  ebitdaPct: 15,  equity: 24100000, bigCust: 18 },
-  { id: 7,  cvr: "29384716", name: "Kløver Tekstil ApS",          dept: "Ikast Erhverv",          branche: "Tekstil og beklædning",rev12: 11000000,  revPct: 4,   ebitda12: 900000,   ebitdaPct: 8,   equity: 3800000,  bigCust: 29 },
-  { id: 8,  cvr: "40912834", name: "Refshaleøen Robotics ApS",    dept: "København Erhverv",      branche: "IT og teknologi",      rev12: 14700000,  revPct: 38,  ebitda12: 2100000,  ebitdaPct: 14,  equity: 5500000,  bigCust: 44 },
-  { id: 9,  cvr: "31847265", name: "Skov & Bertelsen Tømrer ApS", dept: "Odense Erhverv",         branche: "Bygge og anlæg",       rev12: 8700000,   revPct: 12,  ebitda12: 680000,   ebitdaPct: 8,   equity: 2100000,  bigCust: 38 },
-  { id: 10, cvr: "43019287", name: "Jutland Gulve & Fliser ApS",  dept: "Vejle Erhverv",          branche: "Bygge og anlæg",       rev12: 5200000,   revPct: 6,   ebitda12: 420000,   ebitdaPct: 8,   equity: 980000,   bigCust: 55 },
-  { id: 11, cvr: "36748201", name: "Morsø Slagter & Deli ApS",   dept: "Thisted Erhverv",        branche: "Fødevarer og drikke",  rev12: 6400000,   revPct: 3,   ebitda12: 310000,   ebitdaPct: 5,   equity: 1450000,  bigCust: 31 },
-  { id: 12, cvr: "44102938", name: "Ballerup Autoservice A/S",    dept: "København Erhverv",      branche: "Handel og service",    rev12: 12800000,  revPct: -5,  ebitda12: -180000,  ebitdaPct: -1,  equity: 2700000,  bigCust: 19 },
-  { id: 13, cvr: "45123890", name: "BrainSpark Technologies A/S", dept: "Aarhus Erhverv",         branche: "IT og teknologi",      rev12: 32400000,  revPct: 48,  ebitda12: 6100000,  ebitdaPct: 19,  equity: 18700000, bigCust: 12 },
-  { id: 14, cvr: "36291048", name: "Midtjylland Vindservice ApS", dept: "Herning Erhverv",        branche: "Energi og forsyning",  rev12: 54200000,  revPct: 41,  ebitda12: 11300000, ebitdaPct: 21,  equity: 29400000, bigCust: 8  },
+  { id: 1,  cvr: "12345678", name: "Nordhavn Composite ApS",      dept: "Frederikshavn Erhverv", branche: "Industri",             rev12: 18500000,  revPct: 32,  ebitda12: 2400000,  ebitdaPct: 13,  equity: 6200000,  bigCust: 41 },
+  { id: 2,  cvr: "12345678", name: "Vendia Bio ApS",              dept: "Esbjerg Erhverv",        branche: "Medicinal og biotek",  rev12: 9200000,   revPct: 28,  ebitda12: 1100000,  ebitdaPct: 12,  equity: 3100000,  bigCust: 22 },
+  { id: 3,  cvr: "12345678", name: "Marstal Maritime ApS",        dept: "Svendborg Erhverv",      branche: "Transport og logistik",rev12: 42100000,  revPct: -8,  ebitda12: -2400000, ebitdaPct: -6,  equity: 11400000, bigCust: 58 },
+  { id: 4,  cvr: "12345678", name: "Skagen Klima ApS",            dept: "Skagen Erhverv",         branche: "Energi og forsyning",  rev12: 5800000,   revPct: 27,  ebitda12: 800000,   ebitdaPct: 14,  equity: 1900000,  bigCust: 33 },
+  { id: 5,  cvr: "12345678", name: "Lyngbæk Industrier ApS",      dept: "Herning Erhverv",        branche: "Industri",             rev12: 28400000,  revPct: -12, ebitda12: -4100000, ebitdaPct: -14, equity: -1200000, bigCust: 71 },
+  { id: 6,  cvr: "12345678", name: "Aalborg Hydrogen A/S",        dept: "Aalborg Erhverv",        branche: "Energi og forsyning",  rev12: 61300000,  revPct: 45,  ebitda12: 9200000,  ebitdaPct: 15,  equity: 24100000, bigCust: 18 },
+  { id: 7,  cvr: "12345678", name: "Kløver Tekstil ApS",          dept: "Ikast Erhverv",          branche: "Tekstil og beklædning",rev12: 11000000,  revPct: 4,   ebitda12: 900000,   ebitdaPct: 8,   equity: 3800000,  bigCust: 29 },
+  { id: 8,  cvr: "12345678", name: "Refshaleøen Robotics ApS",    dept: "København Erhverv",      branche: "IT og teknologi",      rev12: 14700000,  revPct: 38,  ebitda12: 2100000,  ebitdaPct: 14,  equity: 5500000,  bigCust: 44 },
+  { id: 9,  cvr: "12345678", name: "Skov & Bertelsen Tømrer ApS", dept: "Odense Erhverv",         branche: "Bygge og anlæg",       rev12: 8700000,   revPct: 12,  ebitda12: 680000,   ebitdaPct: 8,   equity: 2100000,  bigCust: 38 },
+  { id: 10, cvr: "12345678", name: "Jutland Gulve & Fliser ApS",  dept: "Vejle Erhverv",          branche: "Bygge og anlæg",       rev12: 5200000,   revPct: 6,   ebitda12: 420000,   ebitdaPct: 8,   equity: 980000,   bigCust: 55 },
+  { id: 11, cvr: "12345678", name: "Morsø Slagter & Deli ApS",   dept: "Thisted Erhverv",        branche: "Fødevarer og drikke",  rev12: 6400000,   revPct: 3,   ebitda12: 310000,   ebitdaPct: 5,   equity: 1450000,  bigCust: 31 },
+  { id: 12, cvr: "12345678", name: "Ballerup Autoservice A/S",    dept: "København Erhverv",      branche: "Handel og service",    rev12: 12800000,  revPct: -5,  ebitda12: -180000,  ebitdaPct: -1,  equity: 2700000,  bigCust: 19 },
+  { id: 13, cvr: "12345678", name: "BrainSpark Technologies A/S", dept: "Aarhus Erhverv",         branche: "IT og teknologi",      rev12: 32400000,  revPct: 48,  ebitda12: 6100000,  ebitdaPct: 19,  equity: 18700000, bigCust: 12 },
+  { id: 14, cvr: "12345678", name: "Midtjylland Vindservice ApS", dept: "Herning Erhverv",        branche: "Energi og forsyning",  rev12: 54200000,  revPct: 41,  ebitda12: 11300000, ebitdaPct: 21,  equity: 29400000, bigCust: 8  },
 ];
 
 const TEMPLATES = [
