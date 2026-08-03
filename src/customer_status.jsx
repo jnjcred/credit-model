@@ -137,125 +137,61 @@ function WSCustomerStatus() {
         {/* ── Questions / Dialog ── */}
         <div className="card" style={{ marginBottom: 20 }}>
           <div className="card-head" style={{ borderBottom: '1px solid var(--c-line-2)' }}>
-            <div className="card-title">Spørgsmål fra kreditafdelingen</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--c-text-3)' }}>
-              <div className="avatar" style={{ width: 22, height: 22, fontSize: 9 }}>ML</div>
-              Mette Larsen
-            </div>
+            <div className="card-title">Dialog med kreditafdelingen</div>
+            <button className="btn btn-sm btn-ghost" onClick={() => setAddingQuestion(v => !v)}>
+              <I.Plus size={12}/> Stil et spørgsmål
+            </button>
           </div>
 
+          {addingQuestion && (
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--c-line-2)', background: 'var(--c-surface-2)' }}>
+              <textarea
+                autoFocus
+                value={newQuestion}
+                onChange={e => setNewQuestion(e.target.value)}
+                rows={3}
+                placeholder="Skriv dit spørgsmål til kreditafdelingen..."
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--c-line-strong)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.55, color: 'var(--c-text)', outline: 'none', boxSizing: 'border-box', background: '#fff' }}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+                <button className="btn btn-sm btn-ghost" onClick={() => { setAddingQuestion(false); setNewQuestion(''); }}>Annullér</button>
+                <button
+                  className="btn btn-sm btn-primary"
+                  disabled={!newQuestion.trim()}
+                  onClick={() => {
+                    if (!newQuestion.trim()) return;
+                    setCustomerQuestions(prev => [...prev, { id: Date.now(), text: newQuestion.trim(), date: 'Lige nu' }]);
+                    setNewQuestion('');
+                    setAddingQuestion(false);
+                  }}
+                  style={newQuestion.trim() ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.45, cursor: 'not-allowed' }}
+                >
+                  <I.Send size={12}/> Send
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
-            {false && QUESTIONS.map((q, i) => {
-              const isAnswered = submitted.has(q.id);
-              const isOpen = activeReply === q.id;
-              const replyText = replies[q.id] || '';
-
-              return (
-                <div key={q.id} style={{ borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', padding: '18px 20px' }}>
-                  {/* Question header */}
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
-                    <div style={{ width: 8, height: 8, borderRadius: '50%', marginTop: 5, flexShrink: 0, background: isAnswered ? 'var(--c-success)' : q.severity === 'warn' ? 'var(--c-warn)' : 'var(--c-primary)' }}/>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-                        <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{q.subject}</span>
-                        <span style={{ fontSize: 11, color: 'var(--c-text-4)' }}>{q.date}</span>
-                        {isAnswered && (
-                          <span style={{ fontSize: 11, color: 'var(--c-success)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <I.Check size={10}/> Besvaret
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.65 }}>{q.text}</div>
-
-                      {/* Doc reference */}
-                      {q.docRef && (
-                        <div style={{ marginTop: 10, display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 10px', background: 'var(--c-surface-2)', borderRadius: 6, fontSize: 12, color: 'var(--c-text-2)', border: '1px solid var(--c-line-2)' }}>
-                          <I.File size={11}/>
-                          <b style={{ color: 'var(--c-ink)' }}>{q.docRef.name}</b>
-                          <span style={{ color: 'var(--c-text-4)' }}>·</span>
-                          {q.docRef.note}
-                        </div>
-                      )}
-
-                      {/* Submitted reply preview */}
-                      {isAnswered && (replyText || (attachments[q.id] || []).length > 0) && (
-                        <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: 8, fontSize: 12.5, color: 'var(--c-text)', lineHeight: 1.6 }}>
-                          <div style={{ fontSize: 10.5, color: 'var(--c-success)', fontWeight: 600, marginBottom: 6 }}>Dit svar</div>
-                          {replyText && <div style={{ marginBottom: (attachments[q.id] || []).length ? 8 : 0 }}>{replyText}</div>}
-                          {(attachments[q.id] || []).map((f, fi) => (
-                            <div key={fi} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 9px', background: 'rgba(34,197,94,0.1)', borderRadius: 5, fontSize: 11.5, marginRight: 6 }}>
-                              <I.File size={11}/> {f.name} <span style={{ color: 'var(--c-text-4)' }}>{f.size}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Reply area */}
-                      {!isAnswered && isOpen && (
-                        <div style={{ marginTop: 12 }}>
-                          <textarea
-                            value={replyText}
-                            onChange={e => setReplies(r => ({ ...r, [q.id]: e.target.value }))}
-                            rows={3}
-                            autoFocus
-                            placeholder="Skriv dit svar her..."
-                            style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--c-line-strong)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.55, color: 'var(--c-text)', outline: 'none', boxSizing: 'border-box' }}
-                          />
-                          {/* Attached files */}
-                          {(attachments[q.id] || []).length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                              {(attachments[q.id] || []).map((f, fi) => (
-                                <div key={fi} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 8px 4px 10px', background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 6, fontSize: 12 }}>
-                                  <I.File size={11} style={{ color: 'var(--c-text-3)' }}/> {f.name} <span style={{ color: 'var(--c-text-4)' }}>{f.size}</span>
-                                  <button onClick={() => removeAttachment(q.id, fi)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--c-text-3)', padding: '0 2px', display: 'flex', alignItems: 'center' }}><I.X size={11}/></button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                            <button
-                              className="btn btn-sm btn-ghost"
-                              onClick={() => attachFile(q.id, "Dokument_" + (q.id) + ".pdf")}
-                            >
-                              <I.Upload size={12}/> Vedhæft fil
-                            </button>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                              <button className="btn btn-sm btn-ghost" onClick={() => setActiveReply(null)}>Annullér</button>
-                              <button
-                                className="btn btn-sm btn-primary"
-                                disabled={!replyText.trim() && !(attachments[q.id] || []).length}
-                                onClick={() => submitReply(q.id)}
-                                style={(replyText.trim() || (attachments[q.id] || []).length) ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.45, cursor: 'not-allowed' }}
-                              >
-                                <I.Send size={12}/> Send svar
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* CTA */}
-                      {!isAnswered && !isOpen && (
-                        <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                          <button className="btn btn-sm" onClick={() => setActiveReply(q.id)}>
-                            Svar
-                          </button>
-                          {q.requestDoc && (
-                            <button className="btn btn-sm btn-ghost" onClick={() => setUploadOpen(true)}>
-                              <I.Upload size={12}/> Upload dokument
-                            </button>
-                          )}
-                        </div>
-                      )}
+            {customerQuestions.length === 0 ? (
+              <div style={{ padding: '28px 20px', textAlign: 'center', color: 'var(--c-text-3)', fontSize: 13 }}>
+                Ingen spørgsmål på nuværende tidspunkt
+              </div>
+            ) : (
+              customerQuestions.map((q, i) => (
+                <div key={q.id} style={{ padding: '14px 18px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div className="avatar" style={{ width: 24, height: 24, fontSize: 9, flexShrink: 0, marginTop: 1 }}>AN</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>Anders Nielsen</span>
+                      <span style={{ fontSize: 11, color: 'var(--c-text-4)' }}>{q.date}</span>
+                      <span style={{ fontSize: 11, color: 'var(--c-success)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Check size={10}/> Sendt</span>
                     </div>
+                    <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.65 }}>{q.text}</div>
                   </div>
                 </div>
-              );
-            })}
-
-            <div style={{ padding: '28px 20px', textAlign: 'center', color: 'var(--c-text-3)', fontSize: 13 }}>
-              Ingen spørgsmål på nuværende tidspunkt
-            </div>
+              ))
+            )}
           </div>
         </div>
 

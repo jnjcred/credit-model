@@ -96,6 +96,19 @@ function WSFinancials({ go }) {
         <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 4, maxWidth: 720 }}>
           Foreløbig vurdering baseret på offentlige årsregnskaber, branche og soft signals. Periodetal, budget og interne dokumenter mangler fra kunden.
         </div>
+        <div style={{
+          marginTop: 10, display: 'flex', alignItems: 'flex-start', gap: 8,
+          background: 'var(--c-warn-bg)', border: '1px solid #f4dfb7',
+          padding: '8px 12px', borderRadius: 8,
+          fontSize: 12, color: 'var(--c-text-2)', lineHeight: 1.5, maxWidth: 720,
+        }}>
+          <I.AlertCircle size={13} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 2 }}/>
+          <span>
+            <b style={{ color: 'var(--c-ink)', fontWeight: 600 }}>AI kan tage fejl.</b>{' '}
+            Sammenfatninger og markedsdata er genereret af AI og kan indeholde fejl eller forældede oplysninger.
+            Verificér altid kritiske tal og udsagn mod kilden, før de bruges i kreditindstilling.
+          </span>
+        </div>
       </div>
 
       {/* Sticky toolbar - section filter + næste-skridt CTAs */}
@@ -167,6 +180,11 @@ function WSFinancials({ go }) {
       {/* Årsregnskaber - 3 års overblik */}
       {show("kpi") && (
         <AnnualReportSection go={go}/>
+      )}
+
+      {/* Budget - editérbart, max 12 mdr frem */}
+      {show("kpi") && (
+        <BudgetSection/>
       )}
 
 
@@ -324,16 +342,24 @@ function MarketSection() {
         <div className="card" style={{ padding: '14px 18px', marginBottom: 14 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {[
-              { label: "Branchevækst 2025",   value: "+6,8%",    note: "DK vindkomponenter" },
-              { label: "Ordreindgang",         value: "Stabil",   note: "Sektoren i Q2 2026" },
-              { label: "Konkurrenceniveau",   value: "Moderat",  note: "5-7 spillere i DK-segment" },
+              { label: "Branchevækst 2025",   value: "+6,8%",    note: "DK vindkomponenter", src: "Danmarks Statistik · brancheindeks" },
+              { label: "Ordreindgang",         value: "Stabil",   note: "Sektoren i Q2 2026", src: "Wind Denmark · kvartalsrapport Q2 2026" },
+              { label: "Konkurrenceniveau",   value: "Moderat",  note: "5-7 spillere i DK-segment", src: "AI-vurdering · CVR-opslag på branchekode 28.11.00" },
             ].map((m, i) => (
               <div key={i} style={{ minWidth: 0 }}>
                 <div style={{ fontSize: 11, color: 'var(--c-text-2)' }}>{m.label}</div>
                 <div className="mono" style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)', marginTop: 3 }}>{m.value}</div>
                 <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2 }}>{m.note}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--c-text-4)', marginTop: 4, fontStyle: 'italic' }}>Kilde: {m.src}</div>
               </div>
             ))}
+          </div>
+          <div style={{
+            marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--c-line-2)',
+            fontSize: 11, color: 'var(--c-text-3)', display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <I.Sparkles size={11} style={{ color: 'var(--c-primary)' }}/>
+            <span>AI-sammenfatning af eksterne brancheopslag · hentet 23. maj 2026</span>
           </div>
         </div>
 
@@ -341,21 +367,34 @@ function MarketSection() {
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
           <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>PEST-analyse</div>
           <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>· kort overblik over makroforhold</div>
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            fontSize: 10.5, fontWeight: 500, color: 'var(--c-primary)',
+            background: 'var(--c-primary-bg)', border: '1px solid var(--c-primary-border)',
+            padding: '1px 7px', borderRadius: 999,
+          }}>
+            <I.Sparkles size={9}/> AI-genereret
+          </span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
           {[
-            { k: "Politisk",    desc: "EU's Green Deal og dansk vindkraftpolitik støtter sektoren. Følg evt. handelsbarrierer på import af kompositmaterialer." },
-            { k: "Økonomisk",   desc: "Stabil branchevækst og lave finansieringsomkostninger. DKK/EUR-følsomhed pga. høj eksportandel kan påvirke marginer." },
-            { k: "Socialt",     desc: "Stigende efterspørgsel efter vedvarende energi understøtter pipeline. Kompetencemangel i komposit-faget kan presse lønninger." },
-            { k: "Teknologisk", desc: "Genanvendelige kompositter og automatisering skaber muligheder, men kræver kapitalinvesteringer for at følge med." },
+            { k: "Politisk",    desc: "EU's Green Deal og dansk vindkraftpolitik støtter sektoren. Følg evt. handelsbarrierer på import af kompositmaterialer.", src: "EU-Kommissionen · Green Deal-pakke 2024; Energistyrelsen" },
+            { k: "Økonomisk",   desc: "Stabil branchevækst og lave finansieringsomkostninger. DKK/EUR-følsomhed pga. høj eksportandel kan påvirke marginer.", src: "Nationalbanken · pengepolitik maj 2026; Danmarks Statistik" },
+            { k: "Socialt",     desc: "Stigende efterspørgsel efter vedvarende energi understøtter pipeline. Kompetencemangel i komposit-faget kan presse lønninger.", src: "DI Energi · arbejdsmarkedsanalyse 2025" },
+            { k: "Teknologisk", desc: "Genanvendelige kompositter og automatisering skaber muligheder, men kræver kapitalinvesteringer for at følge med.", src: "Wind Denmark · teknologinotat 2025; AI-syntese" },
           ].map((p, i) => (
             <div key={i} className="card" style={{ padding: '12px 14px', minWidth: 0 }}>
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--c-primary)' }}>
                 {p.k}
               </div>
               <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.5 }}>{p.desc}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--c-text-4)', marginTop: 6, fontStyle: 'italic', lineHeight: 1.4 }}>Kilde: {p.src}</div>
             </div>
           ))}
+        </div>
+        <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <I.Sparkles size={11} style={{ color: 'var(--c-primary)' }}/>
+          <span>AI-syntese baseret på offentlige rapporter og branchekilder · genereret 23. maj 2026. Bør valideres af kreditrådgiver inden brug i indstilling.</span>
         </div>
 
         {/* Produktbeskrivelse */}
@@ -433,8 +472,17 @@ function MarketSection() {
                 </>
               )}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--c-text-4)', marginTop: 8 }}>
-              Kilde: nordhavncomposites.dk · CVR — hentet 4. jun 2026
+            <div style={{
+              marginTop: 10, paddingTop: 8, borderTop: '1px solid var(--c-line-2)',
+              fontSize: 11, color: 'var(--c-text-3)',
+              display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+            }}>
+              <I.Sparkles size={11} style={{ color: 'var(--c-primary)' }}/>
+              <span>
+                AI-sammenfatning · Kilder:{' '}
+                <a href="https://nordhavncomposites.dk" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c-primary)', textDecoration: 'none' }}>nordhavncomposites.dk</a>
+                {' '}· CVR-udtræk{uploadState === 'uploaded' ? ' · produktblad_nordhavn.pdf' : ''} — hentet 4. jun 2026
+              </span>
             </div>
           </div>
         </div>
@@ -1259,17 +1307,18 @@ const ANNUAL_REPORT = {
   ytdIndex: 3,
   groups: [
     {
-      label: 'Resultat',
+      label: 'Resultatopgørelse',
       rows: [
         { label: 'Nettoomsætning',                  values: [null, null, null, null], note: 'Ikke tilgængeligt i offentligt regnskab' },
         { label: 'Vareforbrug',                      values: [null, null, null, null], note: 'Ikke tilgængeligt i offentligt regnskab' },
-        { label: 'Bruttofortjeneste',                values: [12.8, 15.2, 18.5, null] },
+        { label: 'Bruttofortjeneste',                values: [12.8, 15.2, 18.5, null], computed: true },
         { label: 'Personaleomkostninger',            values: [-9.5, -11.0, -13.5, null] },
         { label: 'EBITDA',                           values: [1.3, 1.9, 2.4, null], computed: true },
         { label: 'Afskrivninger',                    values: [-0.7, -0.8, -1.0, null] },
         { label: 'Resultat før finansielle poster',  values: [0.6, 1.1, 1.4, null], computed: true },
+        { label: 'Finansielle indtægter',            values: [0.0, 0.0, 0.0, null] },
         { label: 'Finansielle omkostninger',         values: [-0.3, -0.4, -0.4, null] },
-        { label: 'Årets resultat',                   values: [0.3, 0.7, 1.0, null] },
+        { label: 'Årets resultat',                   values: [0.3, 0.7, 1.0, null], computed: true },
       ],
     },
     {
@@ -1277,7 +1326,6 @@ const ANNUAL_REPORT = {
       rows: [
         { label: 'Anlægsaktiver',         values: [4.2, 4.8, 6.0, null] },
         { label: 'Omsætningsaktiver',     values: [5.2, 6.4, 8.0, null] },
-        { label: 'Likvide beholdninger',  values: [1.0, 1.4, 1.9, null] },
         { label: 'Aktiver i alt',         values: [9.4, 11.2, 14.0, null], computed: true },
         { label: 'Egenkapital',           values: [3.5, 4.8, 6.2, null] },
         { label: 'Langfristet gæld',      values: [3.5, 3.8, 4.6, null] },
@@ -1307,10 +1355,78 @@ function formatNum(v, opts) {
   return negative ? `−${s}` : s;
 }
 
+function aggregateBudgetByYear() {
+  // Læs nuværende budget fra localStorage og aggregér per år
+  // Returnerer altid værdier normaliseret til DKK mio. (uanset budget-enhed)
+  const saved = loadBudget();
+  if (!saved || !saved.values) return {};
+  const unitFactor = saved.unit === 'kr' ? 0.000001 : saved.unit === 'thousand' ? 0.001 : 1; // hele kr -> mio, tusind -> mio
+  const rowToGroup = {};
+  BUDGET_GROUPS.forEach(g => g.rows.forEach(r => { rowToGroup[r.label] = g.label; }));
+
+  const perGran = {};
+  ['year', 'quarter', 'month'].forEach(gran => {
+    const bucket = saved.values[gran] || {};
+    Object.entries(bucket).forEach(([rowLabel, periodMap]) => {
+      const isBalance = rowToGroup[rowLabel] === 'Balance';
+      Object.entries(periodMap).forEach(([periodKey, raw]) => {
+        if (raw === '' || raw == null) return;
+        const num = parseFloat(String(raw).replace(/\./g, '').replace(',', '.'));
+        if (isNaN(num)) return;
+        const normalised = num * unitFactor;
+        const year = periodKey.slice(0, 4);
+        if (!perGran[year]) perGran[year] = {};
+        if (!perGran[year][gran]) perGran[year][gran] = {};
+        if (gran === 'year') {
+          perGran[year][gran][rowLabel] = normalised;
+        } else {
+          if (!perGran[year][gran][rowLabel]) perGran[year][gran][rowLabel] = { sum: 0, last: null, lastKey: '', isBalance };
+          perGran[year][gran][rowLabel].sum += normalised;
+          if (periodKey > perGran[year][gran][rowLabel].lastKey) {
+            perGran[year][gran][rowLabel].last = normalised;
+            perGran[year][gran][rowLabel].lastKey = periodKey;
+          }
+        }
+      });
+    });
+  });
+
+  const result = {};
+  Object.entries(perGran).forEach(([year, byGran]) => {
+    const source = byGran.year ? 'year' : byGran.quarter ? 'quarter' : 'month';
+    const data = byGran[source];
+    if (!data) return;
+    result[year] = {};
+    Object.entries(data).forEach(([rowLabel, val]) => {
+      if (source === 'year') result[year][rowLabel] = val;
+      else result[year][rowLabel] = val.isBalance ? val.last : val.sum;
+    });
+    // Beregn computed-rækker fra de aggregerede rå-værdier
+    Object.keys(BUDGET_FORMULAS).forEach(label => {
+      const v = BUDGET_FORMULAS[label](result[year]);
+      if (!isNaN(v)) result[year][label] = v;
+    });
+  });
+  return result;
+}
+
 function AnnualReportSection({ go }) {
   const [unit, setUnit] = React.useState('mio'); // 'mio' | 'thousand'
   const scale = unit === 'mio' ? 1 : 1000;
   const ytdIdx = ANNUAL_REPORT.ytdIndex;
+
+  // Re-render når budget opdateres (custom event fra BudgetSection + storage event på tværs af faner)
+  const [budgetTick, setBudgetTick] = React.useState(0);
+  React.useEffect(() => {
+    const bump = () => setBudgetTick(t => t + 1);
+    const onStorage = (e) => { if (e.key === FIN_BUDGET_STORAGE) bump(); };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('budget-updated', bump);
+    return () => { window.removeEventListener('storage', onStorage); window.removeEventListener('budget-updated', bump); };
+  }, []);
+
+  const budgetByYear = React.useMemo(() => aggregateBudgetByYear(), [budgetTick]);
+  const budgetYears = Object.keys(budgetByYear).sort();
 
   const requestFromCustomer = () => {
     try {
@@ -1322,8 +1438,8 @@ function AnnualReportSection({ go }) {
 
   return (
     <FinSection
-      title="Årsregnskaber - 3 års overblik"
-      sub="Officielle årsrapporter fra CVR. Saldobalance 2026 hentes når kunden har afleveret materialet."
+      title="Regnskab"
+      sub="Officielle årsrapporter fra CVR. Saldobalance 2026 hentes når kunden har afleveret materialet. Budget-kolonner vises automatisk for år der er indtastet nedenfor."
     >
       {(
         <>
@@ -1397,6 +1513,11 @@ function AnnualReportSection({ go }) {
                       <th key={y} style={{ textAlign: 'right', fontWeight: 600, color: 'var(--c-text-2)' }}>{y}</th>
                     );
                   })}
+                  {budgetYears.map(y => (
+                    <th key={'b' + y} style={{ textAlign: 'right', fontWeight: 600, color: 'var(--c-primary)', whiteSpace: 'nowrap', borderLeft: '1px dashed var(--c-line-strong)' }}>
+                      Budget {y}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -1404,7 +1525,7 @@ function AnnualReportSection({ go }) {
                   <React.Fragment key={g.label}>
                     <tr>
                       <td
-                        colSpan={1 + ANNUAL_REPORT.years.length}
+                        colSpan={1 + ANNUAL_REPORT.years.length + budgetYears.length}
                         style={{
                           padding: '12px 14px 6px',
                           background: 'var(--c-surface-2)',
@@ -1473,6 +1594,36 @@ function AnnualReportSection({ go }) {
                             </td>
                           );
                         })}
+                        {budgetYears.map(y => {
+                          const bv = budgetByYear[y]?.[r.label];
+                          const has = bv != null && !isNaN(bv);
+                          let bdisplay;
+                          if (has) {
+                            bdisplay = r.percent
+                              ? formatNum(bv, { decimals: 1 }) + '%'
+                              : formatNum(bv * (r.percent || r.decimals != null ? 1 : scale), { decimals: r.decimals != null ? r.decimals : 1 });
+                          } else {
+                            bdisplay = '–';
+                          }
+                          return (
+                            <td
+                              key={'b' + y}
+                              className={has ? 'mono num' : ''}
+                              style={{
+                                textAlign: 'right',
+                                padding: '9px 14px',
+                                borderTop: '1px solid var(--c-line-2)',
+                                borderLeft: '1px dashed var(--c-line-strong)',
+                                color: has ? 'var(--c-primary)' : 'var(--c-text-4)',
+                                background: has ? 'rgba(59,130,246,0.03)' : 'transparent',
+                                whiteSpace: 'nowrap',
+                                fontWeight: has ? 500 : 400,
+                              }}
+                            >
+                              {bdisplay}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </React.Fragment>
@@ -1509,6 +1660,774 @@ function AnnualReportSection({ go }) {
           </div>
         </>
       )}
+    </FinSection>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Budget - editérbart, måned/kvartal/år, max 12 måneder frem
+   ──────────────────────────────────────────────────────────────────────── */
+const FIN_BUDGET_STORAGE = 'kabul:fin-budget:nordhavn';
+const BUDGET_TODAY = new Date(2026, 5, 1); // jun 2026 (prototype anchor)
+const MONTHS_DA = ['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+const MONTHS_DA_LONG = ['januar','februar','marts','april','maj','juni','juli','august','september','oktober','november','december'];
+
+function loadBudget() {
+  try {
+    const raw = localStorage.getItem(FIN_BUDGET_STORAGE);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
+function generateBudgetPeriods(gran) {
+  // Max 12 måneder ud i fremtiden fra BUDGET_TODAY
+  const today = BUDGET_TODAY;
+  const horizon = new Date(today.getFullYear(), today.getMonth() + 12, 1);
+  const periods = [];
+  if (gran === 'month') {
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
+      const label = `${MONTHS_DA[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+      periods.push({ key, label });
+    }
+  } else if (gran === 'quarter') {
+    const startQ = Math.floor(today.getMonth() / 3);
+    for (let i = 0; i < 8; i++) {
+      const totalQ = startQ + i;
+      const yOffset = Math.floor(totalQ / 4);
+      const q = ((totalQ % 4) + 4) % 4;
+      const y = today.getFullYear() + yOffset;
+      const startMonth = q * 3;
+      const periodStart = new Date(y, startMonth, 1);
+      if (periodStart > horizon) break;
+      periods.push({ key: `${y}-Q${q + 1}`, label: `Q${q + 1} ${y}` });
+    }
+  } else { // year
+    for (let i = 0; i < 3; i++) {
+      const y = today.getFullYear() + i;
+      const periodStart = new Date(y, 0, 1);
+      if (periodStart > horizon && i > 0) break;
+      periods.push({ key: `${y}`, label: `${y}` });
+    }
+  }
+  return periods;
+}
+
+const BUDGET_GROUPS = ANNUAL_REPORT.groups.filter(g => g.label !== 'Nøgletal');
+
+// Beregnings-formler for computed rækker. Tager et map { rowLabel: number } og returnerer tal.
+const BUDGET_FORMULAS = {
+  'Bruttofortjeneste': (ctx) => (ctx['Nettoomsætning'] || 0) + (ctx['Vareforbrug'] || 0),
+  'EBITDA': (ctx) => (ctx['Bruttofortjeneste'] || 0) + (ctx['Personaleomkostninger'] || 0),
+  'Resultat før finansielle poster': (ctx) => (ctx['EBITDA'] || 0) + (ctx['Afskrivninger'] || 0),
+  'Årets resultat': (ctx) => (ctx['Resultat før finansielle poster'] || 0) + (ctx['Finansielle indtægter'] || 0) + (ctx['Finansielle omkostninger'] || 0),
+  'Aktiver i alt': (ctx) => (ctx['Anlægsaktiver'] || 0) + (ctx['Omsætningsaktiver'] || 0),
+  'Gæld i alt': (ctx) => (ctx['Langfristet gæld'] || 0) + (ctx['Kortfristet gæld'] || 0),
+};
+
+function formatThousand(s) {
+  if (s === '' || s == null) return '';
+  let str = String(s);
+  let neg = '';
+  if (str.startsWith('-')) { neg = '-'; str = str.slice(1); }
+  const parts = str.split(',');
+  const intPart = (parts[0] || '').replace(/\./g, '');
+  const decPart = parts[1];
+  const formattedInt = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return neg + formattedInt + (decPart !== undefined ? ',' + decPart : '');
+}
+
+const BudgetInput = React.memo(function BudgetInput({ cell, onChange }) {
+  const [focused, setFocused] = React.useState(false);
+  const display = focused ? cell : formatThousand(cell);
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={display}
+      placeholder="–"
+      className="mono num"
+      style={{
+        width: '100%', minWidth: 70, textAlign: 'right',
+        border: '1px solid ' + (focused ? 'var(--c-primary)' : 'transparent'),
+        borderRadius: 4, padding: '5px 7px', fontSize: 12.5, color: 'var(--c-ink)',
+        background: focused ? '#fff' : (cell !== '' ? 'var(--c-primary-bg)' : 'transparent'),
+        outline: 'none',
+      }}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onChange={(e) => {
+        let v = e.target.value;
+        v = v.replace(/\./g, '').replace(/\s/g, '');
+        v = v.replace(/[^0-9,\-]/g, '');
+        v = v.replace(/(?!^)-/g, '');
+        const firstComma = v.indexOf(',');
+        if (firstComma !== -1) {
+          v = v.slice(0, firstComma + 1) + v.slice(firstComma + 1).replace(/,/g, '');
+        }
+        onChange(v);
+      }}
+      onKeyDown={(e) => {
+        const allowed = ['Backspace','Delete','Tab','Enter','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'];
+        if (allowed.includes(e.key) || e.ctrlKey || e.metaKey) return;
+        if (!/^[0-9,.\-]$/.test(e.key)) e.preventDefault();
+      }}
+    />
+  );
+});
+
+const BudgetRow = React.memo(function BudgetRow({ row, periods, rowValues, computedRowValues, onChangeCell, onRecycle, canRecycle, onClearRow }) {
+  const isComputed = !!row.computed;
+  const hasAnyValue = !isComputed && rowValues && Object.values(rowValues).some(v => v !== '' && v != null);
+  return (
+    <tr>
+      <td style={{
+        padding: '6px 14px',
+        borderTop: '1px solid var(--c-line-2)',
+        color: isComputed ? 'var(--c-text-2)' : 'var(--c-ink)',
+        fontWeight: isComputed ? 500 : 400,
+        position: 'sticky', left: 0, background: isComputed ? 'var(--c-surface)' : '#fff', zIndex: 1,
+      }}>
+        {row.label}
+        {isComputed && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--c-text-3)', fontWeight: 500 }}>(Beregning)</span>}
+      </td>
+      {periods.map(p => {
+        if (isComputed) {
+          const cv = computedRowValues?.[p.key];
+          const has = cv != null && !isNaN(cv);
+          let display = '';
+          if (has) {
+            const rounded = Math.round(cv * 100) / 100;
+            const str = String(rounded).replace('.', ',');
+            display = formatThousand(str);
+          }
+          return (
+            <td key={p.key} style={{
+              borderTop: '1px solid var(--c-line-2)',
+              padding: '4px 6px',
+              textAlign: 'right',
+              background: 'var(--c-surface)',
+            }}>
+              <div className="mono num" style={{
+                padding: '5px 7px', fontSize: 12.5,
+                color: has ? 'var(--c-text-2)' : 'var(--c-text-4)',
+                fontWeight: has ? 500 : 400,
+                textAlign: 'right',
+              }}>
+                {display || '–'}
+              </div>
+            </td>
+          );
+        }
+        const cell = rowValues?.[p.key] ?? '';
+        return (
+          <td key={p.key} style={{
+            borderTop: '1px solid var(--c-line-2)',
+            padding: '4px 6px',
+            textAlign: 'right',
+          }}>
+            <BudgetInput
+              cell={cell}
+              onChange={(v) => onChangeCell(row.label, p.key, v)}
+            />
+          </td>
+        );
+      })}
+      <td style={{
+        borderTop: '1px solid var(--c-line-2)',
+        padding: '4px 8px',
+        textAlign: 'center',
+        width: 64,
+        background: isComputed ? 'var(--c-surface)' : '#fff',
+        whiteSpace: 'nowrap',
+      }}>
+        {!isComputed && canRecycle && (
+          <button
+            type="button"
+            onClick={() => onRecycle(row.label)}
+            title="Genbrug sidste års tal"
+            style={{
+              background: 'transparent', border: '1px solid transparent', borderRadius: 4,
+              padding: 4, cursor: 'pointer', color: 'var(--c-text-3)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.12s ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--c-primary)'; e.currentTarget.style.background = 'var(--c-primary-bg)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--c-text-3)'; e.currentTarget.style.background = 'transparent'; }}
+          >
+            <I.Refresh size={13}/>
+          </button>
+        )}
+        {hasAnyValue && (
+          <button
+            type="button"
+            onClick={() => onClearRow(row.label)}
+            title="Slet rækkens værdier"
+            style={{
+              background: 'transparent', border: '1px solid transparent', borderRadius: 4,
+              padding: 4, cursor: 'pointer', color: 'var(--c-text-3)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.12s ease', marginLeft: 2,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--c-warn)'; e.currentTarget.style.background = 'var(--c-warn-bg)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--c-text-3)'; e.currentTarget.style.background = 'transparent'; }}
+          >
+            <I.X size={13}/>
+          </button>
+        )}
+      </td>
+    </tr>
+  );
+});
+
+function getLastAnnualValue(rowLabel) {
+  // Find row in ANNUAL_REPORT; returns { value, year, groupLabel } in DKK mio., eller null
+  for (const g of ANNUAL_REPORT.groups) {
+    const r = g.rows.find(x => x.label === rowLabel);
+    if (!r) continue;
+    for (let i = r.values.length - 1; i >= 0; i--) {
+      const v = r.values[i];
+      if (v != null) return { value: v, year: ANNUAL_REPORT.years[i], groupLabel: g.label };
+    }
+    return null;
+  }
+  return null;
+}
+
+function BudgetSection() {
+  const saved = loadBudget();
+  const [open, setOpen] = React.useState(false);
+  const [gran, setGran] = React.useState(saved?.gran || 'month');
+  const [unit, setUnit] = React.useState(saved?.unit || 'mio');
+  const [values, setValues] = React.useState(saved?.values || { month: {}, quarter: {}, year: {} });
+  const [savedAt, setSavedAt] = React.useState(saved?.savedAt || null);
+
+  const periods = React.useMemo(() => generateBudgetPeriods(gran), [gran]);
+
+  const filledCount = React.useMemo(() => {
+    const bucket = values[gran] || {};
+    let n = 0;
+    Object.values(bucket).forEach(rowMap => {
+      Object.values(rowMap || {}).forEach(v => { if (v !== '' && v != null) n += 1; });
+    });
+    return n;
+  }, [values, gran]);
+
+  // Stabil onChange callback (kun gran ændrer den) - så React.memo virker per række
+  const granRef = React.useRef(gran);
+  React.useEffect(() => { granRef.current = gran; }, [gran]);
+  const onChangeCell = React.useCallback((rowLabel, periodKey, raw) => {
+    setValues(prev => {
+      const g = granRef.current;
+      const next = { ...prev };
+      const bucket = { ...(next[g] || {}) };
+      const rowMap = { ...(bucket[rowLabel] || {}) };
+      rowMap[periodKey] = raw;
+      bucket[rowLabel] = rowMap;
+      next[g] = bucket;
+      return next;
+    });
+  }, []);
+
+  const handleClearRow = React.useCallback((rowLabel) => {
+    setValues(prev => {
+      const g = granRef.current;
+      const next = { ...prev };
+      const bucket = { ...(next[g] || {}) };
+      delete bucket[rowLabel];
+      next[g] = bucket;
+      return next;
+    });
+  }, []);
+
+  const handleRecycleRow = React.useCallback((rowLabel) => {
+    const last = getLastAnnualValue(rowLabel);
+    if (!last) return;
+    // Konvertér fra mio til budget-enhed
+    const unitFactor = unit === 'mio' ? 1 : unit === 'thousand' ? 1000 : 1000000;
+    const converted = last.value * unitFactor;
+    const isBalance = last.groupLabel === 'Balance';
+    const g = granRef.current;
+    const periodsNow = generateBudgetPeriods(g);
+    // P&L distribueres: år=fuld pr. år, kvartal=÷4, måned=÷12. Balance kopieres.
+    const divisor = isBalance ? 1 : (g === 'year' ? 1 : g === 'quarter' ? 4 : 12);
+    const perPeriod = converted / divisor;
+    // Format som streng med komma decimal (afrund til 2 decimaler, drop trailing .00)
+    const rounded = Math.round(perPeriod * 100) / 100;
+    const str = (Number.isInteger(rounded) ? String(rounded) : String(rounded)).replace('.', ',');
+    setValues(prev => {
+      const next = { ...prev };
+      const bucket = { ...(next[g] || {}) };
+      const rowMap = {};
+      periodsNow.forEach(p => { rowMap[p.key] = str; });
+      bucket[rowLabel] = rowMap;
+      next[g] = bucket;
+      return next;
+    });
+  }, [unit]);
+
+  // Auto-save (debounced) - skriver til localStorage og notifikerer Regnskab
+  const saveTimer = React.useRef(null);
+  React.useEffect(() => {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const ts = new Date().toISOString();
+      try {
+        localStorage.setItem(FIN_BUDGET_STORAGE, JSON.stringify({ gran, unit, values, savedAt: ts }));
+        setSavedAt(ts);
+        window.dispatchEvent(new CustomEvent('budget-updated'));
+      } catch (e) {}
+    }, 300);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [values, gran, unit]);
+
+  const [clearConfirmOpen, setClearConfirmOpen] = React.useState(false);
+  const clearBtnRef = React.useRef(null);
+  const handleClearAll = () => {
+    setValues({ month: {}, quarter: {}, year: {} });
+    setClearConfirmOpen(false);
+  };
+
+  // Luk popover ved klik udenfor
+  React.useEffect(() => {
+    if (!clearConfirmOpen) return;
+    const onDown = (e) => {
+      if (clearBtnRef.current && !clearBtnRef.current.contains(e.target)) setClearConfirmOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    const onEsc = (e) => { if (e.key === 'Escape') setClearConfirmOpen(false); };
+    document.addEventListener('keydown', onEsc);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onEsc); };
+  }, [clearConfirmOpen]);
+
+  // Beregn computed-rækker for hver periode
+  const computedValues = React.useMemo(() => {
+    const bucket = values[gran] || {};
+    const result = {};
+    BUDGET_GROUPS.forEach(g => g.rows.forEach(r => {
+      if (r.computed && BUDGET_FORMULAS[r.label]) result[r.label] = {};
+    }));
+    periods.forEach(p => {
+      const ctx = {};
+      // Læs rå-celler først
+      BUDGET_GROUPS.forEach(g => g.rows.forEach(r => {
+        if (r.computed) return;
+        const raw = bucket[r.label]?.[p.key];
+        if (raw == null || raw === '') return;
+        const num = parseFloat(String(raw).replace(/\./g, '').replace(',', '.'));
+        if (!isNaN(num)) ctx[r.label] = num;
+      }));
+      // Anvend formler top-til-bund, så afhængigheder fyldes ind
+      BUDGET_GROUPS.forEach(g => g.rows.forEach(r => {
+        if (!r.computed || !BUDGET_FORMULAS[r.label]) return;
+        const v = BUDGET_FORMULAS[r.label](ctx);
+        ctx[r.label] = v;
+        result[r.label][p.key] = v;
+      }));
+    });
+    return result;
+  }, [values, gran, periods]);
+
+  const fileInputRef = React.useRef(null);
+  const [importMsg, setImportMsg] = React.useState(null);
+
+  const handleExport = () => {
+    if (!window.XLSX) { alert('Excel-bibliotek ikke indlæst. Prøv at genindlæse siden.'); return; }
+    const XLSX = window.XLSX;
+    const bucket = values[gran] || {};
+    const granLabel = gran === 'month' ? 'måned' : gran === 'quarter' ? 'kvartal' : 'år';
+    const granLabelCap = gran === 'month' ? 'Måned' : gran === 'quarter' ? 'Kvartal' : 'År';
+    const unitLabel = unit === 'mio' ? 'DKK mio.' : unit === 'thousand' ? 'DKK tusind' : 'Hele kr.';
+
+    const formatDa = (n) => {
+      if (typeof n !== 'number' || isNaN(n)) return '';
+      return n.toLocaleString('da-DK', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    };
+
+    // Header meta
+    const aoa = [
+      ['Budget – Nordhavn Composite A/S'],
+      ['Granularitet', granLabelCap],
+      ['Enhed', unitLabel],
+      [''],
+      ['Gruppe', 'Regnskabspost', ...periods.map(p => p.label)],
+    ];
+
+    BUDGET_GROUPS.forEach(g => {
+      g.rows.forEach(r => {
+        const row = [g.label, r.label];
+        periods.forEach(p => {
+          let num = null;
+          if (r.computed && computedValues[r.label]) {
+            const cv = computedValues[r.label][p.key];
+            if (cv != null && !isNaN(cv)) num = cv;
+          } else {
+            const cell = bucket[r.label]?.[p.key];
+            if (cell != null && cell !== '') {
+              const parsed = parseFloat(String(cell).replace(/\./g, '').replace(',', '.'));
+              if (!isNaN(parsed)) num = parsed;
+            }
+          }
+          row.push(num == null ? '' : formatDa(num));
+        });
+        aoa.push(row);
+      });
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    // column widths
+    ws['!cols'] = [{ wch: 18 }, { wch: 32 }, ...periods.map(() => ({ wch: 14 }))];
+    // merge title across all columns
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 + periods.length } }];
+
+    // tving alle celler til at være tekst-typede (giver venstre-justering og bevarer 1000-separatorer)
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        const cellRef = ws[addr];
+        if (cellRef && cellRef.v !== undefined && cellRef.v !== null && cellRef.v !== '') {
+          cellRef.t = 's';
+          cellRef.v = String(cellRef.v);
+        }
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Budget ' + granLabel);
+
+    const date = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `budget-nordhavn-${granLabel}-${date}.xlsx`);
+  };
+
+  const handleImportClick = () => {
+    if (!window.XLSX) { alert('Excel-bibliotek ikke indlæst. Prøv at genindlæse siden.'); return; }
+    fileInputRef.current?.click();
+  };
+
+  const handleImportFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const XLSX = window.XLSX;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = new Uint8Array(ev.target.result);
+        const wb = XLSX.read(data, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+
+        // Find granularity and unit
+        let importedGran = gran;
+        let importedUnit = unit;
+        for (const row of aoa.slice(0, 5)) {
+          if (!row) continue;
+          const k = String(row[0] || '').toLowerCase().trim();
+          if (k === 'granularitet') {
+            const v = String(row[1] || '').toLowerCase().trim();
+            if (v === 'month' || v === 'måned' || v === 'maned') importedGran = 'month';
+            else if (v === 'quarter' || v === 'kvartal') importedGran = 'quarter';
+            else if (v === 'year' || v === 'år' || v === 'aar') importedGran = 'year';
+          } else if (k === 'enhed') {
+            const v = String(row[1] || '').toLowerCase();
+            if (v.includes('hele kr') || v.includes('kroner') || v === 'kr' || v === 'dkk') importedUnit = 'kr';
+            else if (v.includes('tusind') || v.includes('t.')) importedUnit = 'thousand';
+            else importedUnit = 'mio';
+          }
+        }
+
+        // Find header row (starts with "Gruppe")
+        let headerIdx = aoa.findIndex(r => r && String(r[0] || '').toLowerCase().trim() === 'gruppe');
+        if (headerIdx === -1) { setImportMsg({ kind: 'err', text: 'Kunne ikke finde header-række "Gruppe". Brug en eksporteret fil som skabelon.' }); return; }
+
+        const importedPeriods = generateBudgetPeriods(importedGran);
+        const headerRow = aoa[headerIdx];
+        // map column index → period key
+        // We trust the export order: columns from index 2 onwards = periods in same order
+        // But if labels match a known period, use that; otherwise fall back to position
+        const colToPeriod = {};
+        for (let c = 2; c < headerRow.length; c++) {
+          const label = String(headerRow[c] || '').trim();
+          const byLabel = importedPeriods.find(p => p.label === label);
+          if (byLabel) colToPeriod[c] = byLabel.key;
+          else if (importedPeriods[c - 2]) colToPeriod[c] = importedPeriods[c - 2].key;
+        }
+
+        const labelToRow = {};
+        BUDGET_GROUPS.forEach(g => g.rows.forEach(r => { labelToRow[r.label.toLowerCase().trim()] = r.label; }));
+
+        const newBucket = {};
+        let matched = 0, valuesCount = 0;
+        for (let i = headerIdx + 1; i < aoa.length; i++) {
+          const row = aoa[i];
+          if (!row) continue;
+          const rowLabel = String(row[1] || '').toLowerCase().trim();
+          if (!rowLabel) continue;
+          const canonical = labelToRow[rowLabel];
+          if (!canonical) continue;
+          matched += 1;
+          const rowMap = {};
+          for (let c = 2; c < row.length; c++) {
+            const periodKey = colToPeriod[c];
+            if (!periodKey) continue;
+            const raw = row[c];
+            if (raw === null || raw === undefined || raw === '') continue;
+            let str;
+            if (typeof raw === 'number') {
+              str = String(raw).replace('.', ',');
+            } else {
+              // Strip tusind-prikker og whitespace, behold komma som decimal
+              str = String(raw).trim().replace(/\s/g, '').replace(/\./g, '');
+            }
+            rowMap[periodKey] = str;
+            valuesCount += 1;
+          }
+          if (Object.keys(rowMap).length > 0) newBucket[canonical] = rowMap;
+        }
+
+        setGran(importedGran);
+        setUnit(importedUnit);
+        setValues(prev => ({ ...prev, [importedGran]: newBucket }));
+        setImportMsg({ kind: 'ok', text: `Importeret: ${valuesCount} tal i ${matched} rækker (${importedGran === 'month' ? 'måned' : importedGran === 'quarter' ? 'kvartal' : 'år'}). Husk at gemme.` });
+      } catch (err) {
+        setImportMsg({ kind: 'err', text: 'Kunne ikke læse filen: ' + (err.message || err) });
+      }
+      // reset input so same file can be re-selected
+      e.target.value = '';
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  return (
+    <FinSection
+      title="Budget"
+      sub="Indtast budgettal for fremtidige perioder. Tal vises sammen med årsregnskaber i memo og analyse."
+    >
+      <div className="card" style={{ overflow: 'hidden' }}>
+        {/* Header / toggle */}
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          style={{
+            width: '100%', background: 'transparent', border: 0, padding: '14px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <I.ChevronRight size={14} style={{ color: 'var(--c-text-3)', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 160ms' }}/>
+            <div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>Indtast budget</div>
+              <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2 }}>
+                {filledCount > 0 ? `${filledCount} tal indtastet · gemt automatisk` : 'Ingen budgettal endnu'}
+              </div>
+            </div>
+          </div>
+        </button>
+
+        {open && (
+          <div style={{ borderTop: '1px solid var(--c-line)' }}>
+            {/* Toolbar */}
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12,
+              padding: '12px 16px', borderBottom: '1px solid var(--c-line)', background: 'var(--c-surface)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11.5, color: 'var(--c-text-2)', fontWeight: 500 }}>Periode</span>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', padding: 2,
+                  background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 7,
+                }}>
+                  {[
+                    { k: 'month',   l: 'Måned' },
+                    { k: 'quarter', l: 'Kvartal' },
+                    { k: 'year',    l: 'År' },
+                  ].map(g => {
+                    const active = gran === g.k;
+                    return (
+                      <button
+                        key={g.k}
+                        onClick={() => setGran(g.k)}
+                        style={{
+                          height: 24, padding: '0 12px', border: 0,
+                          background: active ? '#fff' : 'transparent',
+                          color: active ? 'var(--c-ink)' : 'var(--c-text-2)',
+                          fontSize: 11.5, fontWeight: 500, borderRadius: 5, cursor: 'pointer',
+                          boxShadow: active ? '0 1px 2px rgba(15,17,20,0.06)' : 'none',
+                        }}
+                      >
+                        {g.l}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11.5, color: 'var(--c-text-2)', fontWeight: 500 }}>Enhed</span>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', padding: 2,
+                  background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 7,
+                }}>
+                  {[
+                    { k: 'kr',       l: 'Hele kr.' },
+                    { k: 'thousand', l: 'DKK t.' },
+                    { k: 'mio',      l: 'DKK mio.' },
+                  ].map(u => {
+                    const active = unit === u.k;
+                    return (
+                      <button
+                        key={u.k}
+                        onClick={() => setUnit(u.k)}
+                        style={{
+                          height: 24, padding: '0 10px', border: 0,
+                          background: active ? '#fff' : 'transparent',
+                          color: active ? 'var(--c-ink)' : 'var(--c-text-2)',
+                          fontSize: 11.5, fontWeight: 500, borderRadius: 5, cursor: 'pointer',
+                          boxShadow: active ? '0 1px 2px rgba(15,17,20,0.06)' : 'none',
+                        }}
+                      >
+                        {u.l}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ flex: 1 }}/>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImportFile}
+                style={{ display: 'none' }}
+              />
+              <button onClick={handleImportClick} className="btn btn-sm btn-ghost" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <I.Download className="ic" style={{ transform: 'rotate(180deg)' }}/> Importér Excel
+              </button>
+              <button onClick={handleExport} className="btn btn-sm btn-ghost" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                <I.Download className="ic"/> Eksportér Excel
+              </button>
+              <div ref={clearBtnRef} style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setClearConfirmOpen(v => !v)}
+                  className="btn btn-sm btn-ghost"
+                  style={{ fontSize: 11.5, color: 'var(--c-warn)' }}
+                  title="Slet alle budgettal på tværs af måned, kvartal og år"
+                >
+                  Ryd alt
+                </button>
+                {clearConfirmOpen && (
+                  <div
+                    style={{
+                      position: 'absolute', top: 'calc(100% + 6px)', right: 0, zIndex: 50,
+                      width: 260, background: '#fff',
+                      border: '1px solid var(--c-line)', borderRadius: 8,
+                      boxShadow: '0 8px 24px rgba(15,17,20,0.12)',
+                      padding: '12px 14px',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
+                      <I.AlertCircle size={14} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }}/>
+                      <div>
+                        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 3 }}>Slet alle budgettal?</div>
+                        <div style={{ fontSize: 11.5, color: 'var(--c-text-2)', lineHeight: 1.45 }}>
+                          Dette rydder måneder, kvartaler og år. Kan ikke fortrydes.
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+                      <button
+                        onClick={() => setClearConfirmOpen(false)}
+                        className="btn btn-sm btn-ghost"
+                        style={{ fontSize: 11.5 }}
+                      >
+                        Annullér
+                      </button>
+                      <button
+                        onClick={handleClearAll}
+                        className="btn btn-sm"
+                        style={{ fontSize: 11.5, background: 'var(--c-warn)', color: '#fff', border: '1px solid var(--c-warn)' }}
+                      >
+                        Ja, ryd alt
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div style={{ overflowX: 'auto' }}>
+              <table className="tbl" style={{ fontSize: 12.5, width: '100%', minWidth: 720 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', fontWeight: 600, color: 'var(--c-text-2)', position: 'sticky', left: 0, background: 'var(--c-surface)', zIndex: 1 }}>
+                      Regnskabspost
+                    </th>
+                    {periods.map(p => (
+                      <th key={p.key} style={{ textAlign: 'right', fontWeight: 600, color: 'var(--c-text-2)', whiteSpace: 'nowrap', padding: '8px 10px', minWidth: 84 }}>
+                        {p.label}
+                      </th>
+                    ))}
+                    <th style={{ width: 64, padding: '8px 6px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {BUDGET_GROUPS.map((g, gi) => (
+                    <React.Fragment key={g.label}>
+                      <tr>
+                        <td
+                          colSpan={2 + periods.length}
+                          style={{
+                            padding: '12px 14px 6px',
+                            background: 'var(--c-surface-2)',
+                            borderTop: gi === 0 ? 'none' : '1px solid var(--c-line)',
+                            fontSize: 11, fontWeight: 600,
+                            letterSpacing: '0.06em', textTransform: 'uppercase',
+                            color: 'var(--c-text-2)',
+                          }}
+                        >
+                          {g.label}
+                        </td>
+                      </tr>
+                      {g.rows.map((r) => (
+                        <BudgetRow
+                          key={r.label}
+                          row={r}
+                          periods={periods}
+                          rowValues={values[gran]?.[r.label]}
+                          computedRowValues={r.computed ? computedValues[r.label] : undefined}
+                          onChangeCell={onChangeCell}
+                          onRecycle={handleRecycleRow}
+                          canRecycle={!!getLastAnnualValue(r.label)}
+                          onClearRow={handleClearRow}
+                        />
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Import status */}
+            {importMsg && (
+              <div style={{
+                padding: '8px 14px', borderTop: '1px solid var(--c-line)',
+                background: importMsg.kind === 'ok' ? 'var(--c-success-bg)' : 'var(--c-warn-bg)',
+                color: importMsg.kind === 'ok' ? 'var(--c-success)' : 'var(--c-warn)',
+                fontSize: 11.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+              }}>
+                <span>{importMsg.text}</span>
+                <button onClick={() => setImportMsg(null)} style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer', color: 'inherit', fontSize: 14 }}>×</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </FinSection>
   );
 }
@@ -1664,6 +2583,23 @@ function TrustpilotSection() {
           </div>
         ))}
       </div>
+
+      {/* Source */}
+      <div style={{
+        marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--c-line)',
+        fontSize: 11, color: 'var(--c-text-3)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
+      }}>
+        <span>Kilde: Trustpilot.com/review/nordhavncomposites.dk · hentet 23. maj 2026</span>
+        <a
+          href="https://www.trustpilot.com/review/nordhavncomposites.dk"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: 'var(--c-primary)', fontSize: 11.5, fontWeight: 500, textDecoration: 'none' }}
+        >
+          Åbn på Trustpilot →
+        </a>
+      </div>
       </div>
     </FinSection>
   );
@@ -1671,4 +2607,5 @@ function TrustpilotSection() {
 
 window.WSFinancials = WSFinancials;
 window.AnnualReportSection = AnnualReportSection;
+window.BudgetSection = BudgetSection;
 window.SimpleOwnershipTree = SimpleOwnershipTree;

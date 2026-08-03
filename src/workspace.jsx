@@ -1,6 +1,7 @@
 // Case workspace shell - header + tabs + content router
-function WorkspaceShell({ tab, go, openMemo }) {
+function WorkspaceShell({ tab, go, openMemo, caseId }) {
   const co = DATA.COMPANY;
+  const caseData = DATA.CASES.find(c => c.id === caseId) || DATA.CASES[0];
   const scrollRef = React.useRef(null);
   const scrollMap = React.useRef({});
   const [confirmIndstil, setConfirmIndstil] = React.useState(false);
@@ -40,7 +41,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
         right={
           <>
             <button className="btn btn-sm btn-ghost"><I.Share className="ic"/> Del</button>
-            <button className="btn btn-sm" onClick={() => go("workspace:1:memo")}><I.FileText className="ic"/> Credit memo</button>
+            <button className="btn btn-sm" onClick={() => go("workspace:" + caseId + ":memo")}><I.FileText className="ic"/> Credit memo</button>
           </>
         }
       />
@@ -52,6 +53,11 @@ function WorkspaceShell({ tab, go, openMemo }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div className="ws-co-name">{co.name}</div>
               {tab === "indstil" && indstillet ? statusPill("Indstillet") : statusPill(co.status)}
+            </div>
+            <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2 }}>
+              <span className="mono">Sagsnr. {caseData.caseNr}</span>
+              <span style={{ margin: '0 6px', color: 'var(--c-line-strong)' }}>·</span>
+              <span className="mono">CVR {co.cvr}</span>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -90,7 +96,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
             return (
               <button
                 key={t.k}
-                onClick={() => go("workspace:1:" + t.k)}
+                onClick={() => go("workspace:" + caseId + ":" + t.k)}
                 style={{
                   height: 34, padding: '0 14px',
                   background: isActive ? 'var(--c-success)' : 'transparent',
@@ -108,7 +114,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
             );
           }
           return (
-            <button key={t.k} className={"ws-tab " + (tab === t.k ? "active" : "")} onClick={() => go("workspace:1:" + t.k)}>
+            <button key={t.k} className={"ws-tab " + (tab === t.k ? "active" : "")} onClick={() => go("workspace:" + caseId + ":" + t.k)}>
               {t.ic} {t.label} {t.badge && <span className="badge">{t.badge}</span>}
             </button>
           );
@@ -116,13 +122,13 @@ function WorkspaceShell({ tab, go, openMemo }) {
       </div>
 
       <div className="scroll" ref={scrollRef}>
-        {tab === "overview" && <WSOverview go={go}/>}
+        {tab === "overview" && <WSOverview go={go} caseId={caseId}/>}
         {tab === "financials" && <WSFinancials go={go}/>}
         {tab === "documents" && <WSDocuments/>}
         {tab === "security" && <WSSecurity/>}
         {tab === "questions" && <WSQuestions/>}
         {tab === "memo" && <WSMemo/>}
-        {tab === "indstil" && <WSIndstil go={go} indstillet={indstillet} indstilletAt={indstilletAt} onIndstil={() => { setIndstilletAt(new Date()); setIndstillet(true); }} onReset={() => setIndstillet(false)}/>}
+        {tab === "indstil" && <WSIndstil go={go} caseId={caseId} indstillet={indstillet} indstilletAt={indstilletAt} onIndstil={() => { setIndstilletAt(new Date()); setIndstillet(true); }} onReset={() => setIndstillet(false)}/>}
       </div>
 
       {showCustomerStatus && (
@@ -141,7 +147,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
             <span style={{ fontSize: 10.5, letterSpacing: '0.07em', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Forhåndsvisning</span>
             <span style={{ fontSize: 11.5, padding: '2px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 4, color: 'rgba(255,255,255,0.6)' }}>Hvad kunden ser</span>
             <div style={{ flex: 1 }}/>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Nordhavn Composite A/S · Sagsnr. 2026-0184</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{co.name} · Sagsnr. {caseData.caseNr}</span>
             <button
               onClick={() => setShowCustomerStatus(false)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
@@ -180,7 +186,7 @@ function WorkspaceShell({ tab, go, openMemo }) {
               <button className="btn btn-sm" onClick={() => setConfirmIndstil(false)}>Annullér</button>
               <button
                 className="btn btn-sm btn-primary"
-                onClick={() => { setConfirmIndstil(false); go("workspace:1:indstil"); }}
+                onClick={() => { setConfirmIndstil(false); go("workspace:" + caseId + ":indstil"); }}
               >
                 Ja, indstil kunde
               </button>
@@ -208,7 +214,7 @@ function loadCaseStage() {
   } catch (e) { return 'review-public'; }
 }
 
-function WSOverview({ go }) {
+function WSOverview({ go, caseId }) {
   const [stage, setStageRaw] = React.useState(loadCaseStage);
   const setStage = (s) => {
     setStageRaw(s);
@@ -238,7 +244,7 @@ function WSOverview({ go }) {
       <StamoplysningerCard/>
 
       {/* Stage-aware hero with 5-step stepper */}
-      <StageHero stage={stage} setStage={setStage} go={go}/>
+      <StageHero stage={stage} setStage={setStage} go={go} caseId={caseId}/>
 
       {/* Declined */}
       {stage === 'declined' && (
@@ -300,7 +306,7 @@ function WSOverview({ go }) {
   );
 }
 
-function StageHero({ stage, setStage, go }) {
+function StageHero({ stage, setStage, go, caseId }) {
   // Map stage → step states (5 steps)
   const stepState = (k) => {
     if (stage === 'declined') {
@@ -374,7 +380,7 @@ function StageHero({ stage, setStage, go }) {
         <button className="btn btn-primary" onClick={() => setStage('material-selection')}>
           Indhent mere materiale <I.ArrowRight className="ic"/>
         </button>
-        <button className="btn" onClick={() => go && go("workspace:1:financials")}>
+        <button className="btn" onClick={() => go && go("workspace:" + caseId + ":financials")}>
           <I.BarChart className="ic"/> Se materiale
         </button>
         <button className="btn btn-danger" style={{ color: 'var(--c-success)', borderColor: 'var(--c-success)' }} onClick={() => setStage('ready-skip')}>Indstil kunde</button>
@@ -387,7 +393,7 @@ function StageHero({ stage, setStage, go }) {
     body = "Du har valgt at gå direkte til indstilling. Materialevalg er markeret færdig og Kundeinput er sprunget over.";
     actions = (
       <>
-        <button className="btn btn-primary" onClick={() => go && go("workspace:1:memo")}>
+        <button className="btn btn-primary" onClick={() => go && go("workspace:" + caseId + ":memo")}>
           Fortsæt til memo <I.ArrowRight className="ic"/>
         </button>
         <button className="btn" onClick={() => setStage('review-public')}>Tilbage</button>
@@ -426,7 +432,7 @@ function StageHero({ stage, setStage, go }) {
     body = "Alle påkrævede punkter er modtaget. Du kan fortsætte til kreditmemo.";
     actions = (
       <>
-        <button className="btn btn-primary" onClick={() => go && go("workspace:1:memo")}>
+        <button className="btn btn-primary" onClick={() => go && go("workspace:" + caseId + ":memo")}>
           Fortsæt til memo <I.ArrowRight className="ic"/>
         </button>
         <button className="btn" onClick={() => setStage('awaiting-customer')}>Tilbage</button>
@@ -1399,7 +1405,7 @@ function DecisionBlock({ go }) {
       <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--c-line-2)', fontSize: 12.5, color: 'var(--c-text-3)' }}>
         Brug knapperne ovenfor til at gå videre med yderligere materiale fra kunden - eller give afslag på sagen.
         {' '}
-        <button onClick={() => go && go("workspace:1:financials")} style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer', color: 'var(--c-primary)', fontSize: 'inherit', fontWeight: 500 }}>
+        <button onClick={() => go && go("workspace:" + caseId + ":financials")} style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer', color: 'var(--c-primary)', fontSize: 'inherit', fontWeight: 500 }}>
           Se datagrundlag
         </button>
       </div>
@@ -1735,7 +1741,8 @@ function CustomerStatusBlock({ stage, go, onMarkReady }) {
   );
 }
 
-function WSIndstil({ go, indstillet, indstilletAt, onIndstil, onReset }) {
+function WSIndstil({ go, caseId, indstillet, indstilletAt, onIndstil, onReset }) {
+  const caseData = DATA.CASES.find(c => c.id === caseId) || DATA.CASES[0];
   if (indstillet) {
     const d = indstilletAt || new Date();
     const dateStr = d.toLocaleDateString('da-DK', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -1761,7 +1768,7 @@ function WSIndstil({ go, indstillet, indstilletAt, onIndstil, onReset }) {
             {[
               { label: "Indstillet af", value: "Mette Larsen" },
               { label: "Dato", value: dateStr + ' · ' + timeStr },
-              { label: "Sagsnr.", value: "2026-0184" },
+              { label: "Sagsnr.", value: caseData.caseNr || "2026-0184" },
               { label: "Kreditmemo", value: "Vedhæftet indstillingen" },
             ].map((r, i) => (
               <div key={i} style={{ display: 'flex', gap: 12, padding: '7px 0', borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)', fontSize: 13.5 }}>
@@ -1807,7 +1814,7 @@ function WSIndstil({ go, indstillet, indstilletAt, onIndstil, onReset }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', height: 40, fontSize: 14 }} onClick={() => go && go("workspace:1:memo")}>
+        <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', height: 40, fontSize: 14 }} onClick={() => go && go("workspace:" + caseId + ":memo")}>
           <I.FileText className="ic"/> Åbn kreditmemo
         </button>
         <button onClick={onIndstil} style={{ flex: 1, height: 40, fontSize: 14, fontWeight: 600, background: 'var(--c-success)', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>

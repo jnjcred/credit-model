@@ -12,6 +12,7 @@ const COMPANY = {
   postal: "9900 Frederikshavn",
   country: "Danmark",
   website: "nordhavn-composite.dk",
+  caseNr: "2026-0184",
   caseType: "Eksportkaution + driftskredit",
   amount: "DKK 4,5M",
   status: "Needs review",
@@ -27,14 +28,15 @@ const COMPANY = {
 };
 
 const CASES = [
-  { id: 1, name: "Nordhavn Composite ApS", cvr: "12345678", type: "Eksportkaution", amount: "4,5M", status: "Needs review", risk: "med", responsible: "Mette L.", lastActivity: "2 timer siden", missing: 1, deadline: "29 May", pinned: true, tasks: 3 },
-  { id: 2, name: "Vendia Bio ApS", cvr: "12345678", type: "Vækstlån", amount: "1,8M", status: "Waiting for customer", risk: "low", responsible: "Jonas K.", lastActivity: "i går", missing: 4, deadline: "03 Jun", tasks: 1 },
-  { id: 3, name: "Marstal Maritime ApS", cvr: "12345678", type: "Driftskredit", amount: "3,2M", status: "Data received", risk: "low", responsible: "Mette L.", lastActivity: "i dag, 09:14", missing: 0, deadline: "31 May", tasks: 2 },
-  { id: 4, name: "Skagen Klima ApS", cvr: "12345678", type: "Eksportkaution", amount: "0,9M", status: "Credit memo ready", risk: "low", responsible: "Sara F.", lastActivity: "2 dage siden", missing: 0, deadline: "27 May", tasks: 1 },
-  { id: 5, name: "Lyngbæk Industrier ApS", cvr: "12345678", type: "Investeringslån", amount: "7,2M", status: "Needs review", risk: "high", responsible: "Jonas K.", lastActivity: "i dag, 11:02", missing: 2, deadline: "02 Jun", tasks: 4 },
-  { id: 6, name: "Aalborg Hydrogen A/S", cvr: "12345678", type: "Eksportkaution", amount: "12,0M", status: "Draft", risk: "low", responsible: "Mette L.", lastActivity: "3 dage siden", missing: null, deadline: "-", tasks: 0 },
-  { id: 7, name: "Kløver Tekstil ApS", cvr: "12345678", type: "Driftskredit", amount: "0,5M", status: "Approved", risk: "low", responsible: "Sara F.", lastActivity: "1 uge siden", missing: 0, deadline: "-", archived: true, tasks: 0 },
-  { id: 8, name: "Refshaleøen Robotics ApS", cvr: "12345678", type: "Vækstlån", amount: "2,1M", status: "Waiting for customer", risk: "med", responsible: "Jonas K.", lastActivity: "4 dage siden", missing: 3, deadline: "12 Jun", tasks: 1 },
+  { id: 1, name: "Nordhavn Composite ApS", cvr: "12345678", caseNr: "2026-0184", type: "Eksportkaution", amount: "4,5M", status: "Needs review", risk: "med", responsible: "Mette L.", lastActivity: "2 timer siden", missing: 1, deadline: "29 May", pinned: true, tasks: 3 },
+  { id: 2, name: "Vendia Bio ApS", cvr: "12345678", caseNr: "2026-0201", type: "Vækstlån", amount: "1,8M", status: "Waiting for customer", risk: "low", responsible: "Jonas K.", lastActivity: "i går", missing: 4, deadline: "03 Jun", tasks: 1 },
+  { id: 3, name: "Marstal Maritime ApS", cvr: "12345678", caseNr: "2026-0212", type: "Driftskredit", amount: "3,2M", status: "Data received", risk: "low", responsible: "Mette L.", lastActivity: "i dag, 09:14", missing: 0, deadline: "31 May", tasks: 2 },
+  { id: 4, name: "Skagen Klima ApS", cvr: "12345678", caseNr: "2026-0095", type: "Eksportkaution", amount: "0,9M", status: "Credit memo ready", risk: "low", responsible: "Sara F.", lastActivity: "2 dage siden", missing: 0, deadline: "27 May", tasks: 1 },
+  { id: 5, name: "Lyngbæk Industrier ApS", cvr: "12345678", caseNr: "2026-0178", type: "Investeringslån", amount: "7,2M", status: "Needs review", risk: "high", responsible: "Jonas K.", lastActivity: "i dag, 11:02", missing: 2, deadline: "02 Jun", tasks: 4 },
+  { id: 6, name: "Aalborg Hydrogen A/S", cvr: "12345678", caseNr: "2026-0233", type: "Eksportkaution", amount: "12,0M", status: "Draft", risk: "low", responsible: "Mette L.", lastActivity: "3 dage siden", missing: null, deadline: "-", tasks: 0 },
+  { id: 7, name: "Kløver Tekstil ApS", cvr: "12345678", caseNr: "2025-1147", type: "Driftskredit", amount: "0,5M", status: "Approved", risk: "low", responsible: "Sara F.", lastActivity: "1 uge siden", missing: 0, deadline: "-", archived: true, tasks: 0 },
+  { id: 8, name: "Refshaleøen Robotics ApS", cvr: "12345678", caseNr: "2026-0221", type: "Vækstlån", amount: "2,1M", status: "Waiting for customer", risk: "med", responsible: "Jonas K.", lastActivity: "4 dage siden", missing: 3, deadline: "12 Jun", tasks: 1 },
+  { id: 9, name: "Nordhavn Composite ApS", cvr: "12345678", caseNr: "2026-0267", type: "Investeringslån", amount: "2,8M", status: "Draft", risk: "low", responsible: "Jonas K.", lastActivity: "i dag, 08:45", missing: null, deadline: "-", tasks: 0 },
 ];
 
 // Data collection - the HERO view

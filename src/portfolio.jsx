@@ -77,7 +77,7 @@ function Portfolio({ go, openNewCase }) {
   const matchesFilters = (c) => {
     if (search) {
       const q = search.toLowerCase();
-      if (!c.name.toLowerCase().includes(q) && !String(c.cvr).toLowerCase().includes(q)) return false;
+      if (!c.name.toLowerCase().includes(q) && !String(c.cvr).toLowerCase().includes(q) && !String(c.caseNr || '').toLowerCase().includes(q)) return false;
     }
     return true;
   };
@@ -308,10 +308,10 @@ function CaseTaskCard({ c, tasks, go }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'nowrap', minWidth: 0 }}>
           <span style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{c.name}</span>
+          <span className="mono" style={{ fontSize: 11, color: 'var(--c-text-3)', flexShrink: 0, whiteSpace: 'nowrap' }}>{c.caseNr}</span>
           <span style={{ flexShrink: 0 }}>{statusPill(c.status)}</span>
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {stageLabel(c.status) && <><span style={{ color: 'var(--c-text-2)', fontWeight: 500 }}>{stageLabel(c.status)}</span> · </>}
           <span className="mono">CVR {c.cvr}</span> · {c.type} · <span className="mono">{c.amount}</span> · {c.lastActivity}
         </div>
       </div>

@@ -37,7 +37,9 @@ function App() {
 
   // Parse route
   const isWorkspace = route.startsWith("workspace:");
-  const workspaceTab = isWorkspace ? (route.split(":")[2] || "overview") : null;
+  const workspaceParts = isWorkspace ? route.split(":") : [];
+  const workspaceCaseId = workspaceParts.length > 1 ? (parseInt(workspaceParts[1]) || 1) : 1;
+  const workspaceTab = isWorkspace ? (workspaceParts[2] || "overview") : null;
   const isPortal = route === "portal";
 
   return (
@@ -49,7 +51,7 @@ function App() {
           <Sidebar route={route} go={go} openNewCase={() => setNewCaseOpen(true)}/>
           <div className="main">
             {route === "cases" && <Portfolio go={go} openNewCase={() => setNewCaseOpen(true)}/>}
-            {isWorkspace && <WorkspaceShell tab={workspaceTab} go={go} openMemo={() => go("workspace:1:memo")}/>}
+            {isWorkspace && <WorkspaceShell tab={workspaceTab} caseId={workspaceCaseId} go={go} openMemo={() => go("workspace:" + workspaceCaseId + ":memo")}/>}
             {route === "analyse" && <PortfolioAnalyse go={go}/>}
             {route === "inbox" && <ComingSoon title="Indbakke" sub="Notifikationer, kundebeskeder, deadline-påmindelser"/>}
             {route === "requests" && <DataRequests go={go}/>}

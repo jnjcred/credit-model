@@ -243,8 +243,16 @@ function CustomerPortal({ back }) {
     else if (item.kind === "trade") setScreen("trade");
   };
 
-  const delegateToAccountant = (itemIds, email) => {
-    setItems(prev => prev.map(x => itemIds.includes(x.id) ? { ...x, st: "accountant", note: "Anmodet fra revisor (" + email + ") · afventer svar" } : x));
+  const delegateToHelper = (itemIds, contact, helperKind) => {
+    const label = helperKind === 'bank' ? 'bank' : 'revisor';
+    setItems(prev => prev.map(x => itemIds.includes(x.id) ? {
+      ...x,
+      st: "accountant",
+      helperKind,
+      helperName: contact.name,
+      helperEmail: contact.email,
+      note: "Anmodet fra " + label + " (" + contact.email + ") · afventer svar"
+    } : x));
     setBundleOpen(false);
     setBundlePreselect(null);
   };
@@ -309,7 +317,7 @@ function CustomerPortal({ back }) {
         )}
       </div>
 
-      {bundleOpen && <DelegateBundleModal items={items} preselect={bundlePreselect} onClose={() => { setBundleOpen(false); setBundlePreselect(null); }} onSend={(itemIds, email) => delegateToAccountant(itemIds, email)}/>}
+      {bundleOpen && <DelegateBundleModal items={items} preselect={bundlePreselect} onClose={() => { setBundleOpen(false); setBundlePreselect(null); }} onSend={(itemIds, contact, helperKind) => delegateToHelper(itemIds, contact, helperKind)}/>}
     </div>
   );
 }
@@ -473,7 +481,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onTa
         <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em', flex: 1 }}>Materiale til kreditafdelingen</div>
         {canDelegate && (
           <button onClick={() => onOpenBundle(null)} className="btn btn-sm btn-ghost" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <I.User size={13}/> Anmod revisor om hjælp
+            <I.User size={13}/> Anmod bank eller revisor om hjælp
           </button>
         )}
       </div>
@@ -504,7 +512,7 @@ function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onTa
         <div style={{ marginTop: 14, padding: '12px 16px', background: 'var(--c-warn-bg)', borderRadius: 10, fontSize: 12.5, color: 'var(--c-text)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <I.Clock size={14} style={{ color: 'var(--c-warn)', flexShrink: 0 }}/>
           <div style={{ flex: 1 }}>
-            <b>{accountant}</b> {accountant === 1 ? 'element afventer' : 'elementer afventer'} jeres revisor. Kreditafdelingen ser status og kan kontakte revisor direkte hvis nødvendigt.
+            <b>{accountant}</b> {accountant === 1 ? 'element afventer' : 'elementer afventer'} jeres bank eller revisor. Kreditafdelingen ser status og kan kontakte dem direkte hvis nødvendigt.
           </div>
           <button onClick={() => onOpenBundle(null)} className="btn btn-sm btn-ghost" style={{ fontSize: 11.5 }}>Rediger</button>
         </div>
@@ -541,7 +549,7 @@ function PortalHubRow({ x, isFirst, onOpen, onReopen, onTakeBack, onOpenBundle }
           {x.l}
           {x.optional && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-3)' }}>Valgfri</span>}
           {x.auto && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-2)' }}>Auto</span>}
-          {x.st === 'accountant' && <span className="tag" style={{ fontSize: 10, marginLeft: 7, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>Afventer revisor</span>}
+          {x.st === 'accountant' && <span className="tag" style={{ fontSize: 10, marginLeft: 7, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>{x.helperKind === 'bank' ? 'Afventer bank' : 'Afventer revisor'}</span>}
         </div>
       </div>
       {x.st === 'open' && (
@@ -1238,9 +1246,28 @@ function DelegateBundleModal({ items, preselect, onClose, onSend }) {
   const [selected, setSelected] = React.useState(
     preselect ? [preselect] : eligible.filter(x => x.st === 'open').map(x => x.id)
   );
-  const [email, setEmail] = React.useState("jan@revisor-nordkysten.dk");
-  const [name, setName] = React.useState("Jan Holmgaard");
-  const [msg, setMsg] = React.useState("Hej Jan,\n\nKan du sende nedenstående dokumentation direkte til kreditafdelingen via det vedhæftede link? Det er en del af vores ansøgning om kreditfacilitet.\n\nMvh Anders");
+  const PRESETS = {
+    accountant: { name: "Jan Holmgaard", email: "jan@revisor-nordkysten.dk", greeting: "Jan" },
+    bank: { name: "Henrik Skov", email: "henrik.skov@nordeabank.dk", greeting: "Henrik" },
+  };
+  const [helperKind, setHelperKind] = React.useState('accountant');
+  const [name, setName] = React.useState(PRESETS.accountant.name);
+  const [email, setEmail] = React.useState(PRESETS.accountant.email);
+  const buildMsg = (greeting) => "Hej " + greeting + ",\n\nKan du sende nedenstående dokumentation direkte til kreditafdelingen via det vedhæftede link? Det er en del af vores ansøgning om kreditfacilitet.\n\nMvh Anders";
+  const [msg, setMsg] = React.useState(buildMsg(PRESETS.accountant.greeting));
+  const [touched, setTouched] = React.useState({ name: false, email: false, msg: false });
+
+  const switchKind = (kind) => {
+    setHelperKind(kind);
+    const p = PRESETS[kind];
+    if (!touched.name) setName(p.name);
+    if (!touched.email) setEmail(p.email);
+    if (!touched.msg) setMsg(buildMsg(p.greeting));
+  };
+
+  const label = helperKind === 'bank' ? 'banken' : 'revisoren';
+  const labelCap = helperKind === 'bank' ? 'Banken' : 'Revisoren';
+  const sendLabel = helperKind === 'bank' ? 'Send til bank' : 'Send til revisor';
 
   const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
   const allChecked = eligible.length > 0 && eligible.every(x => selected.includes(x.id));
@@ -1251,13 +1278,28 @@ function DelegateBundleModal({ items, preselect, onClose, onSend }) {
       <div className="modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
         <div className="modal-head">
           <div>
-            <div className="modal-title">Anmod revisor om hjælp</div>
-            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>Revisoren får ét samlet link til de valgte punkter</div>
+            <div className="modal-title">Anmod bank eller revisor om hjælp</div>
+            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{labelCap} får ét samlet link til de valgte punkter</div>
           </div>
           <button className="icon-btn" onClick={onClose}><I.X size={16}/></button>
         </div>
         <div className="modal-body">
-          <div className="label-mini" style={{ marginBottom: 6 }}>Vælg punkter revisoren skal hjælpe med</div>
+          <div className="label-mini" style={{ marginBottom: 6 }}>Hvem skal hjælpe?</div>
+          <div style={{ display: 'flex', gap: 0, marginBottom: 16, border: '1px solid var(--c-line)', borderRadius: 8, padding: 3, background: 'var(--c-surface-2)' }}>
+            {[{ k: 'accountant', l: 'Revisor', ic: <I.User size={13}/> }, { k: 'bank', l: 'Bank', ic: <I.Lock size={13}/> }].map(opt => (
+              <button key={opt.k} onClick={() => switchKind(opt.k)}
+                style={{
+                  flex: 1, padding: '8px 12px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  background: helperKind === opt.k ? '#fff' : 'transparent',
+                  color: helperKind === opt.k ? 'var(--c-ink)' : 'var(--c-text-2)',
+                  boxShadow: helperKind === opt.k ? 'var(--shadow-sm)' : 'none'
+                }}>
+                {opt.ic} {opt.l}
+              </button>
+            ))}
+          </div>
+          <div className="label-mini" style={{ marginBottom: 6 }}>Vælg punkter {label} skal hjælpe med</div>
           <div style={{ border: '1px solid var(--c-line)', borderRadius: 8, overflow: 'hidden', marginBottom: 16 }}>
             {eligible.length === 0 && (
               <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--c-text-3)' }}>Ingen åbne punkter at delegere</div>
@@ -1283,33 +1325,33 @@ function DelegateBundleModal({ items, preselect, onClose, onSend }) {
             <div className="grid g-2" style={{ gap: 10 }}>
               <div className="field">
                 <label>Navn</label>
-                <input className="input" value={name} onChange={e => setName(e.target.value)}/>
+                <input className="input" value={name} onChange={e => { setName(e.target.value); setTouched(t => ({ ...t, name: true })); }}/>
               </div>
               <div className="field">
                 <label>Email</label>
-                <input className="input" value={email} onChange={e => setEmail(e.target.value)}/>
+                <input className="input" value={email} onChange={e => { setEmail(e.target.value); setTouched(t => ({ ...t, email: true })); }}/>
               </div>
             </div>
             <div className="field">
-              <label>Besked til revisor</label>
-              <textarea className="input" rows={4} value={msg} onChange={e => setMsg(e.target.value)} style={{ height: 'auto', padding: 10, resize: 'vertical' }}/>
+              <label>Besked til {label}</label>
+              <textarea className="input" rows={4} value={msg} onChange={e => { setMsg(e.target.value); setTouched(t => ({ ...t, msg: true })); }} style={{ height: 'auto', padding: 10, resize: 'vertical' }}/>
             </div>
             <div style={{ background: 'var(--c-surface-2)', padding: '10px 14px', borderRadius: 8 }}>
-              <div className="label-mini" style={{ marginBottom: 3 }}>Revisoren modtager ét samlet link</div>
-              <div className="mono" style={{ fontSize: 12.5, color: 'var(--c-text)' }}>crediwire.app/r/nh-rev-4Kp2</div>
+              <div className="label-mini" style={{ marginBottom: 3 }}>{labelCap} modtager ét samlet link</div>
+              <div className="mono" style={{ fontSize: 12.5, color: 'var(--c-text)' }}>crediwire.app/r/nh-{helperKind === 'bank' ? 'bank' : 'rev'}-4Kp2</div>
               <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Giver kun adgang til de {selected.length} valgte punkter · udløber om 14 dage</div>
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <I.Lock size={11}/> Revisoren ser kun de valgte punkter, ikke resten af ansøgningen.
+              <I.Lock size={11}/> {labelCap} ser kun de valgte punkter, ikke resten af ansøgningen.
             </div>
           </div>
         </div>
         <div className="modal-foot">
           <div style={{ flex: 1 }}/>
           <button className="btn btn-ghost" onClick={onClose}>Annullér</button>
-          <button className="btn btn-primary" disabled={selected.length === 0} onClick={() => onSend(selected, email)}
+          <button className="btn btn-primary" disabled={selected.length === 0} onClick={() => onSend(selected, { name, email }, helperKind)}
             style={selected.length === 0 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>
-            <I.Send className="ic"/> Send til revisor
+            <I.Send className="ic"/> {sendLabel}
           </button>
         </div>
       </div>
