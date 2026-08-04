@@ -147,8 +147,9 @@ function BudgetPreview() {
 
 function WSDocuments() {
   const [uploaded, setUploaded] = React.useState([]); // advisor-uploaded docs (session)
+  // Periodetallene er nu en rigtig kilde memoet citerer, så de hører med i listen
   const allDocs = React.useMemo(
-    () => [...uploaded, ...DATA.DOCS.filter(d => d.type !== 'Periodetal')],
+    () => [...uploaded, ...DATA.DOCS],
     [uploaded]
   );
 
@@ -413,7 +414,9 @@ function WSDocuments() {
               display: 'flex', justifyContent: 'center',
               overflow: 'auto',
             }}>
-              {selected?.type === 'Årsrapport' ? (
+              {findCaseDoc(selected?.name) ? (
+                <CaseDocReader doc={findCaseDoc(selected.name)}/>
+              ) : selected?.type === 'Årsrapport' ? (
                 <AnnualReportPreview doc={selected}/>
               ) : selected?.type === 'Budget' ? (
                 <BudgetPreview/>
@@ -450,6 +453,94 @@ function WSDocuments() {
     </div>
 
     </React.Fragment>
+  );
+}
+
+/* ── Læser til sagens kildedokumenter ─────────────────────────────────────
+   Viser det faktiske indhold AI'en læser, opdelt i de afsnit memoet citerer.
+   ──────────────────────────────────────────────────────────────────────── */
+function findCaseDoc(name) {
+  if (!name || !window.CASE_DOCS) return null;
+  return window.CASE_DOCS.find(d => d.name === name) || null;
+}
+
+function CaseDocReader({ doc }) {
+  const [activeRef, setActiveRef] = React.useState(doc.pages[0] ? doc.pages[0].ref : null);
+  const [q, setQ] = React.useState('');
+  const bodyRef = React.useRef(null);
+
+  React.useEffect(() => {
+    setActiveRef(doc.pages[0] ? doc.pages[0].ref : null);
+    setQ('');
+    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+  }, [doc.id]);
+
+  const page = doc.pages.find(p => p.ref === activeRef) || doc.pages[0];
+
+  const hits = q.trim()
+    ? doc.pages.filter(p => (p.title + ' ' + p.body).toLowerCase().includes(q.trim().toLowerCase()))
+    : null;
+
+  function highlight(text) {
+    const term = q.trim();
+    if (!term) return text;
+    const parts = text.split(new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig'));
+    return parts.map((p, i) =>
+      p.toLowerCase() === term.toLowerCase()
+        ? <mark key={i} style={{ background: 'rgba(245,200,60,0.45)', color: 'inherit' }}>{p}</mark>
+        : p
+    );
+  }
+
+  return (
+    <div style={{ width: '100%', display: 'grid', gridTemplateColumns: '196px 1fr', gap: 0, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 8, overflow: 'hidden', minHeight: 480 }}>
+      <div style={{ borderRight: '1px solid var(--c-line-2)', background: 'var(--c-surface-2)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: 10, borderBottom: '1px solid var(--c-line-2)' }}>
+          <input
+            className="input"
+            style={{ width: '100%', height: 28, fontSize: 12 }}
+            placeholder="Søg i dokumentet"
+            value={q}
+            onChange={e => setQ(e.target.value)}
+          />
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', maxHeight: 520 }}>
+          {(hits || doc.pages).map(p => {
+            const on = p.ref === activeRef;
+            return (
+              <button key={p.ref} onClick={() => { setActiveRef(p.ref); if (bodyRef.current) bodyRef.current.scrollTop = 0; }}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+                  padding: '8px 12px', border: 'none',
+                  borderLeft: '2px solid ' + (on ? 'var(--c-ink)' : 'transparent'),
+                  background: on ? '#fff' : 'transparent',
+                  fontFamily: 'inherit',
+                }}>
+                <div className="mono" style={{ fontSize: 10, color: 'var(--c-text-3)' }}>{p.ref}</div>
+                <div style={{ fontSize: 12, color: on ? 'var(--c-ink)' : 'var(--c-text-2)', lineHeight: 1.35, marginTop: 1 }}>{p.title}</div>
+              </button>
+            );
+          })}
+          {hits && hits.length === 0 && (
+            <div style={{ padding: '16px 12px', fontSize: 12, color: 'var(--c-text-3)' }}>Ingen træffere.</div>
+          )}
+        </div>
+      </div>
+
+      <div ref={bodyRef} style={{ overflowY: 'auto', maxHeight: 560, padding: '22px 28px 34px' }}>
+        {page && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid var(--c-line-2)' }}>
+              <span className="mono" style={{ fontSize: 11, color: 'var(--c-text-3)' }}>{page.ref}</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>{page.title}</span>
+            </div>
+            <div style={{ fontSize: 12.5, lineHeight: 1.75, color: 'var(--c-text)', whiteSpace: 'pre-wrap', fontFamily: /ark |linje /.test(page.ref) ? 'var(--mono)' : 'inherit' }}>
+              {highlight(page.body)}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 

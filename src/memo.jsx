@@ -16,7 +16,34 @@
     .memo-body table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
     .memo-body th { text-align: left; padding: 7px 10px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em; color: var(--c-text-2); border-bottom: 2px solid var(--c-line-strong); }
     .memo-body td { padding: 7px 10px; border-bottom: 1px solid var(--c-line-2); font-size: 12px; }
-    .memo-body .memo-cite { border-bottom: 1.5px dotted var(--c-primary); cursor: help; }
+    /* Under redigering skal cellerne kunne ses. Uden lodrette linjer ligner to
+       tomme rækker bare to blanke linjer, og man kan ikke sigte efter en celle. */
+    .memo-body[contenteditable="true"] td,
+    .memo-body[contenteditable="true"] th { border-right: 1px solid var(--c-line-2); }
+    .memo-body[contenteditable="true"] tr > *:last-child { border-right: none; }
+    .memo-body[contenteditable="true"] td:empty::after,
+    .memo-body[contenteditable="true"] td:has(> br:only-child)::after { content: ''; display: inline-block; min-height: 1em; }
+    .memo-body td:focus-within, .memo-body th:focus-within { background: rgba(29,78,216,0.05); }
+
+    /* Værktøjslinje der kun vises når markøren står i en tabel */
+    .memo-tbl-bar {
+      position: sticky; bottom: 10px; z-index: 6;
+      display: flex; align-items: center; gap: 4; flex-wrap: wrap;
+      margin: 10px 0 0 28px; padding: 6px 8px;
+      background: var(--c-ink); border-radius: 9px;
+      box-shadow: 0 6px 18px rgba(15,17,20,0.22);
+    }
+    .memo-tbl-bar button {
+      height: 24px; padding: 0 9px; border: 0; border-radius: 6px;
+      background: rgba(255,255,255,0.1); color: #fff;
+      font-family: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer;
+    }
+    .memo-tbl-bar button:hover { background: rgba(255,255,255,0.22); }
+    .memo-tbl-lbl { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-right: 4px; }
+    .memo-tbl-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.18); margin: 0 4px; }
+    .memo-tbl-hint { font-size: 10.5px; color: rgba(255,255,255,0.45); margin-left: 6px; }
+    .memo-body .memo-cite { border-bottom: 1.5px dotted var(--c-primary); cursor: pointer; }
+    .memo-body .memo-cite:hover { background: rgba(29,78,216,0.08); border-bottom-style: solid; }
     .memo-body:focus-within { background: rgba(59,130,246,0.018); border-radius: 6px; }
 
     /* ── Template hints / placeholders (EIFO-template tekst) ── */
@@ -173,12 +200,12 @@ const SEC = {
     </ul>
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
-      <p><strong>Aktiviteter:</strong> Nordhavn Composite A/S producerer fiberforstærkede kompositkomponenter, primært til vindmølleblade. Selskabet er specialiseret i korte serier med hurtig omstilling og leverer til OEM-kunder som Vestas og <span class="memo-cite" data-doc="GE_Vernova_kontrakt.pdf" data-page="s. 1">GE Vernova</span>.</p>
+      <p><strong>Aktiviteter:</strong> Nordhavn Composite A/S producerer fiberforstærkede kompositkomponenter, primært til vindmølleblade. Selskabet er specialiseret i korte serier med hurtig omstilling og leverer til OEM-kunder som Vestas og <span class="memo-cite" data-doc="GE_Vernova_rammekontrakt.pdf" data-page="s. 1">GE Vernova</span>.</p>
       <p><strong>Historik (seneste 5 år):</strong></p>
       <ul>
         <li>2022: Første leverance til Vestas Blades efter 18 måneders kvalifikation</li>
         <li>2024: Opskalering af produktion i Vendsyssel (+45% kapacitet)</li>
-        <li>Q4 2025: Indgået <span class="memo-cite" data-doc="GE_Vernova_kontrakt.pdf" data-page="s. 1">rammeaftale med GE Vernova</span> for Block-Island havvindprojektet</li>
+        <li>Q4 2025: Indgået <span class="memo-cite" data-doc="GE_Vernova_rammekontrakt.pdf" data-page="s. 1">rammeaftale med GE Vernova</span> for Block-Island havvindprojektet</li>
       </ul>
       <p><strong>Pengeinstituttets motiv:</strong> Nordjyske Bank ønsker at risikodele eksporteksponeringen mod USD-fakturering (Block-Island, betaling Q4 2026). Banken har eksisterende anlægslån (DKK 1,8M, 4,2%) med selskabet og vurderer EIFO-medfinansiering som nødvendig for at kunne stille den ønskede driftskredit.</p>
     </div>
@@ -225,7 +252,7 @@ const SEC = {
         <tr><td style="width:42%">Objektiv (beregnet) Credit rating</td><td><strong>BB+</strong> <span style="color:var(--c-text-3); font-size:11px">(score 6,2/10)</span></td></tr>
         <tr><td>Indstillet Credit rating</td><td><strong>BB</strong> <span style="color:var(--c-text-3); font-size:11px">(override − 1 trin)</span></td></tr>
         <tr><td>Anvendt (-e) overrides</td><td>Kundekoncentration – nedjustering 1 trin</td></tr>
-        <tr><td>Argumentation for overrides</td><td>Top-3 kunder udgør <span class="memo-cite" data-doc="Periodetal_Q1-2026.xlsx" data-page="ark Kunder">64% af omsætningen</span> med GE Vernova alene på ~38%. Den objektive model fanger ikke risikoen ved tab af én primær kunde tilstrækkeligt, hvorfor manuel nedjustering ét trin er anvendt.</td></tr>
+        <tr><td>Argumentation for overrides</td><td>Top-3 kunder udgør <span class="memo-cite" data-doc="Periodetal_Q1-Q3_2026.xlsx" data-page="ark Kunder">64% af omsætningen</span> med GE Vernova alene på ~38%. Den objektive model fanger ikke risikoen ved tab af én primær kunde tilstrækkeligt, hvorfor manuel nedjustering ét trin er anvendt.</td></tr>
       </tbody>
     </table>
   `,
@@ -240,8 +267,8 @@ const SEC = {
     </ul>
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
-      <p>Legal SME har gennemgået <span class="memo-cite" data-doc="GE_Vernova_kontrakt.pdf" data-page="s. 1">GE Vernova-rammekontrakten</span> og bekræfter sædvanlige internationale handelsvilkår (INCOTERMS DDP, betalingsbetingelser 60 dage). Ingen exit-klausuler eller cross-default-bestemmelser vurderes problematiske.</p>
-      <p>Eksportkautionsdokumentation følger EIFOs standard og er gennemgået i samarbejde med Nordjyske Banks juridiske afdeling. Tilbagetrædelseserklæring for <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14 -Anpartshaverlån">anpartshaverlån DKK 0,5M</span> mangler og er forudsætning for bevilling.</p>
+      <p>Legal SME har gennemgået <span class="memo-cite" data-doc="GE_Vernova_rammekontrakt.pdf" data-page="s. 1">GE Vernova-rammekontrakten</span> og bekræfter sædvanlige internationale handelsvilkår (INCOTERMS DDP, betalingsbetingelser 60 dage). Ingen exit-klausuler eller cross-default-bestemmelser vurderes problematiske.</p>
+      <p>Eksportkautionsdokumentation følger EIFOs standard og er gennemgået i samarbejde med Nordjyske Banks juridiske afdeling. Tilbagetrædelseserklæring for <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">anpartshaverlån DKK 0,5M</span> mangler og er forudsætning for bevilling.</p>
     </div>
   `,
 
@@ -251,19 +278,19 @@ const SEC = {
       <thead><tr><th style="width:38%">Væsentligste risikoområder</th><th>Mitigering</th></tr></thead>
       <tbody>
         <tr>
-          <td><strong>Risikoområde 1 — Kundekoncentration</strong><br/><span class="memo-cite" data-doc="Periodetal_Q1-2026.xlsx" data-page="ark Kunder">Top-3 kunder = 64% af omsætningen</span>, GE Vernova alene ~38%.</td>
+          <td><strong>Risikoområde 1 — Kundekoncentration</strong><br/><span class="memo-cite" data-doc="Periodetal_Q1-Q3_2026.xlsx" data-page="ark Kunder">Top-3 kunder = 64% af omsætningen</span>, GE Vernova alene ~38%.</td>
           <td><em>Uddyb risikoområdet / Analyser mitigerende forhold:</em><br/>Eksportkautionen er specifik for GE Vernova-ordren, hvilket adresserer den primære eksponering for nærværende facilitet. Pipeline mod Siemens Gamesa og ENERCON er etableret men endnu ikke i ordrebog.<br/><strong>Dette mitigeres ved</strong> override i rating (-1 trin) og kvartalsvis rapportering på top-5 kunder.<br/><em>Vurdering: Ikke fuldt mitigeret — fastholdes som override.</em></td>
         </tr>
         <tr>
-          <td><strong>Risikoområde 2 — Råvarepriser</strong><br/><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 18 -risici">Kulfiber +22% YoY</span>, prissikring kun 60%.</td>
+          <td><strong>Risikoområde 2 — Råvarepriser</strong><br/><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">Kulfiber +22% YoY</span>, prissikring kun 60%.</td>
           <td>GE Vernova-kontrakt indeholder pristilpasningsklausul ved kulfiberudsving > ±10%. Resterende 40% af forbrug dækkes af forwardkøb.<br/><em>Vurdering: Mitigeret til acceptabelt niveau.</em></td>
         </tr>
         <tr>
-          <td><strong>Risikoområde 3 — Valutaeksponering</strong><br/><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 18 -risici">41% af omsætning i USD/EUR</span> – ingen formel hedging-politik.</td>
+          <td><strong>Risikoområde 3 — Valutaeksponering</strong><br/><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">41% af omsætning i USD/EUR</span> – ingen formel hedging-politik.</td>
           <td>GE-ordren afdækkes med forward-kontrakt 90% af kontraktværdi via Nordjyske Bank. Formel hedging-politik udarbejdes som bevillingsvilkår.<br/><em>Vurdering: Mitigeret for nærværende ordre.</em></td>
         </tr>
         <tr>
-          <td><strong>Risikoområde 4 — Leverancerisiko</strong><br/><span class="memo-cite" data-doc="GE_Vernova_kontrakt.pdf" data-page="§3 -Leveringsplan">Block-Island leverance Q3 2026</span> kritisk for likviditet.</td>
+          <td><strong>Risikoområde 4 — Leverancerisiko</strong><br/><span class="memo-cite" data-doc="GE_Vernova_rammekontrakt.pdf" data-page="s. 1">Block-Island leverance Q3 2026</span> kritisk for likviditet.</td>
           <td>Produktionsplan bekræftet af driftsleder, kapacitet reserveret. Backup-kapacitet hos søsterselskab Nordhavn Production ApS sikrer leveringsevne ved nedbrud.<br/><em>Vurdering: Acceptabelt mitigeret.</em></td>
         </tr>
         <tr>
@@ -290,7 +317,7 @@ const SEC = {
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
       <ul>
-        <li><strong>Økonomisk levedygtighed:</strong> Sund finansiel udvikling med stigende omsætning (<span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6">18,5M i 2025</span>) og EBITDA-margin (<span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9">12,6%</span>). Gæld/EBITDA 2,1× understøtter gældsservicering med margin (low-case dækning 1,4×).</li>
+        <li><strong>Økonomisk levedygtighed:</strong> Omsætningen stiger (<span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2025">41,1M i 2025</span>), men indtjeningsevnen er tynd: EBITDA-marginen er <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="EBITDA-margin %" data-col="2025">5,8%</span> og uændret fra 2024. Gæld/EBITDA på <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Gæld / EBITDA" data-col="2025">3,3×</span> er højt for en virksomhed af denne størrelse og efterlader begrænset margin til at absorbere en forsinkelse på ordren.</li>
         <li><strong>EIFO-strategi:</strong> Direkte overensstemmelse med EIFOs eksportfokus og strategi for grøn omstilling — produktet leverer komponenter til vedvarende energi.</li>
         <li><strong>Ledelseskompetencer:</strong> Dokumenteret brancheerfaring (CEO 15 år hos Vestas Blades, CTO materialeforsker). Etableret økonomifunktion med statsautoriseret revisor.</li>
         <li><strong>Særvilkår:</strong> Hedging-politik, kvartalsvis kunderapportering og tilbagetrædelseserklæring medtaget som bevillingsvilkår (se Bilag 1).</li>
@@ -308,7 +335,7 @@ const SEC = {
       <ul>
         <li>Høj kundekoncentration (top-3 = 64%) som ikke fuldt kan mitigeres — håndteret via rating-override og rapporteringskrav.</li>
         <li>Uafklaret budgetafvigelse på primo egenkapital (difference DKK 2,0M) som bør forklares før endelig bevilling.</li>
-        <li>Manglende tilbagetrædelseserklæring på <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14 -Anpartshaverlån">anpartshaverlån DKK 0,5M</span> — sættes som bevillingsforudsætning.</li>
+        <li>Manglende tilbagetrædelseserklæring på <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">anpartshaverlån DKK 0,5M</span> — sættes som bevillingsforudsætning.</li>
       </ul>
     </div>
   `,
@@ -329,7 +356,7 @@ const SEC = {
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
       <p>Selskabet er ejet af <span class="memo-cite" data-doc="Ejerbog_2026.pdf" data-page="s. 1">Anders Christensen (51,8% direkte) og Anders Holding ApS (48,2%)</span>. Klar ejerstruktur uden fond/forening eller fragmenteret ejerkreds. Ingen konkurshistorik på ejere.</p>
-      <p>Anders Holding ApS har ydet et <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14 -Anpartshaverlån">anpartshaverlån på DKK 0,5M (CIBOR+2%, forfald 2028)</span>. Tilbagetrædelseserklæring foreligger endnu ikke. Personlig kaution fra A. Christensen <span class="memo-cite" data-doc="Personlig_kaution_AC.pdf" data-page="s. 1 -omfang">DKK 0,5M</span> er underskrevet.</p>
+      <p>Anders Holding ApS har ydet et <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">anpartshaverlån på DKK 0,5M (CIBOR+2%, forfald 2028)</span>. Tilbagetrædelseserklæring foreligger endnu ikke. Personlig kaution fra A. Christensen <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S4">DKK 0,5M</span> er underskrevet.</p>
       <p>Datterselskabsaktivitet: Nordhavn Production ApS (100%, produktion) og Nordhavn US Inc. (100%, salg/service). Begge i normal drift. Ingen planer om generationsskifte aktuelt – ejere er <span class="tpl-blank">[alder]</span>.</p>
     </div>
 
@@ -440,7 +467,7 @@ const SEC = {
     </ul>
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
-      <p>Det globale marked for vindmøllekompositter forventes at vokse <span class="memo-cite" data-doc="WindEurope_Market_2025.pdf" data-page="s. 14, figur 3">6,8% p.a. i 2025–2030</span>, drevet af offshore-udbygning og repowering. Moderat cyklisk (afhænger af OEM-ordreintag) men strukturelt voksende. Begrænset substitutionsrisiko, da kompositter er teknologisk vanskelige at erstatte. Høje indtrængningsbarrierer (kvalifikationsprocesser hos OEM tager 12–24 mdr.).</p>
+      <p>Det globale marked for vindmøllekompositter forventes at vokse <span class="memo-cite" data-doc="WindEurope_Market_2026.pdf" data-page="s. 14">6,8% p.a. i 2025–2030</span>, drevet af offshore-udbygning og repowering. Moderat cyklisk (afhænger af OEM-ordreintag) men strukturelt voksende. Begrænset substitutionsrisiko, da kompositter er teknologisk vanskelige at erstatte. Høje indtrængningsbarrierer (kvalifikationsprocesser hos OEM tager 12–24 mdr.).</p>
     </div>
 
     <h3 class="tpl-subhead">Konkurrence – Risikovurdering: <span class="tpl-risk mid">Middel</span></h3>
@@ -456,9 +483,9 @@ const SEC = {
       <table>
         <thead><tr><th>Aktør</th><th>Fokus</th><th style="text-align:right">Est. omsætning (DKK M)</th></tr></thead>
         <tbody>
-          <tr><td>LM Wind Power</td><td>Standard vindmølleblade, globalt</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="WindEurope_Market_2025.pdf" data-page="s. 22">~2.000</span></td></tr>
-          <tr><td>TPI Composites</td><td>Kontraktproduktion, store serier</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="WindEurope_Market_2025.pdf" data-page="s. 23">~400</span></td></tr>
-          <tr><td><strong>Nordhavn Composite</strong></td><td>Specialkomponenter, korte serier</td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6">18,5</span></td></tr>
+          <tr><td>LM Wind Power</td><td>Standard vindmølleblade, globalt</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="WindEurope_Market_2026.pdf" data-page="s. 22">~2.000</span></td></tr>
+          <tr><td>TPI Composites</td><td>Kontraktproduktion, store serier</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="WindEurope_Market_2026.pdf" data-page="s. 23">~400</span></td></tr>
+          <tr><td><strong>Nordhavn Composite</strong></td><td>Specialkomponenter, korte serier</td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2025">41,1</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -473,7 +500,7 @@ const SEC = {
     </ul>
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
-      <p>Top-3 kunder = <span class="memo-cite" data-doc="Periodetal_Q1-2026.xlsx" data-page="ark Kunder">64% af omsætningen</span>: GE Vernova (~38%), Vestas (~16%), ENERCON (~10%). Tendens: svagt stigende koncentration grundet vækst hos GE.</p>
+      <p>Top-3 kunder = <span class="memo-cite" data-doc="Periodetal_Q1-Q3_2026.xlsx" data-page="ark Kunder">64% af omsætningen</span>: GE Vernova (~38%), Vestas (~16%), ENERCON (~10%). Tendens: svagt stigende koncentration grundet vækst hos GE.</p>
       <p>Kunderne har stærk forhandlingsposition og fastsætter pris i samråd. Høje skifteomkostninger for kunderne pga. kvalifikationsprocesser → høj kundeloyalitet trods ringe diversifikation. Lange kontrakter (12–36 mdr.) reducerer kortsigtet risiko.</p>
     </div>
 
@@ -497,7 +524,7 @@ const SEC = {
     <em class="tpl-hint">Revisionsform, regnskaber revideret eller udvidet gennemgang? Revisortype, fx statsautoriseret eller registreret revisor. Er der forbehold / revisionsanmærkninger? Hvem har udarbejdet perioderegnskab, budgetmateriale, følsomhedsanalyse og evt. koncernsammenstilling?</em>
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
-      <p><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 14 -Revisionspåtegning">Årsrapport 2025 revideret af BDO (statsautoriseret) uden forbehold eller anmærkninger</span>. Perioderegnskab Q1 2026, budget 2026–28 og følsomhedsanalyse er udarbejdet af selskabets CFO med review fra BDO. Koncernsammenstilling: <span class="tpl-blank">ikke relevant (datterselskaber konsolideres direkte i moderselskab)</span>.</p>
+      <p><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 2">Årsrapport 2025 revideret af BDO (statsautoriseret) uden forbehold eller anmærkninger</span>. Perioderegnskab Q1 2026, budget 2026–28 og følsomhedsanalyse er udarbejdet af selskabets CFO med review fra BDO. Koncernsammenstilling: <span class="tpl-blank">ikke relevant (datterselskaber konsolideres direkte i moderselskab)</span>.</p>
     </div>
 
     <h3 class="tpl-subhead">Resultatopgørelse</h3>
@@ -512,12 +539,13 @@ const SEC = {
       <table>
         <thead><tr><th>DKK mio.</th><th style="text-align:right">2023</th><th style="text-align:right">2024</th><th style="text-align:right">2025</th></tr></thead>
         <tbody>
-          <tr><td>Omsætning</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 6">12,8</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 6">15,2</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6">18,5</span></td></tr>
-          <tr><td>EBITDA</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 7">1,3</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 7">1,9</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 7">2,4</span></td></tr>
-          <tr><td>Egenkapital</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 8">3,5</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 8">4,8</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 8">6,2</span></td></tr>
+          <tr><td>Nettoomsætning</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2023">28,0</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2024">32,8</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2025">41,1</span></td></tr>
+          <tr><td>Bruttofortjeneste</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 6" data-line="Bruttofortjeneste" data-col="2023">12,8</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 6" data-line="Bruttofortjeneste" data-col="2024">15,2</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6" data-line="Bruttofortjeneste" data-col="2025">18,5</span></td></tr>
+          <tr><td>EBITDA</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 7" data-line="EBITDA" data-col="2023">1,3</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 7" data-line="EBITDA" data-col="2024">1,9</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 7" data-line="EBITDA" data-col="2025">2,4</span></td></tr>
+          <tr><td>Egenkapital</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 8" data-line="Egenkapital" data-col="2023">3,5</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 8" data-line="Egenkapital" data-col="2024">4,8</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 8" data-line="Egenkapital" data-col="2025">6,2</span></td></tr>
         </tbody>
       </table>
-      <p>Trend: stærk konsistent vækst, drevet af stigende kontraktmasse hos GE Vernova og Vestas. Ingen ekstraordinære poster i perioden. 2025-regnskabet ligger ~5% over budget for året.</p>
+      <p>Trend: omsætningen er vokset 47% på to år, men indtjeningen følger ikke med. Bruttomarginen er faldet fra 45,7% til 45,0%, og EBITDA-marginen ligger fladt på 5,8% i både 2024 og 2025. Væksten er drevet af kontraktmasse hos GE Vernova og Vestas, ikke af forbedret indtjeningsevne. Ingen ekstraordinære poster i perioden.</p>
     </div>
 
     <p><strong>Budget 12-2026</strong></p>
@@ -531,7 +559,7 @@ const SEC = {
     </ul>
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
-      <p>Budget 2026: omsætning <strong>DKK 22,5M</strong> (+22% YoY), EBITDA-margin 13,1%. Driver: GE Vernova-rammeaftalen. Bro: ordrebeholdning + bekræftet pipeline dækker ca. <span class="tpl-blank">85%</span> af omsætningsbudget. Kapacitetsomkostninger stiger ~12% (planlagte ansættelser). Afskrivninger matcher aktivers levetid (5–10 år maskiner). Sammenligning med branchetal: EBITDA-margin over branchemedian (~10%).</p>
+      <p>Budget 2026: omsætning <strong>DKK 44,4M</strong> (+8% YoY), EBITDA-margin 6,1%. Driver: GE Vernova-rammeaftalen. Bro: ordrebeholdning og bekræftet pipeline dækker ca. <span class="tpl-blank">85%</span> af omsætningsbudget. Kapacitetsomkostninger stiger ~12% (planlagte ansættelser). Afskrivninger matcher aktivers levetid (5 til 10 år maskiner). Sammenligning med branchetal: EBITDA-marginen på 6,1% ligger <strong>under</strong> branchemedianen på ca. 10%, hvilket efterlader begrænset stødpude ved prispres eller forsinkelser.</p>
     </div>
 
     <p><strong>Perioderegnskab Q1 2026 sammenlignet med budget</strong></p>
@@ -543,8 +571,8 @@ const SEC = {
     </ul>
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
-      <p>Q1 2026: realiseret omsætning DKK 5,4M = 24% af helårsbudget. Afskrivninger og periodisering korrekt afsat. Sæsonalitet sandsynliggør årsmål (stærk Q3/Q4 grundet leveringsplaner). Need-to-Meet: gns. DKK 5,7M/kvartal i resten af året — realistisk givet pipeline.</p>
-      <p><strong>Budgetafvigelse — kræver afklaring:</strong> Budget primo egenkapital <span class="memo-cite" data-doc="Budget_2026-28_v3.xlsx" data-page="linje 197, primo EK">DKK 4,2M</span> vs. årsrapport ultimo 2025 <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 8 -egenkapital note">DKK 6,2M</span> = <strong>−2,0M ⚠</strong>. Bør forklares før endelig bevilling.</p>
+      <p>Q1 2026: realiseret omsætning <span class="memo-cite" data-doc="Periodetal_Q1-Q3_2026.xlsx" data-page="ark Resultat" data-line="Nettoomsætning" data-col="Q1 2026">DKK 10,6M</span> = 24% af helårsbudget. Afskrivninger og periodisering korrekt afsat. Sæsonalitet sandsynliggør årsmål (stærk Q3 og Q4 grundet leveringsplaner). Need-to-Meet: gns. DKK 11,3M pr. kvartal i resten af året, realistisk givet pipeline.</p>
+      <p><strong>Budgetafvigelse — kræver afklaring:</strong> Budget primo egenkapital <span class="memo-cite" data-doc="Budget_2026-28_v3.xlsx" data-page="linje 197">DKK 4,2M</span> vs. årsrapport ultimo 2025 <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 2">DKK 6,2M</span> = <strong>−2,0M ⚠</strong>. Bør forklares før endelig bevilling.</p>
     </div>
 
     <h3 class="tpl-subhead">Balance</h3>
@@ -564,7 +592,7 @@ const SEC = {
     </ul>
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
-      <p>Aktiver vurderes realistisk værdiansat. Igangværende arbejder indregnes <span class="tpl-blank">[brutto/netto inkl. forholdsmæssig avance]</span>. Debitorer koncentreret på top-3 (~64%) — kreditkvalitet høj (investment grade modparter). Lange anlægsaktiver finansieret med 7-årigt anlægslån. Soliditet 44% (uden ansvarlig kapital), gældsgearing 2,1× — over branchemedian.</p>
+      <p>Aktiver vurderes realistisk værdiansat. Igangværende arbejder indregnes <span class="tpl-blank">[brutto/netto inkl. forholdsmæssig avance]</span>. Debitorer koncentreret på top-3 (~64%) — kreditkvalitet høj (investment grade modparter). Lange anlægsaktiver finansieret med 7-årigt anlægslån. Soliditet 44,3% (uden ansvarlig kapital), gældsgearing 3,3× målt som gæld i alt i forhold til EBITDA.</p>
     </div>
 
     <p><strong>Budget (balance)</strong></p>
@@ -604,8 +632,8 @@ const SEC = {
     <div class="tpl-draft">
       <span class="tpl-draft-label" contenteditable="false">Udkast</span>
       <ul>
-        <li><strong>Low case</strong> (omsætning -15%, EBITDA-margin -2pp): Gældsservicering fortsat dækket med margin på ca. 1,4×.</li>
-        <li><strong>Likviditetsmæssig nulpunktsomsætning</strong>: ca. DKK 14,0M (vs. realiseret 18,5M).</li>
+        <li><strong>Low case</strong> (omsætning -15%, EBITDA-margin -2pp): EBITDA falder til ca. DKK 1,5M mod 2,4M i 2025. Gældsserviceringen bliver da stram, og faciliteten kan kun serviceres hvis afdragsfriheden forlænges. <span class="tpl-blank">[beregning skal dokumenteres]</span></li>
+        <li><strong>Likviditetsmæssig nulpunktsomsætning</strong>: ca. DKK 38,9M mod realiseret 41,1M i 2025. Der er altså kun ca. 5% luft til nulpunktet.</li>
         <li><strong>Valutafølsomhed:</strong> USD -10% giver EBITDA-impact ca. -0,3M efter hedging — håndterbart.</li>
         <li><strong>Rentefølsomhed:</strong> +200bp på CIBOR3 = +DKK 44k/år i rente — uvæsentligt.</li>
       </ul>
@@ -627,10 +655,11 @@ const SEC = {
     <table>
       <thead><tr><th>Nøgletal</th><th style="text-align:right">2023</th><th style="text-align:right">2024</th><th style="text-align:right">2025</th></tr></thead>
       <tbody>
-        <tr><td>EBITDA-margin</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9">10,2%</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9">12,5%</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9">12,6%</span></td></tr>
-        <tr><td>Soliditetsgrad</td><td style="text-align:right;font-family:monospace">37%</td><td style="text-align:right;font-family:monospace">43%</td><td style="text-align:right;font-family:monospace;font-weight:600">44%</td></tr>
-        <tr><td>Afkast af EK</td><td style="text-align:right;font-family:monospace">8,6%</td><td style="text-align:right;font-family:monospace">14,6%</td><td style="text-align:right;font-family:monospace;font-weight:600">16,1%</td></tr>
-        <tr><td>Gæld / EBITDA</td><td style="text-align:right;font-family:monospace">3,2×</td><td style="text-align:right;font-family:monospace">2,6×</td><td style="text-align:right;font-family:monospace;font-weight:600">2,1×</td></tr>
+        <tr><td>Bruttomargin</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="Bruttomargin %" data-col="2023">45,7%</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="Bruttomargin %" data-col="2024">46,3%</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Bruttomargin %" data-col="2025">45,0%</span></td></tr>
+        <tr><td>EBITDA-margin</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="EBITDA-margin %" data-col="2023">4,6%</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="EBITDA-margin %" data-col="2024">5,8%</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="EBITDA-margin %" data-col="2025">5,8%</span></td></tr>
+        <tr><td>Soliditetsgrad</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="Soliditetsgrad %" data-col="2023">37,2%</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="Soliditetsgrad %" data-col="2024">42,9%</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Soliditetsgrad %" data-col="2025">44,3%</span></td></tr>
+        <tr><td>Gæld / EBITDA</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="Gæld / EBITDA" data-col="2023">4,5×</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="Gæld / EBITDA" data-col="2024">3,4×</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Gæld / EBITDA" data-col="2025">3,3×</span></td></tr>
+        <tr><td>Likviditetsgrad</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="Likviditetsgrad" data-col="2023">2,2</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="Likviditetsgrad" data-col="2024">2,5</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Likviditetsgrad" data-col="2025">2,5</span></td></tr>
       </tbody>
     </table>
   `,
@@ -714,13 +743,13 @@ const SEC = {
     <h3 class="tpl-subhead">Sikkerheder [lån og garantier]</h3>
     <p><strong>Primær pant — eksisterende sikkerheder:</strong></p>
     <ul>
-      <li>DKK <span class="memo-cite" data-doc="Pantebrev_maskiner.pdf" data-page="§1 -pantobjekt">2,8 mio. virksomhedspant (maskiner)</span> — tinglyst</li>
-      <li>DKK <span class="memo-cite" data-doc="Tinglysning_Havnegade.pdf" data-page="Tinglyst 14. jan 2026">1,8 mio. pant, Havnegade 47</span> — tinglyst</li>
+      <li>DKK <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S1">2,8 mio. virksomhedspant (maskiner)</span> — tinglyst</li>
+      <li>DKK <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S2">1,8 mio. pant, Havnegade 47</span> — tinglyst</li>
     </ul>
     <p><strong>Nye / forhøjede sikkerheder:</strong></p>
     <ul>
-      <li>DKK <span class="memo-cite" data-doc="Debitorpant_aftale.pdf" data-page="§1 -pantobjekter">1,2 mio. debitorpant (Vestas, GE)</span> — tinglyst</li>
-      <li>DKK <span class="memo-cite" data-doc="Personlig_kaution_AC.pdf" data-page="s. 1 -omfang">0,5 mio. personlig selvskyldnerkaution af Anders Christensen, CPR-nr. <span class="tpl-blank">xxxxxx-xxxx</span></span>. Kautionen respekterer bankens kaution.</li>
+      <li>DKK <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S3">1,2 mio. debitorpant (Vestas, GE)</span> — tinglyst</li>
+      <li>DKK <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S4">0,5 mio. personlig selvskyldnerkaution af Anders Christensen, CPR-nr. <span class="tpl-blank">xxxxxx-xxxx</span></span>. Kautionen respekterer bankens kaution.</li>
       <li>Tilbagetrædelse fra Anders Holding ApS, CVR-nr. <span class="tpl-blank">xx</span>, vedr. anpartshaverlån DKK 0,5 mio. — <strong>⚠ mangler underskrift</strong></li>
       <li>DKK <span class="tpl-blank">x,x</span> mio. nom. anparter/aktier i Anders Holding ApS, CVR-nr. <span class="tpl-blank">xx</span>, <span class="tpl-blank">xx</span> % af ejerandel</li>
     </ul>
@@ -875,21 +904,24 @@ Anders Christensen (51,8%)     Anders Holding ApS (48,2%)
 };
 
 /* ── Sources per section (EIFO template-sektioner) ───────────────────────── */
+/* Navne og sidehenvisninger her skal matche window.CASE_DOCS ordret. Listen
+   styrer både kildepanelet og hvilke dokumenter AI'en får som grundlag for
+   det enkelte afsnit. */
 const MEMO_SOURCES = {
-  background:  [{ t: "CVR-udtræk 30. maj 2026", p: "Stiftelsesdato, adresse, ansatte" }, { t: "Aarsrapport_2025.pdf", p: "s. 2-3 -Selskabsoplysninger, nøgletal" }, { t: "Ejerbog_2026.pdf", p: "s. 2 -Datterselskaber" }, { t: "GE_Vernova_kontrakt.pdf", p: "s. 1 -projektoversigt" }, { t: "Budget_2026-28_v3.xlsx", p: "linje 197" }],
-  financing:   [{ t: "Budget_2026-28_v3.xlsx", p: "linje 197 -finansieringsplan" }, { t: "GE_Vernova_kontrakt.pdf", p: "§4 -betalingsbetingelser" }],
-  rating:      [{ t: "Periodetal_Q1-2026.xlsx", p: "ark Kunder" }, { t: "Aarsrapport_2025.pdf", p: "s. 9 -Nøgletal" }],
-  legal:       [{ t: "GE_Vernova_kontrakt.pdf", p: "s. 1, §3-4" }, { t: "Aarsrapport_2025.pdf", p: "note 14 -Anpartshaverlån" }],
-  risk:        [{ t: "Periodetal_Q1-2026.xlsx", p: "ark Kunder" }, { t: "Aarsrapport_2025.pdf", p: "note 18 -risici" }, { t: "GE_Vernova_kontrakt.pdf", p: "§3 -Leveringsplan" }],
-  conclusion:  [{ t: "Aarsrapport_2025.pdf", p: "s. 6, s. 9" }, { t: "Budget_2026-28_v3.xlsx", p: "linje 197" }, { t: "Selskabskaution_AH.pdf", p: "Afventer underskrift" }],
-  ownership:   [{ t: "Ejerbog_2026.pdf", p: "s. 1" }, { t: "CVR-udtræk 30. maj 2026", p: "Kapitalforhold" }, { t: "Aarsrapport_2025.pdf", p: "note 14 -Anpartshaverlån" }, { t: "Personlig_kaution_AC.pdf", p: "s. 1 -omfang" }],
-  product:     [{ t: "nordhavncomposites.dk", p: "Produktsider, hentet 4. jun 2026" }, { t: "Aarsrapport_2025.pdf", p: "s. 4 -Forretningsmodel" }, { t: "GE_Vernova_kontrakt.pdf", p: "s. 1" }],
-  market:      [{ t: "WindEurope_Market_2025.pdf", p: "s. 14, 22-24" }, { t: "Periodetal_Q1-2026.xlsx", p: "ark Kunder" }, { t: "Aarsrapport_2025.pdf", p: "s. 4 -Markedsforhold" }],
-  financial:   [{ t: "Aarsrapport_2025.pdf", p: "s. 6-9, s. 14 -Revisionspåtegning" }, { t: "Aarsrapport_2024.pdf", p: "s. 6-9" }, { t: "Aarsrapport_2023.pdf", p: "s. 6-9" }, { t: "Periodetal_Q1-2026.xlsx", p: "ark Resultat, Balance" }, { t: "Budget_2026-28_v3.xlsx", p: "linje 197, ark Resultat" }],
+  background:  [{ t: "Aarsrapport_2025.pdf", p: "s. 2, s. 4 -Selskabsoplysninger og ledelsesberetning" }, { t: "GE_Vernova_rammekontrakt.pdf", p: "s. 1 -projektoversigt" }, { t: "Bankansoegning_Nordjyske_Bank.pdf", p: "s. 2 -bankens motiv" }, { t: "Budget_2026-28_v3.xlsx", p: "linje 197" }],
+  financing:   [{ t: "Budget_2026-28_v3.xlsx", p: "linje 197 -finansieringsplan" }, { t: "GE_Vernova_rammekontrakt.pdf", p: "§4 -betalingsbetingelser" }, { t: "Bankansoegning_Nordjyske_Bank.pdf", p: "s. 1, s. 4 -vilkår" }, { t: "Sikkerhedsdokumenter.pdf", p: "S1-S5" }],
+  rating:      [{ t: "Periodetal_Q1-Q3_2026.xlsx", p: "ark Kunder" }, { t: "Aarsrapport_2025.pdf", p: "s. 9 -Nøgletal" }, { t: "Bankansoegning_Nordjyske_Bank.pdf", p: "s. 3 -bankens rating" }],
+  legal:       [{ t: "GE_Vernova_rammekontrakt.pdf", p: "§11, §14" }, { t: "Aarsrapport_2025.pdf", p: "note 14 -Anpartshaverlån" }, { t: "Sikkerhedsdokumenter.pdf", p: "S5 -afventer underskrift" }],
+  risk:        [{ t: "Periodetal_Q1-Q3_2026.xlsx", p: "ark Kunder, ark Ordrebog" }, { t: "Aarsrapport_2025.pdf", p: "note 18 -risici" }, { t: "GE_Vernova_rammekontrakt.pdf", p: "§3, §7" }, { t: "WindEurope_Market_2026.pdf", p: "s. 23-24" }],
+  conclusion:  [{ t: "Aarsrapport_2025.pdf", p: "s. 6, s. 9" }, { t: "Budget_2026-28_v3.xlsx", p: "linje 197, ark Likviditet" }, { t: "Periodetal_Q1-Q3_2026.xlsx", p: "ark Resultat" }, { t: "Sikkerhedsdokumenter.pdf", p: "S5" }],
+  ownership:   [{ t: "Ejerbog_2026.pdf", p: "s. 1, s. 3-4" }, { t: "Aarsrapport_2025.pdf", p: "note 14 -Anpartshaverlån" }, { t: "Sikkerhedsdokumenter.pdf", p: "S4 -personlig kaution" }],
+  product:     [{ t: "Aarsrapport_2025.pdf", p: "s. 4 -Forretningsmodel" }, { t: "GE_Vernova_rammekontrakt.pdf", p: "s. 1, §2" }, { t: "WindEurope_Market_2026.pdf", p: "s. 22" }],
+  market:      [{ t: "WindEurope_Market_2026.pdf", p: "s. 14, 22-24" }, { t: "Periodetal_Q1-Q3_2026.xlsx", p: "ark Kunder" }, { t: "Aarsrapport_2025.pdf", p: "s. 4 -Markedsforhold" }],
+  financial:   [{ t: "Aarsrapport_2025.pdf", p: "s. 6-9, s. 14 -Revisionspåtegning" }, { t: "Aarsrapport_2024.pdf", p: "s. 6-9" }, { t: "Aarsrapport_2023.pdf", p: "s. 6-9" }, { t: "Periodetal_Q1-Q3_2026.xlsx", p: "ark Resultat, ark Balance" }, { t: "Budget_2026-28_v3.xlsx", p: "ark Resultat, ark Likviditet" }],
   endorsement: [],
-  appendix1:   [{ t: "Pantebrev_maskiner.pdf", p: "§4" }, { t: "Tinglysning_Havnegade.pdf", p: "Tinglyst 14. jan 2026" }, { t: "Personlig_kaution_AC.pdf", p: "s. 1" }, { t: "Debitorpant_aftale.pdf", p: "§1 -pantobjekter" }, { t: "Selskabskaution_AH.pdf", p: "Afventer underskrift" }, { t: "Budget_2026-28_v3.xlsx", p: "linje 197" }],
-  appendix2:   [{ t: "Aarsrapport_2025.pdf", p: "s. 11 -CSR/ESG note" }, { t: "ISO9001_certifikat.pdf", p: "Gyldighed 2024-2027" }],
-  appendix3:   [{ t: "Ejerbog_2026.pdf", p: "s. 2 -Datterselskaber" }, { t: "CVR_udtraek_2026-05-30.pdf", p: "Koncernforhold" }, { t: "Dokumentliste", p: "12 dokumenter i sagsmappen" }],
+  appendix1:   [{ t: "Sikkerhedsdokumenter.pdf", p: "S1-S5" }, { t: "Bankansoegning_Nordjyske_Bank.pdf", p: "s. 4 -covenants" }, { t: "Budget_2026-28_v3.xlsx", p: "linje 197" }],
+  appendix2:   [{ t: "Aarsrapport_2025.pdf", p: "s. 11 -CSR/ESG note" }, { t: "WindEurope_Market_2026.pdf", p: "s. 24" }],
+  appendix3:   [{ t: "Ejerbog_2026.pdf", p: "s. 2 -Datterselskaber" }, { t: "Aarsrapport_2025.pdf", p: "s. 2 -Selskabsoplysninger" }],
 };
 
 /* ── SectionDot ───────────────────────────────────────────────────────────── */
@@ -1152,8 +1184,146 @@ function MemoCommentsRail({ sections, sectionOffsets, scrollTop, persona, onPers
   );
 }
 
+/* ── Tabelredigering ─────────────────────────────────────────────────────────
+   Skabelonen beder ordret brugeren om at "tilføje eller slette rækker efter
+   behov", men der var ingen måde at gøre det på. execCommand kan ikke, så
+   operationerne laves direkte på DOM'en.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/** Finder den celle markøren står i, hvis den står i en tabel. */
+function cellAtSelection(root) {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return null;
+  let n = sel.getRangeAt(0).startContainer;
+  if (n.nodeType === 3) n = n.parentElement;
+  if (!n || !n.closest) return null;
+  const cell = n.closest('td, th');
+  if (!cell || (root && !root.contains(cell))) return null;
+  return cell;
+}
+
+/** Alle rækker i tabellen, både i thead og tbody, i visuel rækkefølge. */
+function allRows(table) {
+  return Array.from(table.querySelectorAll('tr'));
+}
+
+function cellIndex(cell) {
+  return Array.from(cell.parentElement.children).indexOf(cell);
+}
+
+function makeCell(tag, template) {
+  const c = document.createElement(tag);
+  // Arv justering og skrifttype fra nabocellen, ellers ser tabellen rodet ud
+  if (template && template.getAttribute('style')) c.setAttribute('style', template.getAttribute('style'));
+  c.innerHTML = '<br>';
+  return c;
+}
+
+function tableInsertRow(cell, where) {
+  const tr = cell.parentElement;
+  const row = document.createElement('tr');
+  Array.from(tr.children).forEach(c => row.appendChild(makeCell(c.tagName === 'TH' ? 'td' : 'td', c)));
+  tr.parentElement.insertBefore(row, where === 'above' ? tr : tr.nextSibling);
+  return row.children[cellIndex(cell)] || row.children[0];
+}
+
+function tableDeleteRow(cell) {
+  const tr = cell.parentElement;
+  const table = tr.closest('table');
+  if (allRows(table).length <= 1) return null;
+  const next = tr.nextElementSibling || tr.previousElementSibling;
+  tr.remove();
+  return next ? next.children[0] : null;
+}
+
+function tableInsertCol(cell, where) {
+  const table = cell.closest('table');
+  const at = cellIndex(cell);
+  allRows(table).forEach(tr => {
+    const ref = tr.children[at];
+    const tag = ref && ref.tagName === 'TH' ? 'th' : 'td';
+    const c = makeCell(tag, ref);
+    if (where === 'left') tr.insertBefore(c, ref || null);
+    else tr.insertBefore(c, ref ? ref.nextSibling : null);
+  });
+  return cell;
+}
+
+function tableDeleteCol(cell) {
+  const table = cell.closest('table');
+  const at = cellIndex(cell);
+  const first = allRows(table)[0];
+  if (!first || first.children.length <= 1) return null;
+  allRows(table).forEach(tr => { if (tr.children[at]) tr.children[at].remove(); });
+  return null;
+}
+
+/** Sætter markøren i en celle. */
+function focusCell(cell) {
+  if (!cell) return;
+  const r = document.createRange();
+  r.selectNodeContents(cell);
+  r.collapse(true);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(r);
+}
+
+/** Næste eller forrige celle i tabellen, på tværs af rækker. */
+function siblingCell(cell, dir) {
+  const table = cell.closest('table');
+  const cells = Array.from(table.querySelectorAll('td, th'));
+  const i = cells.indexOf(cell);
+  return cells[i + dir] || null;
+}
+
+/* ── Fortryd for programmatiske ændringer ────────────────────────────────────
+   AI'en skriver med innerHTML og insertAdjacentHTML. Ingen af delene lægger
+   noget i browserens egen fortryd-stak, og teksten gemmes med det samme i
+   localStorage. Uden det her lag er en times skrivearbejde væk for altid i det
+   øjeblik man trykker Generér på et afsnit man selv har skrevet.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+const SNAP_KEY = 'memo4:snap:';
+const MAX_SNAPS = 20;
+
+function loadSnaps(sKey) {
+  try { return JSON.parse(localStorage.getItem(SNAP_KEY + sKey) || '[]'); } catch (e) { return []; }
+}
+
+function saveSnaps(sKey, list) {
+  try { localStorage.setItem(SNAP_KEY + sKey, JSON.stringify(list.slice(-MAX_SNAPS))); } catch (e) {}
+}
+
+function pushSnap(sKey, html, action) {
+  const list = loadSnaps(sKey);
+  // Samme indhold to gange i træk er ikke et nyt trin
+  if (list.length && list[list.length - 1].html === html) return;
+  list.push({ html: html, action: action, at: Date.now() });
+  saveSnaps(sKey, list);
+  try { window.dispatchEvent(new CustomEvent('memo-snap-changed', { detail: { sKey: sKey } })); } catch (e) {}
+}
+
+function popSnap(sKey) {
+  const list = loadSnaps(sKey);
+  const last = list.pop();
+  saveSnaps(sKey, list);
+  try { window.dispatchEvent(new CustomEvent('memo-snap-changed', { detail: { sKey: sKey } })); } catch (e) {}
+  return last;
+}
+
+function snapLabel(action) {
+  return {
+    write: 'skrev afsnittet forfra',
+    rewrite: 'omskrev afsnittet',
+    selection: 'omskrev en markering',
+    chat: 'indsatte tekst fra chatten',
+    reset: 'nulstillede til skabelonen',
+  }[action] || 'ændrede afsnittet';
+}
+
 /* ── MemoSection ──────────────────────────────────────────────────────────── */
-function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigger, onAddComment, commentCount }) {
+function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigger, onAddComment, commentCount, registerApi, aiOpen, onToggleAi, aiSelection, onCloseAi }) {
   const storageKey = 'memo4:' + sKey;
   const defaultHtml = SEC[sKey] || '';
   const ref = React.useRef(null);
@@ -1166,13 +1336,92 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
     ref.current.innerHTML = saved || defaultHtml;
   }, []);
 
-  // Reset when parent signals
+  const persist = React.useCallback(() => {
+    if (!ref.current) return;
+    localStorage.setItem(storageKey, ref.current.innerHTML);
+    setModified(true);
+  }, [storageKey]);
+
+  /* Gør afsnittet styrbart udefra: AI-assistenten, chatten og
+     "Generér memo" skriver alle igennem det her lille API. */
+  React.useEffect(() => {
+    if (!registerApi) return;
+    // Gem altid det der stod før, så ændringen kan rulles tilbage
+    const snap = (action) => { if (ref.current) pushSnap(sKey, ref.current.innerHTML, action); };
+    registerApi(sKey, {
+      getHtml: () => (ref.current ? ref.current.innerHTML : ''),
+      getText: () => (ref.current ? ref.current.innerText : ''),
+      replace: (html, action) => {
+        if (!ref.current) return;
+        snap(action || 'rewrite');
+        ref.current.innerHTML = html;
+        persist();
+      },
+      append: (html, action) => {
+        if (!ref.current) return;
+        snap(action || 'chat');
+        ref.current.insertAdjacentHTML('beforeend', html);
+        persist();
+      },
+      // Bruges mens der streames. Tager bevidst intet snapshot: ét snapshot per
+      // afsnit tages før streamingen går i gang, ikke ét per opdatering.
+      paint: (html) => { if (ref.current) ref.current.innerHTML = html; },
+      // Afslutter en streaming: gemmer, men snapshotter ikke, da det allerede
+      // er gjort før streamingen begyndte.
+      commit: (html) => { if (ref.current) { ref.current.innerHTML = html; persist(); } },
+      snapshot: (action) => snap(action),
+      replaceSelection: (html, range) => {
+        if (!ref.current) return;
+        // Markeringen skal ligge i DETTE afsnit. Ellers havner teksten et
+        // andet sted uden at nogen opdager det.
+        const r = range || _memoLastRange;
+        if (!r || !ref.current.contains(r.commonAncestorContainer)) return false;
+        snap('selection');
+        ref.current.focus();
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+        document.execCommand('insertHTML', false, html);
+        persist();
+        return true;
+      },
+      undo: () => {
+        const last = popSnap(sKey);
+        if (!last || !ref.current) return null;
+        ref.current.innerHTML = last.html;
+        persist();
+        return last;
+      },
+      snapCount: () => loadSnaps(sKey).length,
+    });
+    return () => registerApi(sKey, null);
+  }, [sKey, persist, registerApi]);
+
+  // Reset when parent signals. Også her skal der kunne fortrydes: en nulstilling
+  // kaster brugerens egen tekst væk, ikke bare AI'ens.
   React.useEffect(() => {
     if (resetTrigger === 0) return;
+    if (ref.current) pushSnap(sKey, ref.current.innerHTML, 'reset');
     localStorage.removeItem(storageKey);
     if (ref.current) ref.current.innerHTML = defaultHtml;
     setModified(false);
   }, [resetTrigger]);
+
+  /* Fortryd-knappen i afsnitshovedet vises kun når der er noget at fortryde */
+  const [snaps, setSnaps] = React.useState(() => loadSnaps(sKey).length);
+  React.useEffect(() => {
+    const on = (e) => { if (!e.detail || e.detail.sKey === sKey) setSnaps(loadSnaps(sKey).length); };
+    window.addEventListener('memo-snap-changed', on);
+    return () => window.removeEventListener('memo-snap-changed', on);
+  }, [sKey]);
+
+  function undoAi() {
+    const last = popSnap(sKey);
+    if (!last || !ref.current) return;
+    ref.current.innerHTML = last.html;
+    localStorage.setItem(storageKey, last.html);
+    setModified(true);
+  }
 
   const handleInput = () => {
     if (!ref.current) return;
@@ -1197,15 +1446,57 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
   };
 
   const handlePaste = (e) => {
-    // Paste as plain text to avoid polluting the doc with external HTML
+    // En kopieret tabel fra Excel eller Word skal beholde sin struktur. Den
+    // renses gennem samme filter som AI-output, så der ikke følger fremmed
+    // styling og skjulte tags med ind i dokumentet.
+    const html = e.clipboardData.getData('text/html');
+    if (html && window.MemoAI && window.MemoAI.cleanHtml) {
+      const cleaned = window.MemoAI.cleanHtml(html);
+      if (cleaned && /<(table|ul|ol|p|h3|h4)\b/i.test(cleaned)) {
+        e.preventDefault();
+        document.execCommand('insertHTML', false, cleaned);
+        persist();
+        return;
+      }
+    }
     e.preventDefault();
-    const text = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, text);
+    document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Tab') { e.preventDefault(); document.execCommand(e.shiftKey ? 'outdent' : 'indent'); }
+    if (e.key !== 'Tab') return;
+    // I en tabel flytter Tab mellem celler. Uden for tabeller rykker den ind,
+    // som før. Tidligere pakkede Tab celleindhold ind i en blockquote.
+    const cell = cellAtSelection(ref.current);
+    if (cell) {
+      e.preventDefault();
+      const next = siblingCell(cell, e.shiftKey ? -1 : 1);
+      if (next) { focusCell(next); return; }
+      if (e.shiftKey) return;
+      // Tab i sidste celle laver en ny række
+      focusCell(tableInsertRow(cell, 'below'));
+      persist();
+      return;
+    }
+    e.preventDefault();
+    document.execCommand(e.shiftKey ? 'outdent' : 'indent');
   };
+
+  /* Værktøjslinje der kun dukker op når markøren står i en tabel */
+  const [tableCell, setTableCell] = React.useState(null);
+
+  const syncTableCell = React.useCallback(() => {
+    setTableCell(cellAtSelection(ref.current));
+  }, []);
+
+  function tableOp(fn, arg) {
+    if (!tableCell || !ref.current) return;
+    pushSnap(sKey, ref.current.innerHTML, 'table');
+    const target = fn(tableCell, arg);
+    persist();
+    if (target) focusCell(target);
+    setTimeout(syncTableCell, 0);
+  }
 
   const isPlaceholder = false;
 
@@ -1220,6 +1511,27 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
         <span className="mono" style={{ fontSize: 11, color: 'var(--c-text-4)', width: 20, flexShrink: 0 }}>{num}</span>
         <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.01em', flex: 1 }}>{title}</h3>
+        <button
+          type="button"
+          className={'memo-sec-ai' + (aiOpen ? ' on' : '')}
+          title="Lad AI skrive eller omskrive netop dette afsnit"
+          onClick={() => onToggleAi && onToggleAi(sKey)}
+        >AI</button>
+        {snaps > 0 && (
+          <button
+            type="button"
+            onClick={undoAi}
+            title={'Fortryd: ' + snapLabel((loadSnaps(sKey).slice(-1)[0] || {}).action) + '. ' + snaps + ' trin gemt.'}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              height: 22, padding: '0 8px', borderRadius: 6, cursor: 'pointer',
+              border: '1px solid var(--c-line)', background: '#fff',
+              color: 'var(--c-text-2)', fontFamily: 'inherit', fontSize: 11, fontWeight: 500,
+            }}
+          >
+            <I.Undo size={11}/> Fortryd
+          </button>
+        )}
         {commentCount > 0 && (
           <span
             title={`${commentCount} kommentar${commentCount === 1 ? '' : 'er'}`}
@@ -1240,8 +1552,9 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
         onInput={handleInput}
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
-        onMouseUp={() => { _memoLastEditable = ref.current; _memoSaveSelection(); }}
-        onKeyUp={() => { _memoLastEditable = ref.current; _memoSaveSelection(); }}
+        onMouseUp={() => { _memoLastEditable = ref.current; _memoSaveSelection(); syncTableCell(); }}
+        onKeyUp={() => { _memoLastEditable = ref.current; _memoSaveSelection(); syncTableCell(); }}
+        onBlur={() => setTimeout(syncTableCell, 150)}
         onFocus={() => { _memoLastEditable = ref.current; if (!isPlaceholder) onFocusSection(sKey, modified); }}
         onBlur={() => onFocusSection(null, false)}
         style={{
@@ -1255,12 +1568,187 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
           } : {}),
         }}
       />
+
+      {tableCell && (
+        <div className="memo-tbl-bar">
+          <span className="memo-tbl-lbl">Tabel</span>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertRow, 'above')} title="Indsæt række over">Række over</button>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertRow, 'below')} title="Indsæt række under">Række under</button>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableDeleteRow)} title="Slet den række markøren står i">Slet række</button>
+          <span className="memo-tbl-sep"/>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertCol, 'left')} title="Indsæt kolonne til venstre">Kolonne venstre</button>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertCol, 'right')} title="Indsæt kolonne til højre">Kolonne højre</button>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableDeleteCol)} title="Slet den kolonne markøren står i">Slet kolonne</button>
+          <span className="memo-tbl-hint">Tab skifter celle</span>
+        </div>
+      )}
+
+      {aiOpen && window.MemoAI && (
+        <window.MemoAI.AiSectionAssistant
+          sKey={sKey}
+          num={num}
+          title={title}
+          selection={aiSelection}
+          getHtml={() => (ref.current ? ref.current.innerHTML : '')}
+          onReplace={(html) => {
+            if (!ref.current) return true;
+            if (aiSelection) {
+              // Markeringen blev gemt da panelet blev åbnet. Ligger den ikke
+              // længere i dette afsnit, ville teksten havne et vilkårligt
+              // andet sted uden at nogen opdagede det.
+              const r = aiSelection.range || _memoLastRange;
+              if (!r || !ref.current.contains(r.commonAncestorContainer)) return false;
+              pushSnap(sKey, ref.current.innerHTML, 'selection');
+              ref.current.focus();
+              const sel = window.getSelection();
+              sel.removeAllRanges();
+              sel.addRange(r);
+              document.execCommand('insertHTML', false, html);
+            } else {
+              pushSnap(sKey, ref.current.innerHTML, 'rewrite');
+              ref.current.innerHTML = html;
+            }
+            persist();
+            return true;
+          }}
+          onAppend={(html) => {
+            if (!ref.current) return true;
+            pushSnap(sKey, ref.current.innerHTML, 'chat');
+            ref.current.insertAdjacentHTML('beforeend', html);
+            persist();
+            return true;
+          }}
+          onClose={() => onCloseAi && onCloseAi()}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ── Klargøring til eksport ──────────────────────────────────────────────────
+   Det eksporterede dokument er det eneste af værktøjet nogen uden for huset
+   ser. Skabelonens vejledningstekst, gule Udkast-mærker og interne noter må
+   ikke følge med ud til kreditkomitéen.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+function prepareForExport(html) {
+  const d = document.createElement('div');
+  d.innerHTML = html || '';
+
+  // Vejledning til den der skriver. Hører ikke hjemme i det færdige dokument.
+  d.querySelectorAll('.tpl-hints, .tpl-hint, .tpl-guide').forEach(el => el.remove());
+
+  // "Udkast"-mærket er en arbejdsmarkering. Teksten bliver, mærket ryger.
+  d.querySelectorAll('.tpl-draft-label').forEach(el => el.remove());
+  d.querySelectorAll('.tpl-draft').forEach(el => el.classList.remove('tpl-draft'));
+
+  // Uudfyldte felter skal være synlige for læseren, ikke camoufleret som tekst.
+  d.querySelectorAll('.tpl-blank').forEach(el => {
+    const t = (el.textContent || '').trim().replace(/^\[|\]$/g, '');
+    const mark = document.createElement('span');
+    mark.className = 'blank';
+    mark.textContent = '[ikke udfyldt: ' + t + ']';
+    el.replaceWith(mark);
+  });
+
+  // Kildehenvisningerne beholder deres tekst, men bliver til en fodnotelignende
+  // reference så læseren kan se hvor tallet kommer fra i et Word-dokument.
+  d.querySelectorAll('.memo-cite').forEach(el => {
+    const doc = el.getAttribute('data-doc');
+    const page = el.getAttribute('data-page');
+    if (doc) {
+      const ref = document.createElement('span');
+      ref.className = 'cite-ref';
+      ref.textContent = ' [' + doc + (page ? ', ' + page : '') + ']';
+      el.after(ref);
+    }
+    el.replaceWith(...el.childNodes);
+  });
+
+  return d.innerHTML;
+}
+
+/** Tæller hvad der mangler, så man advares før man sender. */
+function exportReadiness(sections) {
+  let blanks = 0;
+  let empty = [];
+  sections.forEach(s => {
+    const saved = localStorage.getItem('memo4:' + s.k);
+    if (saved === null) empty.push(s.num + '. ' + s.label);
+    const d = document.createElement('div');
+    d.innerHTML = saved || SEC[s.k] || '';
+    blanks += d.querySelectorAll('.tpl-blank').length;
+  });
+  return { blanks, empty };
+}
+
+/* Vises før eksport. Man skal vide hvad man sender, ikke opdage det bagefter. */
+function ExportDialog({ sections, onClose }) {
+  const [withComments, setWithComments] = React.useState(false);
+  const ready = React.useMemo(() => exportReadiness(sections), [sections]);
+  const commentCount = React.useMemo(
+    () => sections.reduce((n, s) => n + loadComments(s.k).length, 0), [sections]);
+
+  return (
+    <div
+      onMouseDown={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,20,0.45)', zIndex: 9500, display: 'grid', placeItems: 'center', padding: 24 }}
+    >
+      <div
+        onMouseDown={e => e.stopPropagation()}
+        style={{ width: 'min(520px, 100%)', background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}
+      >
+        <div style={{ padding: '20px 24px 0' }}>
+          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>Eksportér til Word</div>
+          <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 5, lineHeight: 1.55 }}>
+            Skabelonens vejledningstekst og Udkast-mærker fjernes automatisk. Kildehenvisninger
+            skrives ud som dokumentnavn og side, så modtageren kan slå efter.
+          </div>
+        </div>
+
+        <div style={{ padding: '16px 24px 4px' }}>
+          {(ready.empty.length > 0 || ready.blanks > 0) && (
+            <div style={{
+              padding: '10px 12px', borderRadius: 8, marginBottom: 14,
+              background: 'var(--c-warn-bg)', border: '1px solid #f4dfb7',
+              fontSize: 12.5, color: 'var(--c-warn)', lineHeight: 1.55,
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: 3 }}>Dokumentet er ikke færdigt</div>
+              {ready.empty.length > 0 && (
+                <div>{ready.empty.length} afsnit er ikke skrevet: {ready.empty.slice(0, 3).join(', ')}{ready.empty.length > 3 ? ' og ' + (ready.empty.length - 3) + ' mere' : ''}.</div>
+              )}
+              {ready.blanks > 0 && <div>{ready.blanks} felter mangler at blive udfyldt.</div>}
+              <div style={{ marginTop: 4 }}>De markeres tydeligt i filen, så de ikke kan overses.</div>
+            </div>
+          )}
+
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, cursor: 'pointer' }}>
+            <input type="checkbox" checked={withComments} onChange={e => setWithComments(e.target.checked)} style={{ marginTop: 2 }}/>
+            <span>
+              <span style={{ fontSize: 13, color: 'var(--c-ink)' }}>Tag de interne kommentarer med</span>
+              <span style={{ display: 'block', fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2, lineHeight: 1.5 }}>
+                {commentCount} kommentar{commentCount === 1 ? '' : 'er'} fra Kredit, Legal og Erhverv.
+                Skal normalt blive i huset. Før fulgte de altid med.
+              </span>
+            </span>
+          </label>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '18px 24px 20px' }}>
+          <div style={{ flex: 1 }}/>
+          <button className="btn btn-sm" onClick={onClose}>Annullér</button>
+          <button className="btn btn-sm btn-primary" onClick={() => { exportMemoToWord(sections, { comments: withComments }); onClose(); }}>
+            Hent filen
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 /* ── Word export ─────────────────────────────────────────────────────────── */
-function exportMemoToWord(sections) {
+function exportMemoToWord(sections, opts) {
+  opts = opts || {};
   const esc = (s) => s == null ? '' : String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const parts = [];
   parts.push(`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">`);
@@ -1282,8 +1770,10 @@ function exportMemoToWord(sections) {
     .cmt-box { background: #fff8e6; border-left: 3pt solid #d97706; padding: 6pt 10pt; margin: 4pt 0; font-size: 10pt; }
     .cmt-meta { color: #555; font-size: 9pt; margin-bottom: 2pt; }
     .cmt-dept { font-weight: 600; }
+    .blank { color: #b45309; background: #fff8e6; padding: 0 3pt; }
+    .cite-ref { color: #4F81BD; font-size: 8.5pt; }
   </style></head><body>`);
-  parts.push(`<h1>Kreditindstilling — Nordhavn Composite A/S</h1>`);
+  parts.push(`<h1>Kreditindstilling · Nordhavn Composite A/S</h1>`);
   parts.push(`<p class="meta"><strong>Indstilling af nyt engagement til Kreditkomité</strong><br/>Kreditrisiko: Middel/Høj · Kundetype: Erhverv – SMV</p>`);
   parts.push(`<table style="width:100%; font-size:10pt; margin: 8pt 0 14pt;">`);
   parts.push(`<tr><td><strong>Dato:</strong> 24. maj 2026</td><td><strong>CVR:</strong> 38 42 71 56</td></tr>`);
@@ -1293,18 +1783,27 @@ function exportMemoToWord(sections) {
   parts.push(`<p class="meta">Dispensation fra acceptkriterie: Ingen · Eksporteret ${new Date().toLocaleDateString('da-DK')}</p>`);
 
   sections.forEach(s => {
-    const body = localStorage.getItem('memo4:' + s.k) || SEC[s.k] || '';
+    const saved = localStorage.getItem('memo4:' + s.k);
     const heading = /^B\d/.test(s.num) ? esc(s.label) : `${esc(s.num)}) ${esc(s.label)}`;
     parts.push(`<h2>${heading}</h2>`);
-    parts.push(body);
+    if (saved === null) {
+      // Aldrig rørt. Før blev skabelonen med al dens vejledning eksporteret
+      // som om det var færdig tekst.
+      parts.push(`<p class="blank">[afsnittet er ikke skrevet]</p>`);
+    } else {
+      parts.push(prepareForExport(saved));
+    }
 
-    const comments = loadComments(s.k);
-    if (comments.length > 0) {
-      parts.push(`<h3>Kommentarer (${comments.length})</h3>`);
-      comments.forEach(c => {
-        const d = MEMO_DEPT_MAP[c.dept] || MEMO_DEPTS[0];
-        parts.push(`<div class="cmt-box"><div class="cmt-meta"><span class="cmt-dept">${esc(c.author)}</span> · ${esc(d.label)} · ${esc(c.date)}</div>${esc(c.text).replace(/\n/g, '<br/>')}</div>`);
-      });
+    // Interne noter følger kun med hvis brugeren beder om det
+    if (opts.comments) {
+      const comments = loadComments(s.k);
+      if (comments.length > 0) {
+        parts.push(`<h3>Interne kommentarer (${comments.length})</h3>`);
+        comments.forEach(c => {
+          const d = MEMO_DEPT_MAP[c.dept] || MEMO_DEPTS[0];
+          parts.push(`<div class="cmt-box"><div class="cmt-meta"><span class="cmt-dept">${esc(c.author)}</span> · ${esc(d.label)} · ${esc(c.date)}</div>${esc(c.text).replace(/\n/g, '<br/>')}</div>`);
+        });
+      }
     }
   });
 
@@ -1322,6 +1821,254 @@ function exportMemoToWord(sections) {
 }
 
 /* ── WSMemo ───────────────────────────────────────────────────────────────── */
+/* ── Generér memo: vælg afsnit før AI'en skriver ─────────────────────────── */
+function GenerateMemoDialog({ sections, modified, onCancel, onStart }) {
+  const [picked, setPicked] = React.useState(() => {
+    const m = {};
+    sections.forEach(s => { m[s.k] = true; });
+    return m;
+  });
+  const chosen = sections.filter(s => picked[s.k]);
+  const overwritten = chosen.filter(s => modified[s.k]);
+
+  function toggle(k) { setPicked(p => ({ ...p, [k]: !p[k] })); }
+  function setAll(v) {
+    const m = {};
+    sections.forEach(s => { m[s.k] = v; });
+    setPicked(m);
+  }
+
+  return (
+    <div onMouseDown={onCancel}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,20,0.45)', zIndex: 10000, display: 'grid', placeItems: 'center', padding: 20 }}>
+      <div onMouseDown={e => e.stopPropagation()}
+        style={{ width: 'min(520px, 100%)', background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column', maxHeight: '82vh' }}>
+        <div style={{ padding: '20px 24px 12px' }}>
+          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>Generér kreditindstillingen</div>
+          <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 5, lineHeight: 1.55 }}>
+            Hvert afsnit skrives ud fra sagens dokumenter, de realiserede periodetal og årsregnskaberne.
+            Teksten kommer med kildehenvisninger, så du kan se hvor hvert tal stammer fra.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 24px 8px' }}>
+          <span style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>{chosen.length} af {sections.length} valgt</span>
+          <div style={{ flex: 1 }}/>
+          <button className="btn btn-sm btn-ghost" onClick={() => setAll(true)}>Vælg alle</button>
+          <button className="btn btn-sm btn-ghost" onClick={() => setAll(false)}>Fravælg alle</button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid var(--c-line-2)', borderBottom: '1px solid var(--c-line-2)' }}>
+          {sections.map(s => (
+            <label key={s.k}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 24px', cursor: 'pointer', fontSize: 12.5, borderBottom: '1px solid var(--c-line-2)' }}>
+              <input type="checkbox" checked={!!picked[s.k]} onChange={() => toggle(s.k)}/>
+              <span className="mono" style={{ fontSize: 10.5, color: 'var(--c-text-4)', width: 22 }}>{s.num}</span>
+              <span style={{ flex: 1, color: 'var(--c-ink)' }}>{s.label}</span>
+              {modified[s.k] && (
+                <span style={{ fontSize: 10.5, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', borderRadius: 4, padding: '1px 6px' }}>redigeret</span>
+              )}
+            </label>
+          ))}
+        </div>
+
+        <div style={{ padding: '14px 24px 18px' }}>
+          {overwritten.length > 0 && (
+            <div style={{ fontSize: 12, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid #f4dfb7', borderRadius: 8, padding: '8px 11px', marginBottom: 12, lineHeight: 1.5 }}>
+              {overwritten.length} af de valgte afsnit er redigeret manuelt. De bliver overskrevet.
+              Du kan fravælge dem ovenfor.
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button className="btn btn-sm" onClick={onCancel}>Annullér</button>
+            <button className="btn btn-sm btn-primary" disabled={!chosen.length}
+              onClick={() => onStart(chosen.map(s => s.k))}>
+              Skriv {chosen.length} afsnit
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Viser hvad kontrollen fandt. Tre slags fund, hver med sin konsekvens:
+   et dødt dokument betyder at henvisningen lover noget der ikke findes,
+   en forkert side at dokumentet findes men ikke stedet, og et uafstemt tal
+   at memoet siger noget andet end regnskabstabellen i samme app. */
+function AuditPanel({ audit, onClose, onGoto, sections }) {
+  const ok = audit.count === 0;
+  const findSection = (label) => {
+    const s = (sections || []).find(x => (x.num + '. ' + x.label) === label);
+    return s ? s.k : null;
+  };
+
+  const Row = ({ tone, head, body, section }) => {
+    const key = findSection(section);
+    return (
+      <li style={{ display: 'flex', gap: 9, alignItems: 'flex-start', padding: '7px 0', borderTop: '1px solid var(--c-line-2)' }}>
+        <span style={{
+          width: 7, height: 7, borderRadius: '50%', marginTop: 6, flexShrink: 0,
+          background: tone === 'bad' ? '#b03030' : 'var(--c-warn)',
+        }}/>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 12.5, color: 'var(--c-ink)' }}>{head}</span>
+          <span style={{ display: 'block', fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2 }}>{body}</span>
+        </span>
+        {key && (
+          <button className="btn btn-sm btn-ghost" style={{ flexShrink: 0 }} onClick={() => onGoto(key)}>
+            Gå til
+          </button>
+        )}
+      </li>
+    );
+  };
+
+  return (
+    <div style={{
+      margin: '0 0 12px', padding: '12px 16px', borderRadius: 10,
+      background: ok ? 'rgba(16,138,80,0.05)' : 'var(--c-warn-bg)',
+      border: '1px solid ' + (ok ? 'rgba(16,138,80,0.25)' : '#f4dfb7'),
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: ok ? 'var(--c-success)' : 'var(--c-warn)' }}>
+          {ok
+            ? 'Kontrol gennemført. Alle kildehenvisninger findes, og alle afstemte tal stemmer med regnskabstabellen.'
+            : audit.count + (audit.count === 1 ? ' forhold kræver din stillingtagen' : ' forhold kræver din stillingtagen')}
+        </span>
+        <div style={{ flex: 1 }}/>
+        <button className="btn btn-sm btn-ghost" onClick={onClose}>Luk</button>
+      </div>
+
+      {!ok && (
+        <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
+          {audit.mismatch.map((m, i) => (
+            <Row key={'m' + i} tone="bad" section={m.section}
+              head={'Tallet ' + m.got.toLocaleString('da-DK') + ' stemmer ikke med regnskabet, der siger ' + m.expect.toLocaleString('da-DK', { maximumFractionDigits: 1 })}
+              body={m.line + ' · ' + m.col + ' · i ' + (m.section || 'memoet') + ' · "' + m.text + '"'}/>
+          ))}
+          {audit.deadDoc.map((d, i) => (
+            <Row key={'d' + i} tone="bad" section={d.section}
+              head={'Henviser til ' + d.doc + ', som ikke findes i sagen'}
+              body={(d.section || 'memoet') + ' · "' + d.text + '"'}/>
+          ))}
+          {audit.deadPage.map((p, i) => (
+            <Row key={'p' + i} tone="warn" section={p.section}
+              head={'Henviser til "' + p.page + '" i ' + p.doc + ', som ikke findes'}
+              body={'Dokumentet har: ' + (p.valid || []).join(', ')}/>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* Viser kildedokumentet på den side en henvisning peger på. Den citerede
+   passage fremhæves, hvis den kan findes i teksten, så man ikke skal lede. */
+function SourceViewer({ doc, page, quote, onClose }) {
+  const pages = doc.pages || [];
+  const startIdx = Math.max(0, pages.findIndex(p => p.ref === page));
+  const [idx, setIdx] = React.useState(startIdx);
+  const cur = pages[idx];
+
+  React.useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight' && idx < pages.length - 1) setIdx(idx + 1);
+      if (e.key === 'ArrowLeft' && idx > 0) setIdx(idx - 1);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [idx, pages.length, onClose]);
+
+  // Find det tal eller den frase memoet henviser for, og fremhæv den
+  const body = React.useMemo(() => {
+    const text = cur ? cur.body : '';
+    if (!quote) return [{ t: text, hit: false }];
+    const needle = quote.replace(/\s+/g, ' ').trim();
+    const nums = needle.match(/\d[\d.,]*/g) || [];
+    const probes = [needle].concat(nums.filter(n => n.length >= 3));
+    for (const p of probes) {
+      const at = text.indexOf(p);
+      if (at !== -1) {
+        return [
+          { t: text.slice(0, at), hit: false },
+          { t: text.slice(at, at + p.length), hit: true },
+          { t: text.slice(at + p.length), hit: false },
+        ];
+      }
+    }
+    return [{ t: text, hit: false }];
+  }, [cur, quote]);
+
+  const found = body.some(b => b.hit);
+
+  return (
+    <div
+      onMouseDown={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,20,0.45)', zIndex: 9000, display: 'grid', placeItems: 'center', padding: 24 }}
+    >
+      <div
+        onMouseDown={e => e.stopPropagation()}
+        style={{
+          width: 'min(860px, 100%)', maxHeight: '86vh', display: 'flex', flexDirection: 'column',
+          background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden',
+        }}
+      >
+        <div style={{ padding: '16px 20px 12px', borderBottom: '1px solid var(--c-line-2)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <I.FileText className="ic" style={{ color: 'var(--c-text-3)' }}/>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>{doc.name}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2 }}>{doc.type}{doc.meta ? ' · ' + doc.meta.split('·')[0].trim() : ''}</div>
+            </div>
+            <button className="btn btn-sm btn-ghost" onClick={onClose}>Luk</button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
+            {pages.map((p, i) => (
+              <button
+                key={p.ref}
+                onClick={() => setIdx(i)}
+                style={{
+                  height: 24, padding: '0 9px', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
+                  fontSize: 11.5, fontWeight: 500,
+                  border: '1px solid ' + (i === idx ? 'var(--c-ink)' : 'var(--c-line)'),
+                  background: i === idx ? 'var(--c-ink)' : '#fff',
+                  color: i === idx ? '#fff' : 'var(--c-text-2)',
+                }}
+              >{p.ref}</button>
+            ))}
+          </div>
+        </div>
+
+        {quote && (
+          <div style={{
+            padding: '9px 20px', background: found ? 'rgba(16,138,80,0.06)' : 'var(--c-warn-bg)',
+            borderBottom: '1px solid ' + (found ? 'rgba(16,138,80,0.2)' : '#f4dfb7'),
+            fontSize: 11.5, color: found ? 'var(--c-success)' : 'var(--c-warn)',
+          }}>
+            {found
+              ? 'Memoet henviser for: "' + quote + '". Fremhævet nedenfor.'
+              : 'Memoet henviser for: "' + quote + '". Den tekst kunne ikke findes ordret på denne side, gennemgå den selv.'}
+          </div>
+        )}
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '18px 24px 28px' }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text-2)', marginBottom: 8 }}>
+            {cur ? cur.ref + ' · ' + cur.title : ''}
+          </div>
+          <div style={{ whiteSpace: 'pre-wrap', fontSize: 12.5, lineHeight: 1.7, color: 'var(--c-ink)' }}>
+            {body.map((b, i) => b.hit
+              ? <mark key={i} style={{ background: '#fde68a', padding: '1px 2px', borderRadius: 3 }}>{b.t}</mark>
+              : <span key={i}>{b.t}</span>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function WSMemo() {
   const [active, setActive] = React.useState("summary");
   const [focusedKey, setFocusedKey] = React.useState(null);
@@ -1336,6 +2083,25 @@ function WSMemo() {
   const [sectionOffsets, setSectionOffsets] = React.useState({});
   const scrollRef = React.useRef(null);
   const hoveredCiteRef = React.useRef(null);
+
+  /* ── AI-tilstand ───────────────────────────────────────────────────────── */
+  const aiStatus = window.MemoAI.useAiStatus();
+  const [aiSettingsOpen, setAiSettingsOpen] = React.useState(false);
+  const [aiSectionKey, setAiSectionKey] = React.useState(null);   // hvilket afsnit har assistenten åben
+  const [aiSelection, setAiSelection] = React.useState(null);      // markeret passage der skal omskrives
+  const [railTab, setRailTab] = React.useState('comments');        // højre skinne: kommentarer eller chat
+  const [floatBtn, setFloatBtn] = React.useState(null);            // knappen der dukker op ved markering
+  const [genOpen, setGenOpen] = React.useState(false);             // dialogen "Generér memo"
+  const [gen, setGen] = React.useState(null);                      // status under generering
+  const sectionApis = React.useRef({});
+  const genAbort = React.useRef(null);
+
+  const registerSectionApi = React.useCallback((k, api) => {
+    if (api) sectionApis.current[k] = api;
+    else delete sectionApis.current[k];
+    // Gør afsnittene tilgængelige for de automatiske browsertests
+    try { window.__memoApis = sectionApis.current; } catch (e) {}
+  }, []);
 
   React.useEffect(() => { try { localStorage.setItem('memo4-persona', persona); } catch (e) {} }, [persona]);
 
@@ -1471,6 +2237,149 @@ function WSMemo() {
 
   function handleDocScroll(e) {
     setDocScrollTop(e.currentTarget.scrollTop);
+    if (floatBtn) setFloatBtn(null);
+  }
+
+  /* ── Markering i teksten giver en flydende "omskriv"-knap ──────────────── */
+  React.useEffect(() => {
+    const onSel = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0) { setFloatBtn(null); return; }
+      let node = sel.anchorNode;
+      const el = node && (node.nodeType === 3 ? node.parentElement : node);
+      const body = el && el.closest ? el.closest('.memo-body') : null;
+      const sec = body && body.closest ? body.closest('[id^="ms-"]') : null;
+      if (!body || !sec) { setFloatBtn(null); return; }
+      const text = sel.toString().trim();
+      if (text.length < 8) { setFloatBtn(null); return; }
+      const r = sel.getRangeAt(0).getBoundingClientRect();
+      if (!r || (!r.width && !r.height)) { setFloatBtn(null); return; }
+      setFloatBtn({ sKey: sec.id.replace('ms-', ''), text, x: r.left + r.width / 2, y: r.top });
+    };
+    document.addEventListener('selectionchange', onSel);
+    return () => document.removeEventListener('selectionchange', onSel);
+  }, []);
+
+  function openSectionAi(key) {
+    setAiSelection(null);
+    setAiSectionKey(prev => (prev === key ? null : key));
+  }
+
+  function openSelectionAi() {
+    if (!floatBtn) return;
+    _memoSaveSelection();
+    // Markeringen fryses her sammen med hvilket afsnit den kom fra. Ellers
+    // overskriver et klik i et andet afsnit den, mens AI'en skriver, og
+    // resultatet lander det forkerte sted.
+    const sel = window.getSelection();
+    const frozen = sel && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : _memoLastRange;
+    setAiSelection({ text: floatBtn.text, range: frozen, sKey: floatBtn.sKey });
+    setAiSectionKey(floatBtn.sKey);
+    setFloatBtn(null);
+  }
+
+  function closeSectionAi() { setAiSectionKey(null); setAiSelection(null); }
+
+  /* ── Chat ──────────────────────────────────────────────────────────────── */
+
+  function memoAsText() {
+    return sections.map(s => {
+      const api = sectionApis.current[s.k];
+      const body = api ? api.getText().trim() : '';
+      return '## ' + s.num + '. ' + s.label + '\n' + (body || '(ikke skrevet endnu)');
+    }).join('\n\n');
+  }
+
+  /* ── Kontrol af hele memoet ────────────────────────────────────────────────
+     Kildehenvisninger og tal ser lige rigtige ud om de er det eller ej, så de
+     kan ikke fanges ved gennemlæsning. Her sammenholdes de med de dokumenter
+     og den regnskabstabel appen allerede kender. */
+
+  const [audit, setAudit] = React.useState(null);
+
+  function runAudit() {
+    if (audit) { setAudit(null); return; }
+    const parts = sections.map(s => {
+      const api = sectionApis.current[s.k];
+      return { key: s.k, title: s.num + '. ' + s.label, html: api ? api.getHtml() : '' };
+    });
+    setAudit(auditMemo(parts));
+  }
+
+  // Kontrollen gælder kun den tekst der stod da den blev kørt
+  React.useEffect(() => { setAudit(null); }, [modifiedSections]);
+
+  function insertFromChat(key, html) {
+    const api = sectionApis.current[key];
+    if (!api || !html) return;
+    api.append(html);
+    scrollTo(key);
+    setModifiedSections(prev => ({ ...prev, [key]: true }));
+  }
+
+  /* ── Generér hele memoet ───────────────────────────────────────────────── */
+
+  async function runGeneration(keys) {
+    const ctrl = new AbortController();
+    genAbort.current = ctrl;
+    setGenOpen(false);
+    setGen({ keys, index: 0, label: '', running: true, error: null, written: [] });
+
+    for (let i = 0; i < keys.length; i++) {
+      if (ctrl.signal.aborted) break;
+      const s = sections.find(x => x.k === keys[i]);
+      if (!s) continue;
+      setGen(g => ({ ...g, index: i, label: s.label }));
+      scrollTo(s.k);
+
+      const api = sectionApis.current[s.k];
+      const p = window.MemoAI.writeSectionPrompt(s.k, s.label, s.num);
+      let lastPaint = 0;
+      // Ét snapshot per afsnit, taget før streamingen begynder at male
+      if (api && api.snapshot) api.snapshot('write');
+
+      try {
+        const res = await window.AI.stream({
+          system: p.system,
+          messages: [{ role: 'user', content: p.content }],
+          maxTokens: 20000,
+          effort: 'high',
+          signal: ctrl.signal,
+          onDelta: (_d, all) => {
+            // Mal med i takt med at teksten kommer, men ikke oftere end øjet kan følge
+            const now = Date.now();
+            if (api && now - lastPaint > 140) {
+              lastPaint = now;
+              try { api.paint(window.MemoAI.markAsDraft(window.MemoAI.cleanHtml(all))); } catch (e) {}
+            }
+          },
+        });
+        const html = window.MemoAI.cleanHtml(res.text);
+        // Tomt svar må ikke overskrive afsnittet. Rul tilbage til det der stod.
+        if (!html.trim()) {
+          if (api && api.undo) api.undo();
+          setGen(g => ({ ...g, skipped: (g.skipped || []).concat([s.label]) }));
+          continue;
+        }
+        if (api) api.commit(window.MemoAI.markAsDraft(html));
+        setGen(g => ({ ...g, written: g.written.concat([s.k]) }));
+        setModifiedSections(prev => ({ ...prev, [s.k]: true }));
+      } catch (e) {
+        if (e && e.code === 'abort') break;
+        setGen(g => ({ ...g, error: e.message || String(e), running: false }));
+        genAbort.current = null;
+        return;
+      }
+    }
+
+    genAbort.current = null;
+    setGen(g => (g ? { ...g, running: false, finished: true } : null));
+  }
+
+  function stopGeneration() {
+    if (genAbort.current) genAbort.current.abort();
+    genAbort.current = null;
+    setGen(g => (g ? { ...g, running: false, finished: true } : null));
   }
 
   // Cite tooltip via event delegation
@@ -1509,7 +2418,25 @@ function WSMemo() {
     if (hoveredCiteRef.current) setTooltip(computeTooltip(hoveredCiteRef.current));
   };
 
-  const sources = MEMO_SOURCES[active] || [];
+  /* Klik på en kildehenvisning åbner selve dokumentet på den side der henvises
+     til. Et tooltip der viser et filnavn er en påstand; kilden er beviset, og
+     hele pointen med sporbarheden er at man kan komme hen til den. */
+  const [sourceDoc, setSourceDoc] = React.useState(null);
+  const [exportOpen, setExportOpen] = React.useState(false);
+
+  const handleCiteClick = (e) => {
+    const el = e.target.closest('.memo-cite');
+    if (!el) return;
+    // Ctrl eller cmd holdt nede betyder at brugeren vil redigere teksten
+    if (e.metaKey || e.ctrlKey) return;
+    const name = el.getAttribute('data-doc');
+    const page = el.getAttribute('data-page');
+    const doc = (window.CASE_DOCS || []).find(d => d.name === name);
+    if (!doc) return;
+    e.preventDefault();
+    setSourceDoc({ doc, page, quote: (el.textContent || '').trim() });
+  };
+
 
   return (
     <div className="page page-wide" style={{ maxWidth: 1320 }}>
@@ -1556,21 +2483,86 @@ function WSMemo() {
         <div className="card" style={{ background: '#fff', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Top bar */}
           <div className="card-head" style={{ flexShrink: 0, borderBottom: '1px solid var(--c-line-2)' }}>
-            <div>
+            <div style={{ minWidth: 0 }}>
               <div className="card-title">Credit memo · udkast</div>
-              <div className="card-sub">Sidst opdateret 24. maj 09:14 · klik i teksten for at redigere</div>
+              <div className="card-sub" style={{ whiteSpace: 'nowrap' }}>Klik i teksten for at redigere</div>
             </div>
-            <div className="hstack" style={{ gap: 6 }}>
-              <button className="btn btn-sm btn-ghost"><I.Download className="ic"/> PDF</button>
+            <div className="hstack" style={{ gap: 6, flexShrink: 0 }}>
+              <button
+                className="btn btn-sm"
+                onClick={() => setAiSettingsOpen(true)}
+                title={aiStatus.ready
+                  ? 'Forbundet til ' + aiStatus.provider.label + ' (' + aiStatus.model + '). Klik for at skifte.'
+                  : 'Forbind din egen Claude- eller ChatGPT-konto'}
+                style={aiStatus.ready ? undefined : { borderColor: 'var(--c-primary)', color: 'var(--c-primary)' }}
+              >
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%', marginRight: 6, display: 'inline-block',
+                  background: aiStatus.ready ? 'var(--c-success)' : 'var(--c-text-4)',
+                }}/>
+                {aiStatus.ready ? aiStatus.provider.label : 'Forbind AI'}
+              </button>
+              <button
+                className="btn btn-sm"
+                disabled={!aiStatus.ready || (gen && gen.running)}
+                onClick={() => setGenOpen(true)}
+                title="Lad AI skrive memoet ud fra dokumenterne, periodetallene og årsregnskaberne"
+              >Generér memo</button>
+              <button
+                className="btn btn-sm"
+                onClick={runAudit}
+                title="Tjek hele memoet for kildehenvisninger der ikke findes, og tal der ikke stemmer med regnskabstabellen"
+                style={audit && audit.count ? { borderColor: 'var(--c-warn)', color: 'var(--c-warn)' } : undefined}
+              >
+                {audit
+                  ? (audit.count ? audit.count + ' fund' : 'Kontrol ok')
+                  : 'Kontrollér'}
+              </button>
+              <button className="btn btn-sm btn-ghost" title="Download som PDF"><I.Download className="ic"/> PDF</button>
               <button
                 className="btn btn-sm btn-primary"
-                title="Download hele kreditmemoet inkl. kommentarer som Word-fil"
-                onClick={() => exportMemoToWord(sections)}
+                title="Hent kreditindstillingen som Word-fil"
+                onClick={() => setExportOpen(true)}
               >
                 <I.Download className="ic"/> Word
               </button>
             </div>
           </div>
+
+          {/* Resultat af kontrollen */}
+          {audit && <AuditPanel audit={audit} onClose={() => setAudit(null)} onGoto={scrollTo} sections={sections}/>}
+          {exportOpen && <ExportDialog sections={sections} onClose={() => setExportOpen(false)}/>}
+          {sourceDoc && (
+            <SourceViewer
+              doc={sourceDoc.doc}
+              page={sourceDoc.page}
+              quote={sourceDoc.quote}
+              onClose={() => setSourceDoc(null)}
+            />
+          )}
+
+          {/* Fremgang under generering */}
+          {gen && (
+            <div className="ai-progress">
+              <span className="ai-chip">AI</span>
+              {gen.error ? (
+                <span style={{ color: '#b03030', flex: 1 }}>{gen.error}</span>
+              ) : gen.running ? (
+                <>
+                  <span style={{ minWidth: 210 }}>Skriver {gen.index + 1} af {gen.keys.length}: {gen.label}</span>
+                  <span className="ai-progress-bar"><span style={{ width: Math.round((gen.index / gen.keys.length) * 100) + '%' }}/></span>
+                  <button className="btn btn-sm" onClick={stopGeneration}>Stop</button>
+                </>
+              ) : (
+                <>
+                  <span style={{ flex: 1 }}>
+                    {gen.written.length} af {gen.keys.length} afsnit skrevet. Gennemgå teksten og ret det der skal rettes.
+                  </span>
+                  <button className="btn btn-sm btn-ghost" onClick={() => setGen(null)}>Luk</button>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Toolbar */}
           <MemoToolbar focusedKey={focusedKey} citeOpen={citeOpen} onOpenCitePicker={openCitePicker} onReset={resetSection}/>
@@ -1578,11 +2570,17 @@ function WSMemo() {
           {/* Scrollable doc body */}
           <div
             ref={scrollRef}
-            style={{ padding: '36px 56px 60px', maxHeight: 660, overflowY: 'auto' }}
+            /* Dokumentet er 14 afsnit langt og blev læst gennem et fast 660px
+               højt vindue, uanset hvor stor skærmen var. Nu fylder det den plads
+               der faktisk er: 344px er hvad topbjælke, sagshoved, faner og
+               værktøjslinje optager over det. Så slipper man også for at scrolle
+               siden for at nå ned til en kasse man skal scrolle i igen. */
+            style={{ padding: '36px 56px 60px', height: 'max(460px, calc(100vh - 344px))', overflowY: 'auto' }}
             onMouseOver={handleMouseOver}
             onMouseOut={handleMouseOut}
             onInput={handleScrollInput}
             onScroll={handleDocScroll}
+            onClick={handleCiteClick}
           >
             {/* Doc header (non-editable) — følger EIFO Kreditindstilling-template */}
             <div style={{ borderBottom: '2px solid var(--c-ink)', paddingBottom: 18, marginBottom: 28 }}>
@@ -1643,27 +2641,92 @@ function WSMemo() {
                 resetTrigger={resets[s.k] || 0}
                 onAddComment={handleAddComment}
                 commentCount={commentCounts[s.k] || 0}
+                registerApi={registerSectionApi}
+                aiOpen={aiSectionKey === s.k}
+                aiSelection={aiSectionKey === s.k ? aiSelection : null}
+                onToggleAi={openSectionAi}
+                onCloseAi={closeSectionAi}
               />
             ))}
           </div>
         </div>
 
-        {/* ── Comments rail ── */}
-        <MemoCommentsRail
-          sections={sections}
-          sectionOffsets={sectionOffsets}
-          scrollTop={docScrollTop}
-          persona={persona}
-          onPersonaChange={setPersona}
-          activeKey={active}
-          composerForKey={composerForKey}
-          onComposerToggle={setComposerForKey}
-          onChanged={() => setCommentsVersion(v => v + 1)}
-          scrollToSection={scrollTo}
-          totalCount={Object.values(commentCounts).reduce((a, b) => a + b, 0)}
-        />
+        {/* ── Højre skinne: kommentarer eller sagschat ── */}
+        <div style={{ alignSelf: 'flex-start', position: 'sticky', top: 16 }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+            {[
+              { k: 'comments', l: 'Kommentarer', n: Object.values(commentCounts).reduce((a, b) => a + b, 0) },
+              { k: 'ai', l: 'Spørg om sagen', n: 0 },
+            ].map(t => {
+              const on = railTab === t.k;
+              return (
+                <button key={t.k} onClick={() => setRailTab(t.k)}
+                  style={{
+                    flex: 1, height: 30, borderRadius: 7, cursor: 'pointer', fontFamily: 'inherit',
+                    border: '1px solid ' + (on ? 'var(--c-ink)' : 'var(--c-line)'),
+                    background: on ? 'var(--c-ink)' : '#fff',
+                    color: on ? '#fff' : 'var(--c-text-2)',
+                    fontSize: 12, fontWeight: 500,
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}>
+                  {t.l}
+                  {t.n > 0 && <span style={{ fontSize: 10, opacity: on ? 0.75 : 0.6 }}>{t.n}</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {railTab === 'comments' ? (
+            <MemoCommentsRail
+              sections={sections}
+              sectionOffsets={sectionOffsets}
+              scrollTop={docScrollTop}
+              persona={persona}
+              onPersonaChange={setPersona}
+              activeKey={active}
+              composerForKey={composerForKey}
+              onComposerToggle={setComposerForKey}
+              onChanged={() => setCommentsVersion(v => v + 1)}
+              scrollToSection={scrollTo}
+              totalCount={Object.values(commentCounts).reduce((a, b) => a + b, 0)}
+            />
+          ) : (
+            <window.MemoAI.AiChatPanel
+              open
+              onClose={() => setRailTab('comments')}
+              getMemoText={memoAsText}
+              sections={sections}
+              onInsert={insertFromChat}
+            />
+          )}
+        </div>
 
       </div>
+
+      {/* Flydende knap ved markeret tekst */}
+      {floatBtn && aiStatus.ready && (
+        <button
+          className="ai-float"
+          style={{ left: floatBtn.x, top: floatBtn.y - 10, transform: 'translate(-50%, -100%)' }}
+          onMouseDown={(e) => { e.preventDefault(); openSelectionAi(); }}
+        >
+          <span className="ai-chip" style={{ background: 'rgba(255,255,255,0.2)' }}>AI</span>
+          Omskriv markeringen
+        </button>
+      )}
+
+      {/* Forbindelsesdialog */}
+      <window.MemoAI.AiSettingsDialog open={aiSettingsOpen} onClose={() => setAiSettingsOpen(false)}/>
+
+      {/* Generér memo */}
+      {genOpen && (
+        <GenerateMemoDialog
+          sections={sections}
+          modified={modifiedSections}
+          onCancel={() => setGenOpen(false)}
+          onStart={runGeneration}
+        />
+      )}
 
       {/* Cite picker -fixed overlay, outside any overflow:hidden ancestor */}
       {citeOpen && (

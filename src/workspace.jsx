@@ -29,8 +29,6 @@ function WorkspaceShell({ tab, go, openMemo, caseId }) {
     { k: "overview", label: "Overblik", ic: <I.Layout className="ic"/> },
     { k: "financials", label: "Finansielt overblik", ic: <I.BarChart className="ic"/> },
     { k: "documents", label: "Dokumenter", ic: <I.FileText className="ic"/>, badge: "12" },
-    { k: "security", label: "Sikkerheder", ic: <I.Lock className="ic"/>, badge: "1" },
-    { k: "questions", label: "Kundedialog", ic: <I.Help className="ic"/>, badge: "4" },
     { k: "memo", label: "Credit memo", ic: <I.File className="ic"/> },
   ];
 
@@ -125,8 +123,6 @@ function WorkspaceShell({ tab, go, openMemo, caseId }) {
         {tab === "overview" && <WSOverview go={go} caseId={caseId}/>}
         {tab === "financials" && <WSFinancials go={go}/>}
         {tab === "documents" && <WSDocuments/>}
-        {tab === "security" && <WSSecurity/>}
-        {tab === "questions" && <WSQuestions/>}
         {tab === "memo" && <WSMemo/>}
         {tab === "indstil" && <WSIndstil go={go} caseId={caseId} indstillet={indstillet} indstilletAt={indstilletAt} onIndstil={() => { setIndstilletAt(new Date()); setIndstillet(true); }} onReset={() => setIndstillet(false)}/>}
       </div>

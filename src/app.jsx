@@ -87,11 +87,9 @@ function App() {
             <button className="btn btn-sm" onClick={() => go("workspace:1")}>Workspace</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:financials")}>Finans</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:documents")}>Dokumenter</button>
-            <button className="btn btn-sm" onClick={() => go("workspace:1:security")}>Sikkerheder</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:findings")}>Findings</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:market")}>Marked</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:ownership")}>Ejerskab</button>
-            <button className="btn btn-sm" onClick={() => go("workspace:1:questions")}>Spørgsmål</button>
             <button className="btn btn-sm" onClick={() => go("workspace:1:memo")}>Credit memo</button>
             <button className="btn btn-sm" onClick={() => go("portal")}>Kundens portal</button>
           </div>

@@ -1,7 +1,6 @@
 // Financials - credit-case financial overview (public data only - periodetal/budget not yet received)
 const FIN_VIEWS = [
   { k: "all",        l: "Alle" },
-  { k: "findings",   l: "Findings" },
   { k: "kpi",        l: "Finansielle tal" },
   { k: "market",     l: "Marked og produkt" },
   { k: "ownership",  l: "Ejerskab" },
@@ -55,15 +54,6 @@ function FinModal({ open, onClose, title, children, width }) {
   );
 }
 
-const FIN_FINDINGS_STORAGE = 'kabul:fin-findings:nordhavn';
-
-function loadCustomFindings() {
-  try {
-    const raw = localStorage.getItem(FIN_FINDINGS_STORAGE);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) { return []; }
-}
-
 function WSFinancials({ go }) {
   const f = DATA.FINANCIALS;
   // Public data: only the three annual columns from CVR
@@ -79,14 +69,6 @@ function WSFinancials({ go }) {
   };
   const [view, setView] = React.useState("all");
   const show = (k) => view === "all" || view === k;
-  const [customFindings, setCustomFindings] = React.useState(loadCustomFindings);
-
-  React.useEffect(() => {
-    try { localStorage.setItem(FIN_FINDINGS_STORAGE, JSON.stringify(customFindings)); } catch (e) {}
-  }, [customFindings]);
-
-  const addFinding = (f) => setCustomFindings(list => [{ ...f, id: Date.now() }, ...list]);
-  const removeFinding = (id) => setCustomFindings(list => list.filter(f => f.id !== id));
 
   return (
     <div className="page page-wide" style={{ maxWidth: 1080, padding: '24px 32px 80px' }}>
@@ -167,15 +149,6 @@ function WSFinancials({ go }) {
           Gå videre <I.ArrowRight className="ic"/>
         </button>
       </div>
-
-      {/* Findings og opmærksomhedspunkter - øverst, samlet på tværs af kategorier */}
-      {show("findings") && (
-        <UnifiedFindings
-          customFindings={customFindings}
-          onAdd={addFinding}
-          onRemove={removeFinding}
-        />
-      )}
 
       {/* Årsregnskaber - 3 års overblik */}
       {show("kpi") && (
@@ -805,437 +778,6 @@ function OwnershipSection() {
   );
 }
 
-const FIN_FINDINGS = [
-  // Finansielle findings
-  {
-    category: 'financial',
-    severity: "warn",
-    severityLabel: "Kræver afklaring",
-    title: "Gæld stiger fra 2024 til 2025",
-    body: "Samlet gæld er gået fra 6,4M til 7,8M. Bør sammenholdes med aktuelle periodetal når de modtages.",
-    basis: "Årsregnskaber",
-    source: "Årsrapport 2025",
-    action: "Tilføj til anmodning",
-    topic: "debt",
-  },
-  {
-    category: 'financial',
-    severity: "neutral",
-    severityLabel: "Følg op",
-    title: "Manglende periodetal",
-    body: "Aktuel drift kan ikke vurderes uden Q1 2026-tal. Foreløbig vurdering bygger alene på årsregnskaber.",
-    basis: "Periodetal",
-    source: "Afventer kunden",
-    action: "Tilføj til anmodning",
-    topic: "missing-data",
-  },
-  {
-    category: 'financial',
-    severity: "ok",
-    severityLabel: "Til orientering",
-    title: "Overskud hvert år 2023-2025",
-    body: "Selskabet har leveret positivt årsresultat tre år i træk (0,3M → 0,7M → 1,0M). Indikerer stabil indtjening.",
-    basis: "Årsregnskaber",
-    source: "Årsrapport 2023-2025",
-    topic: "profit",
-  },
-  {
-    category: 'financial',
-    severity: "ok",
-    severityLabel: "Til orientering",
-    title: "Egenkapital og soliditet",
-    body: "Egenkapital er steget 33% siden 2023. Soliditet på 44% understøtter kapacitet til nyt engagement.",
-    basis: "Årsregnskaber",
-    source: "Årsrapport 2025",
-    topic: "equity",
-  },
-  // Markedsfindings
-  {
-    category: 'market',
-    severity: "ok",
-    severityLabel: "Til orientering",
-    title: "Branchevækst understøtter omsætningsforventning",
-    body: "DK vindkomponenter voksede 6,8% i 2025. Sektoren understøtter virksomhedens vækstkurve frem mod 2026.",
-    basis: "Marked",
-    source: "Brancheopslag · 23. maj",
-    topic: "market-up",
-  },
-  {
-    category: 'market',
-    severity: "neutral",
-    severityLabel: "Følg op",
-    title: "Eksponering mod vindkomponenter",
-    body: "70% af omsætningen er EUR-faktureret. Følsomhed over for DKK/EUR-udsving bør indgå i marginvurderingen.",
-    basis: "Marked",
-    source: "Brancheopslag · soft signals",
-    action: "Tilføj til anmodning",
-    topic: "market-risk",
-  },
-  // Øvrige kreditrelevante findings
-  {
-    category: 'other',
-    severity: "warn",
-    severityLabel: "Kræver afklaring",
-    title: "Anpartshaverlån kræver afklaring",
-    body: "0,5M anpartshaverlån fremgår af note 14. Vilkår og tilbagebetaling kan påvirke vurdering af likviditet og tilbagebetalingsevne.",
-    basis: "Ejerforhold",
-    source: "Årsrapport 2025 · note 14",
-    action: "Tilføj til anmodning",
-    topic: "shareholder-loan",
-  },
-];
-
-const FINDING_CATEGORIES = [
-  { key: 'financial', label: 'Finansielle findings' },
-  { key: 'market',    label: 'Markedsfindings' },
-  { key: 'other',     label: 'Øvrige kreditrelevante findings' },
-];
-
-function UnifiedFindings({ customFindings, onAdd, onRemove }) {
-  const all = [
-    ...customFindings.map(f => ({ ...f, isCustom: true, category: f.category || 'financial' })),
-    ...FIN_FINDINGS,
-  ];
-
-  const counts = all.reduce((acc, f) => {
-    if (f.severity === 'warn') acc.warn++;
-    else if (f.severity === 'ok') acc.ok++;
-    else acc.followup++;
-    return acc;
-  }, { warn: 0, followup: 0, ok: 0 });
-
-  return (
-    <FinSection
-      title="Findings og opmærksomhedspunkter"
-      sub={`${counts.warn} kræver afklaring · ${counts.followup} bør følges op · ${counts.ok} til orientering`}
-    >
-      <div className="card" style={{ padding: '4px 18px' }}>
-      {FINDING_CATEGORIES.map((cat, ci) => {
-        const items = all.filter(f => f.category === cat.key);
-        if (items.length === 0) return null;
-        return (
-          <div key={cat.key} style={{ marginTop: ci === 0 ? 0 : 18 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)' }}>{cat.label}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>· {items.length}</div>
-            </div>
-            {items.map((f, i) => (
-              <FindingRow
-                key={f.isCustom ? `u-${f.id}` : `${cat.key}-${i}`}
-                severity={f.severity}
-                severityLabel={f.severityLabel}
-                title={f.title}
-                body={f.body}
-                basis={f.basis}
-                source={f.source}
-                action={f.action}
-                topic={f.topic}
-                isFirst={i === 0}
-                onRemove={f.isCustom ? (() => onRemove(f.id)) : null}
-              />
-            ))}
-          </div>
-        );
-      })}
-      <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid var(--c-line-2)' }}>
-        <CustomFindingForm onAdd={onAdd}/>
-      </div>
-      </div>
-    </FinSection>
-  );
-}
-
-const TOPIC_ICONS = {
-  'debt':            { icon: <I.TrendUp size={14}/> },
-  'missing-data':    { icon: <I.Clock size={14}/> },
-  'profit':          { icon: <I.TrendUp size={14}/> },
-  'equity':          { icon: <I.CheckCircle size={14}/> },
-  'market-up':       { icon: <I.Globe size={14}/> },
-  'market-risk':     { icon: <I.Globe size={14}/> },
-  'shareholder-loan':{ icon: <I.AlertCircle size={14}/> },
-  'ownership':       { icon: <I.User size={14}/> },
-  'default':         { icon: <I.Sparkles size={14}/> },
-};
-
-function FindingRow({ severity, severityLabel, title, body, basis, source, action, isFirst, onRemove, topic }) {
-  const tones = {
-    warn: { fg: 'var(--c-warn)', bg: 'var(--c-warn-bg)', border: '#f4dfb7' },
-    ok:   { fg: 'var(--c-success)', bg: 'var(--c-success-bg)', border: '#cfe6d8' },
-    neutral: { fg: 'var(--c-text-2)', bg: 'var(--c-surface-2)', border: 'var(--c-line)' },
-  };
-  const t = tones[severity === 'warn' ? 'warn' : severity === 'ok' ? 'ok' : 'neutral'];
-  const topicConfig = TOPIC_ICONS[topic] || TOPIC_ICONS.default;
-  const [hover, setHover] = React.useState(false);
-  return (
-    <div
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'flex', alignItems: 'flex-start', gap: 12,
-        padding: '14px 10px',
-        borderTop: isFirst ? 'none' : '1px solid var(--c-line-2)',
-        transition: 'background .12s ease',
-        background: hover ? 'var(--c-surface-2)' : 'transparent',
-        borderRadius: 6,
-        marginInline: -4,
-      }}
-    >
-      <span
-        aria-hidden="true"
-        style={{
-          width: 30, height: 30, borderRadius: 8,
-          background: t.bg, color: t.fg,
-          border: `1px solid ${t.border}`,
-          display: 'grid', placeItems: 'center',
-          flexShrink: 0, marginTop: 1,
-        }}
-      >
-        {topicConfig.icon}
-      </span>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.005em', lineHeight: 1.35 }}>
-          {title}
-        </div>
-        <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.55 }}>{body}</div>
-        {(basis || source) && (
-          <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 6 }}>
-            {[basis, source].filter(Boolean).join(' · ')}
-          </div>
-        )}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-        {severityLabel && (
-          <span style={{
-            fontSize: 11, fontWeight: 500, color: 'var(--c-text-2)',
-            background: 'var(--c-surface-2)', border: '1px solid var(--c-line)',
-            padding: '1px 8px', borderRadius: 999, whiteSpace: 'nowrap',
-          }}>
-            {severityLabel}
-          </span>
-        )}
-        {action && (
-          <button style={{
-            background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
-            fontSize: 12, color: 'var(--c-primary)', fontWeight: 500, whiteSpace: 'nowrap',
-          }}>
-            {action} →
-          </button>
-        )}
-      </div>
-      {onRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label="Slet finding"
-          title="Slet finding"
-          style={{
-            width: 22, height: 22, padding: 0, border: 0,
-            background: 'transparent', color: 'var(--c-text-3)',
-            cursor: 'pointer', display: 'grid', placeItems: 'center',
-            borderRadius: 5, flexShrink: 0,
-            opacity: hover ? 1 : 0.5,
-            transition: 'opacity .12s ease',
-          }}
-        >
-          <I.X size={12}/>
-        </button>
-      )}
-    </div>
-  );
-}
-
-function FindingItem({ severity, severityLabel, title, body, source, action, isFirst, showSeverityTag, onRemove }) {
-  const tone = severity === 'warn' ? 'warn' : severity === 'ok' ? 'success' : 'neutral';
-  return (
-    <div style={{
-      padding: '14px 18px',
-      borderTop: isFirst ? 'none' : '1px solid var(--c-line-2)',
-      background: severity === 'warn' ? 'var(--c-warn-bg)' : 'transparent',
-      display: 'flex', alignItems: 'flex-start', gap: 14,
-    }}>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>{title}</div>
-          {showSeverityTag && severityLabel && (
-            <StatusTag kind={tone}>{severityLabel}</StatusTag>
-          )}
-        </div>
-        <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{body}</div>
-        {source && (
-          <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-            <I.File size={11}/> {source}
-          </div>
-        )}
-      </div>
-      {action && (
-        <button className="btn btn-sm" style={{ flexShrink: 0 }}>{action}</button>
-      )}
-      {onRemove && (
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label="Slet finding"
-          title="Slet finding"
-          style={{
-            width: 24, height: 24, padding: 0, border: 0,
-            background: 'transparent', color: 'var(--c-text-3)',
-            cursor: 'pointer', display: 'grid', placeItems: 'center',
-            borderRadius: 5, flexShrink: 0,
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-surface-2)'; e.currentTarget.style.color = 'var(--c-danger)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--c-text-3)'; }}
-        >
-          <I.X size={13}/>
-        </button>
-      )}
-    </div>
-  );
-}
-
-function CustomFindingForm({ onAdd }) {
-  const [open, setOpen] = React.useState(false);
-  const [title, setTitle] = React.useState("");
-  const [body, setBody] = React.useState("");
-  const [severity, setSeverity] = React.useState("warn");
-  const [category, setCategory] = React.useState("financial");
-
-  const reset = () => { setTitle(""); setBody(""); setSeverity("warn"); setCategory("financial"); };
-
-  const submit = () => {
-    if (!title.trim()) return;
-    const label = severity === 'warn' ? 'Kræver afklaring' : severity === 'ok' ? 'Til orientering' : 'Følg op';
-    onAdd({ title: title.trim(), body: body.trim(), severity, severityLabel: label, category });
-    reset();
-    setOpen(false);
-  };
-
-  if (!open) {
-    return (
-      <div style={{
-        padding: '12px 18px',
-        borderTop: '1px solid var(--c-line-2)',
-        background: 'var(--c-surface-2)',
-      }}>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
-            color: 'var(--c-primary)', fontSize: 13, fontWeight: 500,
-          }}
-        >
-          <I.Plus size={13}/> Tilføj egen finding
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{
-      padding: '14px 18px',
-      borderTop: '1px solid var(--c-line-2)',
-      background: 'var(--c-surface-2)',
-      display: 'flex', flexDirection: 'column', gap: 10,
-    }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)' }}>Ny finding</div>
-      <input
-        type="text"
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Titel - fx 'Kunde mangler revisorerklæring'"
-        style={{
-          width: '100%', height: 32, padding: '0 10px',
-          border: '1px solid var(--c-line)', borderRadius: 6,
-          fontSize: 13, background: '#fff', color: 'var(--c-ink)', outline: 'none',
-        }}
-      />
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Note - hvad observerede du, og hvorfor er det relevant for vurderingen?"
-        rows={3}
-        style={{
-          width: '100%', resize: 'vertical', padding: '8px 10px',
-          border: '1px solid var(--c-line)', borderRadius: 6,
-          fontSize: 13, background: '#fff', color: 'var(--c-ink)',
-          outline: 'none', fontFamily: 'inherit', lineHeight: 1.5,
-        }}
-      />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, color: 'var(--c-text-2)' }}>Kategori:</span>
-        {[
-          { v: 'financial', l: 'Finansiel' },
-          { v: 'market',    l: 'Marked' },
-          { v: 'other',     l: 'Øvrig' },
-        ].map(o => {
-          const active = category === o.v;
-          return (
-            <button
-              key={o.v}
-              type="button"
-              onClick={() => setCategory(o.v)}
-              style={{
-                height: 26, padding: '0 10px',
-                border: '1px solid ' + (active ? 'var(--c-primary)' : 'var(--c-line)'),
-                background: active ? 'var(--c-primary-bg)' : '#fff',
-                color: active ? 'var(--c-primary)' : 'var(--c-text-2)',
-                fontSize: 11.5, fontWeight: 500,
-                borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
-              }}
-            >
-              {o.l}
-            </button>
-          );
-        })}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, color: 'var(--c-text-2)' }}>Alvorlighed:</span>
-        {[
-          { v: 'warn', l: 'Kræver afklaring' },
-          { v: 'neutral', l: 'Følg op' },
-          { v: 'ok', l: 'Til orientering' },
-        ].map(o => {
-          const active = severity === o.v;
-          return (
-            <button
-              key={o.v}
-              type="button"
-              onClick={() => setSeverity(o.v)}
-              style={{
-                height: 26, padding: '0 10px',
-                border: '1px solid ' + (active ? 'var(--c-primary)' : 'var(--c-line)'),
-                background: active ? 'var(--c-primary-bg)' : '#fff',
-                color: active ? 'var(--c-primary)' : 'var(--c-text-2)',
-                fontSize: 11.5, fontWeight: 500,
-                borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
-              }}
-            >
-              {o.l}
-            </button>
-          );
-        })}
-        <div style={{ flex: 1 }}/>
-        <button
-          type="button"
-          className="btn btn-sm btn-ghost"
-          onClick={() => { reset(); setOpen(false); }}
-        >
-          Annullér
-        </button>
-        <button
-          type="button"
-          className="btn btn-sm btn-primary"
-          onClick={submit}
-          disabled={!title.trim()}
-        >
-          Gem finding
-        </button>
-      </div>
-    </div>
-  );
-}
-
 function FinRow({ label, data }) {
   return (
     <tr>
@@ -1302,49 +844,81 @@ function IncomeChart({ years, revenue, ebitda, labels }) {
    Årsregnskaber - 3 års overblik
    Public-data table grouped into Resultat, Balance, Nøgletal
    ──────────────────────────────────────────────────────────────────────── */
+/* Periodeopsætning for regnskabstabellen.
+   Fire kolonnetyper: årsrapport (values) · estimat 2026 (udledt) ·
+   realiseret kvartal (q) · budget kvartal (bq).
+   Alle tal er i DKK mio.; enhedsvælgeren skalerer først ved visning.
+
+   Kun rå poster står i tabellen nedenfor. Delsummer (bruttofortjeneste, EBITDA,
+   aktiver i alt, gæld i alt) og alle nøgletal beregnes i koden, så ingen kolonne
+   kan komme til at modsige sine egne tal. */
+const FIN_ANNUAL_YEARS = ['2023', '2024', '2025'];
+const FIN_ACTUAL_Q = [
+  { label: 'Q1', year: '2026' },
+  { label: 'Q2', year: '2026' },
+  { label: 'Q3', year: '2026' },
+];
+const FIN_BUDGET_Q = [
+  { label: 'Q4', year: '2026', key: '2026-Q4' },
+  { label: 'Q1', year: '2027', key: '2027-Q1' },
+  { label: 'Q2', year: '2027', key: '2027-Q2' },
+  { label: 'Q3', year: '2027', key: '2027-Q3' },
+];
+
 const ANNUAL_REPORT = {
-  years: ['2023', '2024', '2025', 'Saldobalance 2026'],
-  ytdIndex: 3,
+  years: FIN_ANNUAL_YEARS,
   groups: [
     {
-      label: 'Resultatopgørelse',
+      label: 'Resultat',
       rows: [
-        { label: 'Nettoomsætning',                  values: [null, null, null, null], note: 'Ikke tilgængeligt i offentligt regnskab' },
-        { label: 'Vareforbrug',                      values: [null, null, null, null], note: 'Ikke tilgængeligt i offentligt regnskab' },
-        { label: 'Bruttofortjeneste',                values: [12.8, 15.2, 18.5, null], computed: true },
-        { label: 'Personaleomkostninger',            values: [-9.5, -11.0, -13.5, null] },
-        { label: 'EBITDA',                           values: [1.3, 1.9, 2.4, null], computed: true },
-        { label: 'Afskrivninger',                    values: [-0.7, -0.8, -1.0, null] },
-        { label: 'Resultat før finansielle poster',  values: [0.6, 1.1, 1.4, null], computed: true },
-        { label: 'Finansielle indtægter',            values: [0.0, 0.0, 0.0, null] },
-        { label: 'Finansielle omkostninger',         values: [-0.3, -0.4, -0.4, null] },
-        { label: 'Årets resultat',                   values: [0.3, 0.7, 1.0, null], computed: true },
+        { label: 'Nettoomsætning',                  values: [28.0, 32.8, 41.1],    q: [10.60, 11.10, 11.20], bq: [11.50, 11.40, 12.00, 12.10] },
+        { label: 'Vareforbrug',                     values: [-15.2, -17.6, -22.6], q: [-5.80, -6.08, -6.13], bq: [-6.29, -6.20, -6.50, -6.58] },
+        { label: 'Bruttofortjeneste',               values: [12.8, 15.2, 18.5],    q: [4.80, 5.02, 5.07],    bq: [5.21, 5.20, 5.50, 5.52],    computed: true },
+        { label: 'Personaleomkostninger',           values: [-9.5, -11.0, -13.5],  q: [-3.58, -3.62, -3.66], bq: [-3.74, -3.78, -3.82, -3.88] },
+        { label: 'Andre eksterne omkostninger',     values: [-2.0, -2.3, -2.6],    q: [-0.68, -0.70, -0.70], bq: [-0.72, -0.72, -0.73, -0.74] },
+        { label: 'EBITDA',                          values: [1.3, 1.9, 2.4],       q: [0.54, 0.70, 0.71],    bq: [0.75, 0.70, 0.95, 0.90],    computed: true },
+        { label: 'Afskrivninger',                   values: [-0.7, -0.8, -1.0],    q: [-0.27, -0.27, -0.28], bq: [-0.28, -0.29, -0.29, -0.30] },
+        { label: 'Resultat før finansielle poster', values: [0.6, 1.1, 1.4],       q: [0.27, 0.43, 0.43],    bq: [0.47, 0.41, 0.66, 0.60],    computed: true },
+        { label: 'Finansielle omkostninger',        values: [-0.3, -0.4, -0.4],    q: [-0.11, -0.11, -0.12], bq: [-0.11, -0.11, -0.12, -0.12] },
+        { label: 'Årets resultat',                  values: [0.3, 0.7, 1.0],       q: [0.16, 0.32, 0.31],    bq: [0.36, 0.30, 0.54, 0.48],    computed: true },
       ],
     },
     {
       label: 'Balance',
       rows: [
-        { label: 'Anlægsaktiver',         values: [4.2, 4.8, 6.0, null] },
-        { label: 'Omsætningsaktiver',     values: [5.2, 6.4, 8.0, null] },
-        { label: 'Aktiver i alt',         values: [9.4, 11.2, 14.0, null], computed: true },
-        { label: 'Egenkapital',           values: [3.5, 4.8, 6.2, null] },
-        { label: 'Langfristet gæld',      values: [3.5, 3.8, 4.6, null] },
-        { label: 'Kortfristet gæld',      values: [2.4, 2.6, 3.2, null] },
-        { label: 'Gæld i alt',            values: [5.9, 6.4, 7.8, null], computed: true, finding: true },
-      ],
-    },
-    {
-      label: 'Nøgletal',
-      rows: [
-        { label: 'Bruttomargin %',     values: [null, null, null, null], note: 'Kræver omsætning som ikke er tilgængelig' },
-        { label: 'EBITDA-margin %',     values: [null, null, null, null], note: 'Kræver omsætning som ikke er tilgængelig' },
-        { label: 'Soliditetsgrad %',    values: [37.2, 42.9, 44.3, null], computed: true, percent: true },
-        { label: 'Gæld / EBITDA',       values: [4.5, 3.4, 3.3, null], computed: true, decimals: 1 },
-        { label: 'Likviditetsgrad',     values: [2.2, 2.5, 2.5, null], computed: true, decimals: 1 },
+        { label: 'Anlægsaktiver',        values: [4.2, 4.8, 6.0],   q: [6.10, 6.20, 6.30],    bq: [6.40, 6.50, 6.60, 6.70],     stock: true },
+        { label: 'Omsætningsaktiver',    values: [5.2, 6.4, 8.0],   q: [8.26, 8.58, 8.79],    bq: [9.15, 9.25, 9.64, 9.97],     stock: true },
+        { label: 'Likvide beholdninger', values: [1.0, 1.4, 1.9],   q: [2.00, 2.15, 2.25],    bq: [2.40, 2.55, 2.75, 2.95],     stock: true },
+        { label: 'Aktiver i alt',        values: [9.4, 11.2, 14.0], q: [14.36, 14.78, 15.09], bq: [15.55, 15.75, 16.24, 16.67], stock: true, computed: true },
+        { label: 'Egenkapital',          values: [3.5, 4.8, 6.2],   q: [6.36, 6.68, 6.99],    bq: [7.35, 7.65, 8.19, 8.67],     stock: true },
+        { label: 'Langfristet gæld',     values: [3.5, 3.8, 4.6],   q: [4.50, 4.50, 4.40],    bq: [4.40, 4.30, 4.20, 4.10],     stock: true },
+        { label: 'Kortfristet gæld',     values: [2.4, 2.6, 3.2],   q: [3.50, 3.60, 3.70],    bq: [3.80, 3.80, 3.85, 3.90],     stock: true },
+        { label: 'Gæld i alt',           values: [5.9, 6.4, 7.8],   q: [8.00, 8.10, 8.10],    bq: [8.20, 8.10, 8.05, 8.00],     stock: true, computed: true, finding: true },
       ],
     },
   ],
 };
+
+/* Nøgletal beregnes ud af kolonnens egne rå poster.
+   `ann` er 4 for kvartalskolonner, så EBITDA annualiseres i gearingsnøgletallet,
+   og 1 for helårskolonner. */
+const FIN_RATIOS = [
+  { label: 'Bruttomargin %',   percent: true,
+    calc: (c) => ratio(c['Bruttofortjeneste'], c['Nettoomsætning'], 100) },
+  { label: 'EBITDA-margin %',  percent: true,
+    calc: (c) => ratio(c['EBITDA'], c['Nettoomsætning'], 100) },
+  { label: 'Soliditetsgrad %', percent: true,
+    calc: (c) => ratio(c['Egenkapital'], c['Aktiver i alt'], 100) },
+  { label: 'Gæld / EBITDA',    decimals: 1, note: 'Kvartaler: gæld i forhold til annualiseret EBITDA',
+    calc: (c, ann) => ratio(c['Gæld i alt'], c['EBITDA'] == null ? null : c['EBITDA'] * ann) },
+  { label: 'Likviditetsgrad',  decimals: 1,
+    calc: (c) => ratio(c['Omsætningsaktiver'], c['Kortfristet gæld']) },
+];
+
+function ratio(a, b, factor) {
+  if (a == null || b == null || !b) return null;
+  return (a / b) * (factor || 1);
+}
 
 function formatNum(v, opts) {
   if (v == null) return 'Ikke oplyst';
@@ -1355,65 +929,43 @@ function formatNum(v, opts) {
   return negative ? `−${s}` : s;
 }
 
-function aggregateBudgetByYear() {
-  // Læs nuværende budget fra localStorage og aggregér per år
-  // Returnerer altid værdier normaliseret til DKK mio. (uanset budget-enhed)
+function aggregateBudgetByQuarter() {
+  // Læs kvartalsbudgettet fra localStorage, normaliseret til DKK mio.
+  // Returnerer { '2026-Q4': { rowLabel: number, ... }, ... }
   const saved = loadBudget();
-  if (!saved || !saved.values) return {};
-  const unitFactor = saved.unit === 'kr' ? 0.000001 : saved.unit === 'thousand' ? 0.001 : 1; // hele kr -> mio, tusind -> mio
-  const rowToGroup = {};
-  BUDGET_GROUPS.forEach(g => g.rows.forEach(r => { rowToGroup[r.label] = g.label; }));
+  const quarters = saved && saved.values && saved.values.quarter;
+  if (!quarters) return {};
+  const unitFactor = saved.unit === 'kr' ? 0.000001 : saved.unit === 'thousand' ? 0.001 : 1;
 
-  const perGran = {};
-  ['year', 'quarter', 'month'].forEach(gran => {
-    const bucket = saved.values[gran] || {};
-    Object.entries(bucket).forEach(([rowLabel, periodMap]) => {
-      const isBalance = rowToGroup[rowLabel] === 'Balance';
-      Object.entries(periodMap).forEach(([periodKey, raw]) => {
-        if (raw === '' || raw == null) return;
-        const num = parseFloat(String(raw).replace(/\./g, '').replace(',', '.'));
-        if (isNaN(num)) return;
-        const normalised = num * unitFactor;
-        const year = periodKey.slice(0, 4);
-        if (!perGran[year]) perGran[year] = {};
-        if (!perGran[year][gran]) perGran[year][gran] = {};
-        if (gran === 'year') {
-          perGran[year][gran][rowLabel] = normalised;
-        } else {
-          if (!perGran[year][gran][rowLabel]) perGran[year][gran][rowLabel] = { sum: 0, last: null, lastKey: '', isBalance };
-          perGran[year][gran][rowLabel].sum += normalised;
-          if (periodKey > perGran[year][gran][rowLabel].lastKey) {
-            perGran[year][gran][rowLabel].last = normalised;
-            perGran[year][gran][rowLabel].lastKey = periodKey;
-          }
-        }
-      });
+  const out = {};
+  Object.entries(quarters).forEach(([rowLabel, periodMap]) => {
+    Object.entries(periodMap).forEach(([key, raw]) => {
+      if (raw === '' || raw == null) return;
+      const num = parseFloat(String(raw).replace(/\./g, '').replace(',', '.'));
+      if (isNaN(num)) return;
+      if (!out[key]) out[key] = {};
+      out[key][rowLabel] = num * unitFactor;
     });
   });
 
-  const result = {};
-  Object.entries(perGran).forEach(([year, byGran]) => {
-    const source = byGran.year ? 'year' : byGran.quarter ? 'quarter' : 'month';
-    const data = byGran[source];
-    if (!data) return;
-    result[year] = {};
-    Object.entries(data).forEach(([rowLabel, val]) => {
-      if (source === 'year') result[year][rowLabel] = val;
-      else result[year][rowLabel] = val.isBalance ? val.last : val.sum;
-    });
-    // Beregn computed-rækker fra de aggregerede rå-værdier
+  // Udled de beregnede rækker, men kun når mindst ét af deres input findes.
+  // Ellers ville en tom række blive til 0 og overskrive demo-tallet i tabellen.
+  Object.keys(out).forEach(key => {
     Object.keys(BUDGET_FORMULAS).forEach(label => {
-      const v = BUDGET_FORMULAS[label](result[year]);
-      if (!isNaN(v)) result[year][label] = v;
+      const inputs = BUDGET_FORMULA_INPUTS[label] || [];
+      if (!inputs.some(i => out[key][i] != null)) return;
+      const v = BUDGET_FORMULAS[label](out[key]);
+      if (!isNaN(v)) out[key][label] = v;
     });
   });
-  return result;
+  return out;
 }
 
 function AnnualReportSection({ go }) {
-  const [unit, setUnit] = React.useState('mio'); // 'mio' | 'thousand'
+  const [unit, setUnit] = React.useState('thousand'); // 'mio' | 'thousand'
   const scale = unit === 'mio' ? 1 : 1000;
-  const ytdIdx = ANNUAL_REPORT.ytdIndex;
+  // Kvartalerne er detaljen bag 2026E og 2027B og er foldet sammen som udgangspunkt.
+  const [showQuarters, setShowQuarters] = React.useState(false);
 
   // Re-render når budget opdateres (custom event fra BudgetSection + storage event på tværs af faner)
   const [budgetTick, setBudgetTick] = React.useState(0);
@@ -1425,8 +977,9 @@ function AnnualReportSection({ go }) {
     return () => { window.removeEventListener('storage', onStorage); window.removeEventListener('budget-updated', bump); };
   }, []);
 
-  const budgetByYear = React.useMemo(() => aggregateBudgetByYear(), [budgetTick]);
-  const budgetYears = Object.keys(budgetByYear).sort();
+  // Budgetbåndet viser demo-tal, men overskrives af det brugeren selv har
+  // tastet i budgetsektionen nedenfor, kvartal for kvartal.
+  const budgetQ = React.useMemo(() => aggregateBudgetByQuarter(), [budgetTick]);
 
   const requestFromCustomer = () => {
     try {
@@ -1436,230 +989,283 @@ function AnnualReportSection({ go }) {
     if (go) go("workspace:1");
   };
 
+  // Én budgetcelle: brugerens eget tal hvis det findes, ellers demo-tallet.
+  const budgetCell = (row, i) => {
+    const live = budgetQ[FIN_BUDGET_Q[i].key] ? budgetQ[FIN_BUDGET_Q[i].key][row.label] : null;
+    if (live != null && !isNaN(live)) return { v: live, live: true };
+    const v = row.bq ? row.bq[i] : null;
+    return { v: v == null ? null : v, live: false };
+  };
+
+  // Kolonnerne i visningsrækkefølge. Årskolonnerne står altid først og flytter
+  // sig ikke når kvartalerne foldes ud, så trendrækken bliver liggende.
+  // 2026E og 2027B er ikke indberettede tal, men udledninger:
+  //   2026E = Q1-Q3 realiseret + Q4 budget   (balance: ultimo Q4 2026)
+  //   2027B = Q1-Q3 budget, altså 9 måneder  (balance: ultimo Q3 2027)
+  const cols = React.useMemo(() => {
+    const list = [
+      ...FIN_ANNUAL_YEARS.map((y, i) => ({ key: 'y' + i, kind: 'annual', idx: i, ann: 1 })),
+      { key: 'est', kind: 'est', ann: 1 },
+      { key: 'b9', kind: 'b9', ann: 4 / 3 },
+    ];
+    if (showQuarters) {
+      list.push(...FIN_ACTUAL_Q.map((p, i) => ({ key: 'q' + i, kind: 'q', idx: i, ann: 4, sep: i === 0 })));
+      list.push(...FIN_BUDGET_Q.map((p, i) => ({ key: 'b' + i, kind: 'b', idx: i, ann: 4, sep: i === 0 })));
+    }
+    return list;
+  }, [showQuarters]);
+
+  const rawValue = (row, col) => {
+    if (col.kind === 'annual') return row.values ? row.values[col.idx] : null;
+    if (col.kind === 'q') return row.q ? row.q[col.idx] : null;
+    if (col.kind === 'b') return budgetCell(row, col.idx).v;
+    if (col.kind === 'b9') {
+      if (row.stock) return budgetCell(row, FIN_BUDGET_Q.length - 1).v;
+      const parts = [1, 2, 3].map(i => budgetCell(row, i).v);
+      if (parts.some(p => p == null)) return null;
+      return parts.reduce((a, b) => a + b, 0);
+    }
+    // 2026E
+    if (row.stock) return budgetCell(row, 0).v;
+    const parts = [row.q ? row.q[0] : null, row.q ? row.q[1] : null, row.q ? row.q[2] : null, budgetCell(row, 0).v];
+    if (parts.some(p => p == null)) return null;
+    return parts.reduce((a, b) => a + b, 0);
+  };
+
+  // Rå poster pr. kolonne - grundlaget nøgletallene regnes af.
+  const rawRows = React.useMemo(() => ANNUAL_REPORT.groups.flatMap(g => g.rows), []);
+  const colMaps = React.useMemo(() => cols.map(col => {
+    const m = {};
+    rawRows.forEach(r => { m[r.label] = rawValue(r, col); });
+    return m;
+  }), [cols, rawRows, budgetQ]);
+
+  // Formatér én værdi efter rækkens type. Procent og forholdstal skaleres ikke.
+  const fmt = (v, r) => {
+    if (v == null || isNaN(v)) return null;
+    if (r.percent) return formatNum(v, { decimals: 1 }) + '%';
+    if (r.decimals != null) return formatNum(v, { decimals: r.decimals });
+    return formatNum(v * scale, { decimals: 1 });
+  };
+
+  const colCount = 1 + cols.length;
+
+  const numCell = (col, ci, display, extra) => (
+    <td
+      key={col.key}
+      title={(extra && extra.title) || ''}
+      className={(col.sep ? 'fin-sep' : '') + (col.kind === 'est' || col.kind === 'b9' ? ' fin-est' : '') + (display ? ' mono num' : '')}
+      style={{
+        color: display ? 'var(--c-ink)' : 'var(--c-text-4)',
+        fontWeight: extra && extra.bold ? 500 : undefined,
+      }}
+    >
+      {display || '–'}
+    </td>
+  );
+
   return (
     <FinSection
       title="Regnskab"
-      sub="Officielle årsrapporter fra CVR. Saldobalance 2026 hentes når kunden har afleveret materialet. Budget-kolonner vises automatisk for år der er indtastet nedenfor."
+      sub="Officielle årsrapporter fra CVR sammenstillet med virksomhedens egne tal for indeværende år og budgettet frem. 2026E og 2027B er ikke indberettede tal, men sammentællinger af kvartalerne, så årene kan sammenlignes direkte. Fold kvartalerne ud for at se, hvad de består af."
+      badge={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={() => setShowQuarters(v => !v)}
+            aria-expanded={showQuarters}
+            title={showQuarters ? 'Skjul kvartalerne bag 2026E og 2027B' : 'Vis kvartalerne bag 2026E og 2027B'}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              height: 30, padding: '0 11px',
+              border: '1px solid var(--c-line)', borderRadius: 7,
+              background: showQuarters ? 'var(--c-surface-2)' : '#fff',
+              color: 'var(--c-text-2)', fontFamily: 'inherit',
+              fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span style={{
+              display: 'inline-block', fontSize: 9, lineHeight: 1,
+              transform: showQuarters ? 'rotate(90deg)' : 'none',
+              transition: 'transform 0.15s',
+            }}>▶</span>
+            {showQuarters ? 'Skjul kvartaler' : 'Vis kvartaler'}
+          </button>
+          <button className="btn btn-sm btn-ghost" onClick={requestFromCustomer}>
+            Anmod om årsrapport 2026
+          </button>
+        </div>
+      }
     >
-      {(
-        <>
-          <div className="card" style={{ overflow: 'hidden' }}>
-            <table className="tbl" style={{ fontSize: 12.5, width: '100%' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', fontWeight: 600, color: 'var(--c-text-2)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span>Regnskabspost</span>
-                      <div style={{
-                        display: 'inline-flex', alignItems: 'center', padding: 2,
-                        background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 7,
-                      }}>
-                        {[
-                          { k: 'mio',      l: 'DKK mio.' },
-                          { k: 'thousand', l: 'DKK t.' },
-                        ].map(u => {
-                          const active = unit === u.k;
-                          return (
-                            <button
-                              key={u.k}
-                              onClick={() => setUnit(u.k)}
-                              style={{
-                                height: 22, padding: '0 10px',
-                                border: 0,
-                                background: active ? '#fff' : 'transparent',
-                                color: active ? 'var(--c-ink)' : 'var(--c-text-2)',
-                                fontSize: 11.5, fontWeight: 500,
-                                borderRadius: 5, cursor: 'pointer',
-                                boxShadow: active ? '0 1px 2px rgba(15,17,20,0.06)' : 'none',
-                              }}
-                            >
-                              {u.l}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </th>
-                  {ANNUAL_REPORT.years.map((y, i) => {
-                    if (i === ytdIdx) {
-                      return (
-                        <th key={y} style={{ textAlign: 'center', fontWeight: 600, width: 120, whiteSpace: 'nowrap' }}>
+      {/* Sammenfoldet er tabellen seks kolonner og holder sig inden for siden.
+          Foldes kvartalerne ud, bliver den til 13 kolonner og bryder ud i fuld
+          bredde af indholdsområdet. Er der stadig ikke plads, scroller den
+          vandret med rækkenavnene klæbet fast i venstre side. */}
+      <div style={showQuarters ? {
+        position: 'relative', left: '50%', transform: 'translateX(-50%)',
+        width: 'min(1280px, calc(100vw - 290px))', minWidth: '100%',
+      } : undefined}>
+      <div className="card" style={{ overflow: 'hidden' }}>
+        <div className="fin-wrap">
+          <table className="fin-tbl">
+            <thead>
+              <tr>
+                <th className="fin-c1" rowSpan={2} style={{ verticalAlign: 'bottom', width: showQuarters ? undefined : 330 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--c-text-3)' }}>
+                      Regnskabspost
+                    </span>
+                    <div style={{
+                      display: 'inline-flex', alignItems: 'center', padding: 2,
+                      background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 7,
+                    }}>
+                      {[
+                        { k: 'mio',      l: 'DKK mio.' },
+                        { k: 'thousand', l: 'DKK t.' },
+                      ].map(u => {
+                        const active = unit === u.k;
+                        return (
                           <button
-                            type="button"
-                            onClick={requestFromCustomer}
-                            title="Gå til Overblik og vælg hvad kunden skal sende"
+                            key={u.k}
+                            onClick={() => setUnit(u.k)}
+                            aria-pressed={active}
                             style={{
-                              background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
-                              color: 'var(--c-text-2)', fontFamily: 'inherit',
-                              display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 1,
-                              textAlign: 'center',
-                            }}
-                            onMouseEnter={(e) => {
-                              const link = e.currentTarget.querySelector('span[data-link]');
-                              if (link) link.style.textDecoration = 'underline';
-                            }}
-                            onMouseLeave={(e) => {
-                              const link = e.currentTarget.querySelector('span[data-link]');
-                              if (link) link.style.textDecoration = 'none';
+                              height: 22, padding: '0 10px', border: 0,
+                              background: active ? '#fff' : 'transparent',
+                              color: active ? 'var(--c-ink)' : 'var(--c-text-2)',
+                              fontSize: 11.5, fontWeight: 500, fontFamily: 'inherit',
+                              borderRadius: 5, cursor: 'pointer',
+                              boxShadow: active ? '0 1px 2px rgba(15,17,20,0.06)' : 'none',
                             }}
                           >
-                            <span style={{ fontWeight: 600, fontSize: 'inherit', color: 'var(--c-text-2)' }}>2026</span>
-                            <span data-link style={{ fontWeight: 500, fontSize: 10.5, color: 'var(--c-primary)' }}>Anmod fra kunde</span>
+                            {u.l}
                           </button>
-                        </th>
-                      );
-                    }
-                    return (
-                      <th key={y} style={{ textAlign: 'right', fontWeight: 600, color: 'var(--c-text-2)' }}>{y}</th>
-                    );
-                  })}
-                  {budgetYears.map(y => (
-                    <th key={'b' + y} style={{ textAlign: 'right', fontWeight: 600, color: 'var(--c-primary)', whiteSpace: 'nowrap', borderLeft: '1px dashed var(--c-line-strong)' }}>
-                      Budget {y}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {ANNUAL_REPORT.groups.map((g, gi) => (
-                  <React.Fragment key={g.label}>
-                    <tr>
-                      <td
-                        colSpan={1 + ANNUAL_REPORT.years.length + budgetYears.length}
-                        style={{
-                          padding: '12px 14px 6px',
-                          background: 'var(--c-surface-2)',
-                          borderTop: gi === 0 ? 'none' : '1px solid var(--c-line)',
-                          fontSize: 11, fontWeight: 600,
-                          letterSpacing: '0.06em', textTransform: 'uppercase',
-                          color: 'var(--c-text-2)',
-                        }}
-                      >
-                        {g.label}
-                      </td>
-                    </tr>
-                    {g.rows.map((r, ri) => (
-                      <tr key={r.label}>
-                        <td style={{
-                          padding: '9px 14px',
-                          borderTop: '1px solid var(--c-line-2)',
-                          color: 'var(--c-ink)',
-                          fontWeight: r.finding ? 500 : 400,
-                        }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            {r.finding && (
-                              <span
-                                title="Finding tilknyttet - se ovenfor"
-                                aria-label="Finding tilknyttet"
-                                style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--c-warn)', flexShrink: 0 }}
-                              />
-                            )}
-                            <span>{r.label}</span>
-                          </span>
-                        </td>
-                        {r.values.map((v, i) => {
-                          const isNA = v == null;
-                          const isYtd = i === ytdIdx;
-                          let display, color, italic = false, tip;
-                          if (!isNA) {
-                            display = r.percent
-                              ? formatNum(v, { decimals: 1 }) + '%'
-                              : formatNum(v * (r.percent || r.decimals != null ? 1 : scale), { decimals: r.decimals != null ? r.decimals : 1 });
-                            color = 'var(--c-ink)';
-                          } else if (isYtd) {
-                            display = '';
-                            color = 'var(--c-text-4)';
-                          } else {
-                            display = 'Ikke tilgængeligt';
-                            color = 'var(--c-text-3)';
-                            italic = true;
-                            tip = r.note;
-                          }
-                          return (
-                            <td
-                              key={i}
-                              title={tip || ''}
-                              className={isNA ? '' : 'mono num'}
-                              style={{
-                                textAlign: 'right',
-                                padding: '9px 14px',
-                                borderTop: '1px solid var(--c-line-2)',
-                                color,
-                                fontStyle: italic ? 'italic' : 'normal',
-                                fontSize: isNA && !isYtd ? 11.5 : 'inherit',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {display}
-                            </td>
-                          );
-                        })}
-                        {budgetYears.map(y => {
-                          const bv = budgetByYear[y]?.[r.label];
-                          const has = bv != null && !isNaN(bv);
-                          let bdisplay;
-                          if (has) {
-                            bdisplay = r.percent
-                              ? formatNum(bv, { decimals: 1 }) + '%'
-                              : formatNum(bv * (r.percent || r.decimals != null ? 1 : scale), { decimals: r.decimals != null ? r.decimals : 1 });
-                          } else {
-                            bdisplay = '–';
-                          }
-                          return (
-                            <td
-                              key={'b' + y}
-                              className={has ? 'mono num' : ''}
-                              style={{
-                                textAlign: 'right',
-                                padding: '9px 14px',
-                                borderTop: '1px solid var(--c-line-2)',
-                                borderLeft: '1px dashed var(--c-line-strong)',
-                                color: has ? 'var(--c-primary)' : 'var(--c-text-4)',
-                                background: has ? 'rgba(59,130,246,0.03)' : 'transparent',
-                                whiteSpace: 'nowrap',
-                                fontWeight: has ? 500 : 400,
-                              }}
-                            >
-                              {bdisplay}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </th>
+                <th className="fin-band" colSpan={FIN_ANNUAL_YEARS.length + 2}>
+                  <span className="fin-band-dot" style={{ background: 'var(--c-text-4)' }}/>Regnskabsår
+                </th>
+                {showQuarters && (
+                  <th className="fin-band fin-sep" colSpan={FIN_ACTUAL_Q.length}>
+                    <span className="fin-band-dot" style={{ background: 'var(--c-primary)' }}/>Realiseret kvartal · 2026
+                  </th>
+                )}
+                {showQuarters && (
+                  <th className="fin-band fin-sep" colSpan={FIN_BUDGET_Q.length}>
+                    <span className="fin-band-dot" style={{ background: 'var(--c-warn)' }}/>Budget · Q4 2026 og 2027
+                  </th>
+                )}
+              </tr>
+              <tr>
+                {FIN_ANNUAL_YEARS.map(y => <th key={y} className="fin-hd">{y}</th>)}
+                <th className="fin-hd fin-est" style={{ minWidth: 88 }}>
+                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                    <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--c-text-4)' }}>Estimat</span>
+                    <span>2026E</span>
+                  </span>
+                </th>
+                <th className="fin-hd fin-est" style={{ minWidth: 88 }}>
+                  <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                    <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--c-text-4)' }}>Budget 9 mdr.</span>
+                    <span>2027B</span>
+                  </span>
+                </th>
+                {showQuarters && FIN_ACTUAL_Q.map((p, i) => (
+                  <th key={'a' + p.label} className={"fin-hd" + (i === 0 ? " fin-sep" : "")} style={{ minWidth: 82 }}>
+                    {p.label}
+                  </th>
                 ))}
-              </tbody>
-            </table>
+                {showQuarters && FIN_BUDGET_Q.map((p, i) => (
+                  <th key={'b' + p.key} className={"fin-hd" + (i === 0 ? " fin-sep" : "")} style={{ minWidth: 82 }}>
+                    <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                      <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--c-text-4)' }}>{p.year}</span>
+                      <span>{p.label}</span>
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {ANNUAL_REPORT.groups.map((g) => (
+                <React.Fragment key={g.label}>
+                  <tr className="fin-grp">
+                    <td className="fin-c1">{g.label}</td>
+                    <td colSpan={colCount - 1}/>
+                  </tr>
+                  {g.rows.map((r) => (
+                    <tr key={r.label} className={r.computed ? "fin-sum" : ""}>
+                      <td className="fin-c1">
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          {r.finding && (
+                            <span
+                              title="Finding tilknyttet - se Credit memo"
+                              aria-label="Finding tilknyttet"
+                              style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--c-warn)', flexShrink: 0 }}
+                            />
+                          )}
+                          <span>{r.label}</span>
+                        </span>
+                      </td>
+                      {cols.map((col, ci) => {
+                        const live = col.kind === 'b' && budgetCell(r, col.idx).live;
+                        return numCell(col, ci, fmt(rawValue(r, col), r), {
+                          bold: live,
+                          title: live ? 'Fra dit budget nedenfor' : '',
+                        });
+                      })}
+                    </tr>
+                  ))}
+                </React.Fragment>
+              ))}
 
-            {/* Source row */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 14px', borderTop: '1px solid var(--c-line)',
-              background: 'var(--c-surface-2)',
-              fontSize: 11, color: 'var(--c-text-3)', flexWrap: 'wrap', gap: 8,
-            }}>
-              <span>Kilder: Årsrapport 2023 · Årsrapport 2024 · Årsrapport 2025 · CVR</span>
-              <a
-                href="https://www.vestas.com/content/dam/vestas-com/global/en/investor/reports-and-presentations/financial/2025/fy-2025/Vestas%20Annual%20Report%202025.pdf.coredownload.inline.pdf"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
-                  color: 'var(--c-primary)', fontSize: 11.5, fontWeight: 500,
-                  textDecoration: 'none',
-                }}
-              >
-                Åbn årsrapport
-              </a>
-            </div>
-          </div>
+              {/* Nøgletal - beregnet af kolonnens egne tal, ikke indtastet */}
+              <tr className="fin-grp">
+                <td className="fin-c1">Nøgletal</td>
+                <td colSpan={colCount - 1}/>
+              </tr>
+              {FIN_RATIOS.map(r => (
+                <tr key={r.label}>
+                  <td className="fin-c1" title={r.note || ''}>{r.label}</td>
+                  {cols.map((col, ci) => numCell(col, ci, fmt(r.calc(colMaps[ci], col.ann), r)))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-          {/* Note about Danish annual reports */}
-          <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--c-text-3)', lineHeight: 1.5 }}>
-            Bemærk: Nettoomsætning og vareforbrug er ikke altid oplyst særskilt i danske årsrapporter - de kan være samlet i bruttofortjeneste.
-          </div>
-        </>
-      )}
+        {/* Kilder */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '10px 14px', borderTop: '1px solid var(--c-line)',
+          background: 'var(--c-surface-2)',
+          fontSize: 11, color: 'var(--c-text-3)', flexWrap: 'wrap', gap: 8,
+        }}>
+          <span>Kilder: Årsrapport 2023 · Årsrapport 2024 · Årsrapport 2025 · Kvartalstal og budget fra kunden · CVR</span>
+          <a
+            href="https://www.vestas.com/content/dam/vestas-com/global/en/investor/reports-and-presentations/financial/2025/fy-2025/Vestas%20Annual%20Report%202025.pdf.coredownload.inline.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: 'transparent', border: 0, padding: 0, cursor: 'pointer',
+              color: 'var(--c-primary)', fontSize: 11.5, fontWeight: 500,
+              textDecoration: 'none',
+            }}
+          >
+            Åbn årsrapport
+          </a>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--c-text-3)', lineHeight: 1.5 }}>
+        2026E: Q1-Q3 realiseret plus Q4 budget, balanceposter ultimo Q4 2026.
+        2027B: budget for Q1-Q3, altså kun 9 måneder, balanceposter ultimo Q3 2027.
+        Nøgletal er beregnet af tallene i samme kolonne; hvor perioden er kortere end et år, er EBITDA annualiseret i Gæld / EBITDA.
+        Realiserede kvartalstal og budget er virksomhedens egne indberetninger og er ikke revideret.
+      </div>
+      </div>
     </FinSection>
   );
 }
@@ -1719,11 +1325,22 @@ const BUDGET_GROUPS = ANNUAL_REPORT.groups.filter(g => g.label !== 'Nøgletal');
 // Beregnings-formler for computed rækker. Tager et map { rowLabel: number } og returnerer tal.
 const BUDGET_FORMULAS = {
   'Bruttofortjeneste': (ctx) => (ctx['Nettoomsætning'] || 0) + (ctx['Vareforbrug'] || 0),
-  'EBITDA': (ctx) => (ctx['Bruttofortjeneste'] || 0) + (ctx['Personaleomkostninger'] || 0),
+  'EBITDA': (ctx) => (ctx['Bruttofortjeneste'] || 0) + (ctx['Personaleomkostninger'] || 0) + (ctx['Andre eksterne omkostninger'] || 0),
   'Resultat før finansielle poster': (ctx) => (ctx['EBITDA'] || 0) + (ctx['Afskrivninger'] || 0),
   'Årets resultat': (ctx) => (ctx['Resultat før finansielle poster'] || 0) + (ctx['Finansielle indtægter'] || 0) + (ctx['Finansielle omkostninger'] || 0),
   'Aktiver i alt': (ctx) => (ctx['Anlægsaktiver'] || 0) + (ctx['Omsætningsaktiver'] || 0),
   'Gæld i alt': (ctx) => (ctx['Langfristet gæld'] || 0) + (ctx['Kortfristet gæld'] || 0),
+};
+
+// Hvilke rækker hver formel læser fra. Bruges til at afgøre om en beregnet
+// række overhovedet har input nok til at blive udledt.
+const BUDGET_FORMULA_INPUTS = {
+  'Bruttofortjeneste': ['Nettoomsætning', 'Vareforbrug'],
+  'EBITDA': ['Bruttofortjeneste', 'Personaleomkostninger', 'Andre eksterne omkostninger'],
+  'Resultat før finansielle poster': ['EBITDA', 'Afskrivninger'],
+  'Årets resultat': ['Resultat før finansielle poster', 'Finansielle indtægter', 'Finansielle omkostninger'],
+  'Aktiver i alt': ['Anlægsaktiver', 'Omsætningsaktiver'],
+  'Gæld i alt': ['Langfristet gæld', 'Kortfristet gæld'],
 };
 
 function formatThousand(s) {
@@ -2606,6 +2223,11 @@ function TrustpilotSection() {
 }
 
 window.WSFinancials = WSFinancials;
+window.ANNUAL_REPORT = ANNUAL_REPORT;
+window.FIN_RATIOS = FIN_RATIOS;
+window.FIN_ANNUAL_YEARS = FIN_ANNUAL_YEARS;
+window.FIN_ACTUAL_Q = FIN_ACTUAL_Q;
+window.FIN_BUDGET_Q = FIN_BUDGET_Q;
 window.AnnualReportSection = AnnualReportSection;
 window.BudgetSection = BudgetSection;
 window.SimpleOwnershipTree = SimpleOwnershipTree;

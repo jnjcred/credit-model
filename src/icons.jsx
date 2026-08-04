@@ -49,6 +49,7 @@ const I = {
   MoreH: (p) => <Icon {...p}><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></Icon>,
   ArrowRight: (p) => <Icon {...p} d="M5 12h14M13 5l7 7-7 7"/>,
   ArrowLeft: (p) => <Icon {...p} d="M19 12H5M12 19l-7-7 7-7"/>,
+  Undo: (p) => <Icon {...p} d="M3 7v6h6M3.51 13a9 9 0 1 0 2.13-9.36L3 7"/>,
   Folder: (p) => <Icon {...p} d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>,
   Pin: (p) => <Icon {...p}><path d="M12 17v5M9 10.76a2 2 0 0 1-.83 1.61l-1.93 1.34a2 2 0 0 0-.83 1.61V17h12v-1.68a2 2 0 0 0-.83-1.61l-1.93-1.34a2 2 0 0 1-.83-1.61V5H9z"/></Icon>,
   Eye: (p) => <Icon {...p}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></Icon>,
