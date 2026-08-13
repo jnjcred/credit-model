@@ -57,16 +57,36 @@
 
   var localStatus = null;
 
+  /* Broen findes kun når prototypen kører på ens egen maskine. Ligger den på et
+     hosted domæne, er der ingen kommandolinje at kalde, og så skal beskeden sige
+     det i stedet for at bede folk om at starte en fil de ikke har. */
+  function isLocalHost() {
+    var h = location.hostname;
+    return h === 'localhost' || h === '127.0.0.1' || h === '[::1]' || h === '';
+  }
+
   async function probeLocal(force) {
     if (localStatus && !force) return localStatus;
+
+    if (!isLocalHost()) {
+      var hosted = 'Kører kun når prototypen er startet på din egen maskine med devserver.js. Brug en API-nøgle her.';
+      localStatus = {
+        hosted: true,
+        claude: { available: false, detail: hosted },
+        codex: { available: false, detail: hosted },
+      };
+      return localStatus;
+    }
+
     try {
       var res = await fetch('/local-ai/status', { cache: 'no-store' });
       if (!res.ok) throw new Error('status ' + res.status);
       localStatus = await res.json();
     } catch (e) {
+      var msg = 'Dev-serveren svarer ikke. Start den med: node devserver.js';
       localStatus = {
-        claude: { available: false, detail: 'Dev-serveren svarer ikke. Kør devserver.js.' },
-        codex: { available: false, detail: 'Dev-serveren svarer ikke. Kør devserver.js.' },
+        claude: { available: false, detail: msg },
+        codex: { available: false, detail: msg },
       };
     }
     return localStatus;

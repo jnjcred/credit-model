@@ -42,6 +42,23 @@
     .memo-tbl-lbl { font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-right: 4px; }
     .memo-tbl-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.18); margin: 0 4px; }
     .memo-tbl-hint { font-size: 10.5px; color: rgba(255,255,255,0.45); margin-left: 6px; }
+
+    /* Ophavsvisning. Slået fra som standard, for i det daglige skal dokumentet
+       læses som et dokument. Slås til når man skal kunne se hvad maskinen skrev. */
+    .memo-doc.show-origin [data-ai] {
+      position: relative;
+      padding-left: 10px;
+      border-left: 2px solid transparent;
+    }
+    .memo-doc.show-origin [data-ai="ai"] { border-left-color: #7c8cf8; background: rgba(124,140,248,0.05); }
+    .memo-doc.show-origin [data-ai="chat"] { border-left-color: #7c8cf8; background: rgba(124,140,248,0.05); }
+    .memo-doc.show-origin [data-ai="edited"] { border-left-color: #b9c0cc; background: rgba(150,160,175,0.04); }
+    .memo-doc.show-origin [data-ai]::after {
+      content: attr(data-ai-label);
+      position: absolute; right: 4px; top: 2px;
+      font-size: 9px; letter-spacing: 0.04em; text-transform: uppercase;
+      color: var(--c-text-4); pointer-events: none;
+    }
     .memo-body .memo-cite { border-bottom: 1.5px dotted var(--c-primary); cursor: pointer; }
     .memo-body .memo-cite:hover { background: rgba(29,78,216,0.08); border-bottom-style: solid; }
     .memo-body:focus-within { background: rgba(59,130,246,0.018); border-radius: 6px; }
@@ -1425,17 +1442,28 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
 
   const handleInput = () => {
     if (!ref.current) return;
-    // Når brugeren redigerer indeni et Udkast-blok: fjern "Udkast"-label
-    // og tpl-draft styling, så indholdet bliver "promoveret" til normal tekst.
+    /* Rådgiveren retter i en AI-skrevet blok. To ting sker, og de skal ikke
+       forveksles:
+         Udkast-mærket fjernes. Han har taget teksten til sig.
+         Ophavet BEVARES, men skifter til "rettet". Sporet må ikke forsvinde,
+         for så kan ingen bagefter se hvad maskinen skrev. */
     try {
       const sel = window.getSelection();
       if (sel && sel.rangeCount > 0 && sel.anchorNode) {
         let el = sel.anchorNode;
         if (el.nodeType === 3) el = el.parentElement;
+
         const draft = el && el.closest ? el.closest('.tpl-draft') : null;
         if (draft) {
           draft.querySelectorAll('.tpl-draft-label').forEach(lbl => lbl.remove());
           draft.classList.remove('tpl-draft');
+        }
+
+        const block = el && el.closest ? el.closest('[data-ai]') : null;
+        if (block && block.getAttribute('data-ai') === 'ai') {
+          block.setAttribute('data-ai', 'edited');
+        } else if (block && block.getAttribute('data-ai') === 'chat') {
+          block.setAttribute('data-ai', 'edited');
         }
       }
     } catch (e) { /* selection may be unavailable; ignore */ }
@@ -1637,6 +1665,14 @@ function prepareForExport(html) {
 
   // Vejledning til den der skriver. Hører ikke hjemme i det færdige dokument.
   d.querySelectorAll('.tpl-hints, .tpl-hint, .tpl-guide').forEach(el => el.remove());
+
+  // Ophavsmærkerne er internt arbejdsmateriale. De skal kunne læses i sagen,
+  // ikke sendes ud af huset.
+  d.querySelectorAll('[data-ai]').forEach(el => {
+    el.removeAttribute('data-ai');
+    el.removeAttribute('data-ai-at');
+    el.removeAttribute('data-ai-label');
+  });
 
   // "Udkast"-mærket er en arbejdsmarkering. Teksten bliver, mærket ryger.
   d.querySelectorAll('.tpl-draft-label').forEach(el => el.remove());
@@ -2312,7 +2348,9 @@ function WSMemo() {
   function insertFromChat(key, html) {
     const api = sectionApis.current[key];
     if (!api || !html) return;
-    api.append(html);
+    // Tekst fra chatten er også maskinskrevet. Før blev den indsat helt umærket,
+    // så den var ikke til at skelne fra rådgiverens egen bagefter.
+    api.append(window.MemoAI.markAsDraft(html, 'chat'), 'chat');
     scrollTo(key);
     setModifiedSections(prev => ({ ...prev, [key]: true }));
   }
@@ -2423,6 +2461,58 @@ function WSMemo() {
      hele pointen med sporbarheden er at man kan komme hen til den. */
   const [sourceDoc, setSourceDoc] = React.useState(null);
   const [exportOpen, setExportOpen] = React.useState(false);
+  const [showOrigin, setShowOrigin] = React.useState(false);
+
+  /* Dokumentet skal fylde resten af vinduet. Et fast fratræk holder ikke, fordi
+     værktøjslinjen ombryder når der kommer en knap mere, og ophavslinjen kan
+     være slået til. Derfor måles den faktiske afstand fra toppen. */
+  const [docHeight, setDocHeight] = React.useState('max(460px, calc(100vh - 344px))');
+  React.useLayoutEffect(() => {
+    const measure = () => {
+      const el = scrollRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      setDocHeight(Math.max(460, Math.round(window.innerHeight - top - 24)) + 'px');
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    const t = setTimeout(measure, 250);
+    return () => { window.removeEventListener('resize', measure); clearTimeout(t); };
+  }, [showOrigin, gen, audit]);
+
+  /* Ophavsmærkerne bærer deres etiket i en attribut, så CSS kan vise den.
+     Sættes når visningen slås til, og efter at AI'en har skrevet. */
+  React.useEffect(() => {
+    if (!showOrigin) return;
+    const t = setTimeout(() => {
+      document.querySelectorAll('.memo-doc [data-ai]').forEach(el => {
+        const o = el.getAttribute('data-ai');
+        el.setAttribute('data-ai-label', o === 'edited' ? 'AI, rettet' : o === 'chat' ? 'AI, chat' : 'AI');
+      });
+    }, 60);
+    return () => clearTimeout(t);
+  }, [showOrigin, focusedKey]);
+
+  /* Hvor meget af memoet står maskinen bag? Tælles på blokke, ikke på tegn,
+     fordi det er den enhed rådgiveren godkender. */
+  const originStats = React.useMemo(() => {
+    if (!showOrigin) return null;
+    let ai = 0, edited = 0, own = 0;
+    sections.forEach(s => {
+      const api = sectionApis.current[s.k];
+      if (!api) return;
+      const d = document.createElement('div');
+      d.innerHTML = api.getHtml();
+      d.querySelectorAll('p, h3, h4, ul, ol, table, blockquote').forEach(el => {
+        const marked = el.closest('[data-ai]');
+        if (!marked) { own++; return; }
+        if (el !== marked && marked.contains(el) && el.parentElement !== marked) return;
+        const o = marked.getAttribute('data-ai');
+        if (o === 'edited') edited++; else ai++;
+      });
+    });
+    return { ai, edited, own, total: ai + edited + own };
+  }, [showOrigin, focusedKey, commentsVersion]);
 
   const handleCiteClick = (e) => {
     const el = e.target.closest('.memo-cite');
@@ -2518,6 +2608,15 @@ function WSMemo() {
                   ? (audit.count ? audit.count + ' fund' : 'Kontrol ok')
                   : 'Kontrollér'}
               </button>
+              <button
+                className="btn btn-sm"
+                onClick={() => setShowOrigin(v => !v)}
+                aria-pressed={showOrigin}
+                title="Vis hvilke afsnit maskinen har skrevet, og hvilke du selv står bag"
+                style={showOrigin ? { borderColor: 'var(--c-ink)', background: 'var(--c-ink)', color: '#fff' } : undefined}
+              >
+                {showOrigin ? 'Skjul ophav' : 'Vis ophav'}
+              </button>
               <button className="btn btn-sm btn-ghost" title="Download som PDF"><I.Download className="ic"/> PDF</button>
               <button
                 className="btn btn-sm btn-primary"
@@ -2567,6 +2666,31 @@ function WSMemo() {
           {/* Toolbar */}
           <MemoToolbar focusedKey={focusedKey} citeOpen={citeOpen} onOpenCitePicker={openCitePicker} onReset={resetSection}/>
 
+          {showOrigin && originStats && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap',
+              padding: '9px 20px', borderBottom: '1px solid var(--c-line-2)',
+              background: 'var(--c-surface-2)', fontSize: 12, color: 'var(--c-text-2)',
+            }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 3, height: 13, background: '#7c8cf8', borderRadius: 2 }}/>
+                {originStats.ai} afsnit skrevet af AI og ikke rørt siden
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 3, height: 13, background: '#b9c0cc', borderRadius: 2 }}/>
+                {originStats.edited} skrevet af AI og rettet af dig
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ width: 3, height: 13, background: 'transparent', border: '1px solid var(--c-line-strong)', borderRadius: 2 }}/>
+                {originStats.own} skrevet af dig
+              </span>
+              <span style={{ flex: 1 }}/>
+              <span style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>
+                Ophavet følger teksten og forsvinder ikke når du retter i den.
+              </span>
+            </div>
+          )}
+
           {/* Scrollable doc body */}
           <div
             ref={scrollRef}
@@ -2575,7 +2699,8 @@ function WSMemo() {
                der faktisk er: 344px er hvad topbjælke, sagshoved, faner og
                værktøjslinje optager over det. Så slipper man også for at scrolle
                siden for at nå ned til en kasse man skal scrolle i igen. */
-            style={{ padding: '36px 56px 60px', height: 'max(460px, calc(100vh - 344px))', overflowY: 'auto' }}
+            className={'memo-doc' + (showOrigin ? ' show-origin' : '')}
+            style={{ padding: '36px 56px 60px', height: docHeight, overflowY: 'auto' }}
             onMouseOver={handleMouseOver}
             onMouseOut={handleMouseOut}
             onInput={handleScrollInput}

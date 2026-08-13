@@ -276,14 +276,47 @@ function chatPrompt(memoText, history, question) {
 const ALLOWED_TAGS = ['P','STRONG','EM','B','I','UL','OL','LI','H3','H4','TABLE','THEAD','TBODY','TR','TH','TD','SPAN','BR','BLOCKQUOTE','DIV'];
 
 /**
- * Markerer AI-skrevet tekst som udkast. Memoet har allerede den konvention:
- * så snart rådgiveren skriver inde i blokken, fjernes mærket automatisk, og
- * teksten står som rådgiverens egen.
+ * Markerer AI-skrevet tekst.
+ *
+ * To ting der ligner hinanden, men ikke er det samme:
+ *
+ *   Udkast (tpl-draft)  arbejdstilstand. Forsvinder når rådgiveren har rettet i
+ *                       blokken, for så har han taget den til sig. Det er rigtigt.
+ *   Ophav  (data-ai)    hvem der oprindeligt skrev teksten. Må ALDRIG forsvinde.
+ *                       Kreditkontrol skal bagefter kunne se hvad der er
+ *                       maskinskrevet og hvad rådgiveren selv står inde for.
+ *
+ * Før var de to slået sammen, så sporet forsvandt ved første tastetryk.
  */
-function markAsDraft(html) {
+function markAsDraft(html, origin) {
   if (!html) return html;
-  return '<div class="tpl-draft"><span class="tpl-draft-label" contenteditable="false">AI-udkast</span>' + html + '</div>';
+  const src = origin || 'ai';
+  const stamped = stampOrigin(html, src);
+  return '<div class="tpl-draft"><span class="tpl-draft-label" contenteditable="false">AI-udkast</span>' + stamped + '</div>';
 }
+
+/** Sætter ophavsmærke på hver blok på øverste niveau. */
+function stampOrigin(html, origin) {
+  const d = document.createElement('div');
+  d.innerHTML = html || '';
+  Array.from(d.children).forEach(el => {
+    if (!el.getAttribute('data-ai')) {
+      el.setAttribute('data-ai', origin);
+      el.setAttribute('data-ai-at', new Date().toISOString().slice(0, 16).replace('T', ' '));
+    }
+  });
+  // Ren tekst uden blokke: pak den ind, ellers er der intet at mærke
+  if (!d.children.length && d.textContent.trim()) {
+    return '<p data-ai="' + origin + '">' + d.innerHTML + '</p>';
+  }
+  return d.innerHTML;
+}
+
+const ORIGIN_LABEL = {
+  ai: 'Skrevet af AI',
+  chat: 'Indsat fra sagschatten',
+  edited: 'Skrevet af AI, rettet af rådgiveren',
+};
 
 /**
  * Modeller pakker gerne HTML ind i en kodeblok eller tilføjer en indledning.
@@ -306,7 +339,10 @@ function cleanHtml(raw) {
     Array.from(el.attributes).forEach(a => {
       const n = a.name.toLowerCase();
       const keep =
-        (el.tagName === 'SPAN' && (n === 'class' || n === 'data-doc' || n === 'data-page' || n === 'contenteditable')) ||
+        // Ophavsmærket skal overleve enhver rensning, ellers går sporet tabt
+        n === 'data-ai' || n === 'data-ai-at' ||
+        // data-line og data-col er det talafstemningen slår op på
+        (el.tagName === 'SPAN' && (n === 'class' || n === 'data-doc' || n === 'data-page' || n === 'data-line' || n === 'data-col' || n === 'contenteditable')) ||
         ((el.tagName === 'H3' || el.tagName === 'H4' || el.tagName === 'UL' || el.tagName === 'DIV') && n === 'class') ||
         ((el.tagName === 'TD' || el.tagName === 'TH') && (n === 'style' || n === 'colspan' || n === 'rowspan'));
       if (!keep) el.removeAttribute(a.name);
@@ -552,7 +588,9 @@ function AiSettingsDialog({ open, onClose }) {
           <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>Forbind din AI-konto</div>
           <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 5, lineHeight: 1.55 }}>
             {isLocal
-              ? 'Memoet skrives med den Claude Code eller Codex du allerede har installeret. De logger ind med selve abonnementet, så der bruges ingen API-kredit. Til gengæld virker det kun på din egen maskine.'
+              ? (local && local.hosted
+                ? 'Denne mulighed kalder Claude Code eller Codex på din egen maskine, så der ikke bruges API-kredit. Den virker kun når prototypen er startet lokalt med devserver.js. Her på nettet skal du bruge en API-nøgle.'
+                : 'Memoet skrives med den Claude Code eller Codex du allerede har installeret. De logger ind med selve abonnementet, så der bruges ingen API-kredit. Til gengæld virker det kun på din egen maskine.')
               : 'Memoet skrives med din egen konto hos ' + P.vendor + '. Nøglen gemmes kun i denne browser og sendes udelukkende til den udbyder du vælger. Forbruget afregnes som API-forbrug på din konto, ikke på dit abonnement.'}
           </div>
         </div>
