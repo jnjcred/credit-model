@@ -15,11 +15,11 @@ function WSOwnership() {
       {/* Source picker */}
       <div className="card" style={{ marginBottom: 16, padding: '12px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div>
-          <div className="label-mini">Kilde til ejeroplysninger</div>
+          <div className="label-mini">{t('Kilde til ejeroplysninger')}</div>
           <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2 }}>
-            {source === "cvr" && "Sidst opdateret 31. dec 2024 · automatisk hentet"}
-            {source === "uploaded" && "Pr. 23. maj 2026 · uploadet af kunde"}
-            {source === "compare" && "Sammenligning · 2 forskelle fundet"}
+            {source === "cvr" && t("Sidst opdateret 31. dec 2024 · automatisk hentet")}
+            {source === "uploaded" && t("Pr. 23. maj 2026 · uploadet af kunde")}
+            {source === "compare" && t("Sammenligning · 2 forskelle fundet")}
           </div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', background: 'var(--c-surface-2)', borderRadius: 8, padding: 3, border: '1px solid var(--c-line)' }}>
@@ -37,13 +37,13 @@ function WSOwnership() {
                 color: source === o.k ? 'var(--c-ink)' : 'var(--c-text-2)',
                 display: 'inline-flex', alignItems: 'center', gap: 6,
               }}>
-              {o.ic} {o.l}
+              {o.ic} {t(o.l)}
               {o.k === "compare" && source !== o.k && <span className="tag" style={{ fontSize: 9.5, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none', padding: '1px 4px' }}>2</span>}
             </button>
           ))}
         </div>
         <button className="btn btn-sm">
-          {source === "cvr" ? "Brug denne kilde" : source === "uploaded" ? "Brug denne kilde" : "Vælg foretrukne"}
+          {source === "cvr" ? t("Brug denne kilde") : source === "uploaded" ? t("Brug denne kilde") : t("Vælg foretrukne")}
         </button>
       </div>
 
@@ -52,8 +52,8 @@ function WSOwnership() {
         <div className="card">
           <div className="card-head">
             <div>
-              <div className="card-title">Ejerstruktur</div>
-              <div className="card-sub">{source === "cvr" ? "Pr. 31. dec 2024 · CVR" : "Pr. 23. maj 2026 · ejerbog"}</div>
+              <div className="card-title">{t('Ejerstruktur')}</div>
+              <div className="card-sub">{source === "cvr" ? t("Pr. 31. dec 2024 · CVR") : t("Pr. 23. maj 2026 · ejerbog")}</div>
             </div>
             <button className="btn btn-sm btn-ghost"><I.Maximize className="ic"/></button>
           </div>
@@ -64,8 +64,8 @@ function WSOwnership() {
 
         <div className="card">
           <div className="card-head">
-            <div className="card-title">Ejerkreds</div>
-            <div className="card-sub">{owners.length} ejere · ingen PEP markering</div>
+            <div className="card-title">{t('Ejerkreds')}</div>
+            <div className="card-sub">{owners.length} {t('ejere · ingen PEP markering')}</div>
           </div>
           <div>
             {owners.map((o, i) => (
@@ -75,7 +75,7 @@ function WSOwnership() {
                 </div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 500 }}>{o.name} {o.role && <span className="muted" style={{ fontWeight: 400 }}>· {o.role}</span>}</div>
-                  <div className="muted" style={{ fontSize: 11.5 }}>{o.type === 'holding' ? 'Holding­selskab' : o.type === 'fund' ? 'Fond / VC' : o.type === 'person' ? 'Person' : 'Andet'}{o.pep ? ' · PEP' : ''}</div>
+                  <div className="muted" style={{ fontSize: 11.5 }}>{o.type === 'holding' ? t('Holding­selskab') : o.type === 'fund' ? t('Fond / VC') : o.type === 'person' ? t('Person') : t('Andet')}{o.pep ? ' · PEP' : ''}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div className="mono num" style={{ fontSize: 14, fontWeight: 500 }}>{o.share.toFixed(1)}%</div>
@@ -87,40 +87,40 @@ function WSOwnership() {
           {source === "cvr" && (
             <div style={{ padding: 14, background: 'var(--c-surface-2)', borderTop: '1px solid var(--c-line-2)', fontSize: 11.5, color: 'var(--c-text-2)', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <I.AlertCircle size={13} style={{ marginTop: 1, color: 'var(--c-warn)', flexShrink: 0 }}/>
-              <div>CVR viser ikke <b>medarbejder­warrants (5,0%)</b>. Disse fremgår kun af den uploadede ejerbog.</div>
+              <div>{t('CVR viser ikke')} <b>{t('medarbejder­warrants (5,0%)')}</b>. {t('Disse fremgår kun af den uploadede ejerbog.')}</div>
             </div>
           )}
         </div>
 
         <div className="card">
-          <div className="card-head"><div className="card-title">Bestyrelse</div></div>
+          <div className="card-head"><div className="card-title">{t('Bestyrelse')}</div></div>
           <div>
             {DATA.BOARD.map((b, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '34px 1fr auto', gap: 12, alignItems: 'center', padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none' }}>
                 <div className="avatar" style={{ width: 30, height: 30, fontSize: 11 }}>{b.name.split(' ').map(w=>w[0]).join('')}</div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 500 }}>{b.name}</div>
-                  <div className="muted" style={{ fontSize: 11.5 }}>{b.role}</div>
+                  <div className="muted" style={{ fontSize: 11.5 }}>{t(b.role)}</div>
                 </div>
-                <div className="muted" style={{ fontSize: 11.5 }}>siden {b.since}</div>
+                <div className="muted" style={{ fontSize: 11.5 }}>{t('siden')} {b.since}</div>
               </div>
             ))}
           </div>
         </div>
 
         <div className="card">
-          <div className="card-head"><div className="card-title">Fundinghistorik</div></div>
+          <div className="card-head"><div className="card-title">{t('Fundinghistorik')}</div></div>
           <div style={{ padding: '14px 16px' }}>
             {[
               { y: "2023", t: "Vækstkapital", a: "18,0M DKK", inv: "Erhvervsfonden + Industrifonden" },
               { y: "2020", t: "Serie A", a: "32,0M DKK", inv: "Erhvervsfonden" },
               { y: "2017", t: "Seed + grants", a: "8,5M DKK", inv: "InnoBooster + Erhvervsfonden" },
-              { y: "2014", t: "Stiftet", a: "1,5M DKK", inv: "Anders & Maria (stiftere)" },
+              { y: "2014", t: "Stiftet", a: "1,5M DKK", inv: "Anders & Maria (" + t('stiftere') + ")" },
             ].map((r, i) => (
               <div key={i} style={{ display: 'flex', gap: 14, padding: '10px 0', borderBottom: i < 3 ? '1px solid var(--c-line-2)' : 'none' }}>
                 <div className="mono" style={{ width: 36, fontSize: 12, color: 'var(--c-text-3)', flexShrink: 0 }}>{r.y}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500 }}>{r.t} · <span className="mono">{r.a}</span></div>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{t(r.t)} · <span className="mono">{r.a}</span></div>
                   <div className="muted" style={{ fontSize: 11.5 }}>{r.inv}</div>
                 </div>
               </div>
@@ -149,29 +149,29 @@ function OwnershipCompare() {
       <div className="card" style={{ background: 'var(--c-warn-bg)', borderColor: 'transparent', padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
         <I.AlertTriangle size={16} style={{ color: 'var(--c-warn)', marginTop: 2, flexShrink: 0 }}/>
         <div style={{ flex: 1, fontSize: 13 }}>
-          <div style={{ fontWeight: 500, color: 'var(--c-warn)' }}>2 forskelle mellem CVR og uploadet ejerbog</div>
+          <div style={{ fontWeight: 500, color: 'var(--c-warn)' }}>{t('2 forskelle mellem CVR og uploadet ejerbog')}</div>
           <div style={{ color: 'var(--c-text-2)', marginTop: 3, fontSize: 12.5 }}>
-            CVR-data afspejler seneste indberetning (31. dec 2024). Ejerbogen fra kunden er dateret 23. maj 2026 og inkluderer en medarbejder­warrant-program oprettet i marts 2025.
+            {t('CVR-data afspejler seneste indberetning (31. dec 2024). Ejerbogen fra kunden er dateret 23. maj 2026 og inkluderer en medarbejder­warrant-program oprettet i marts 2025.')}
           </div>
         </div>
       </div>
 
       <div className="card">
         <div className="card-head">
-          <div className="card-title">Sammenligning</div>
+          <div className="card-title">{t('Sammenligning')}</div>
           <div className="hstack">
-            <span className="tag"><I.Database size={10}/> CVR (31. dec 2024)</span>
-            <span className="tag"><I.File size={10}/> Ejerbog (23. maj 2026)</span>
+            <span className="tag"><I.Database size={10}/> {t('CVR (31. dec 2024)')}</span>
+            <span className="tag"><I.File size={10}/> {t('Ejerbog (23. maj 2026)')}</span>
           </div>
         </div>
         <table className="tbl">
           <thead>
             <tr>
-              <th>Ejer</th>
+              <th>{t('Ejer')}</th>
               <th style={{ textAlign: 'right' }}>CVR</th>
-              <th style={{ textAlign: 'right' }}>Ejerbog</th>
-              <th style={{ textAlign: 'right' }}>Forskel</th>
-              <th>Note</th>
+              <th style={{ textAlign: 'right' }}>{t('Ejerbog')}</th>
+              <th style={{ textAlign: 'right' }}>{t('Forskel')}</th>
+              <th>{t('Note')}</th>
             </tr>
           </thead>
           <tbody>
@@ -184,7 +184,7 @@ function OwnershipCompare() {
                 <tr key={i} style={{ background: isDiff || onlyInUploaded || onlyInCvr ? 'var(--c-warn-bg)' : 'transparent' }}>
                   <td>
                     <div style={{ fontWeight: 500, fontSize: 13 }}>{r.name}</div>
-                    <div className="muted" style={{ fontSize: 11.5 }}>{r.type === 'holding' ? 'Holding' : r.type === 'fund' ? 'Fond' : r.type === 'person' ? 'Person' : 'Andet'}{r.role ? ` · ${r.role}` : ''}</div>
+                    <div className="muted" style={{ fontSize: 11.5 }}>{r.type === 'holding' ? t('Holding') : r.type === 'fund' ? t('Fond') : r.type === 'person' ? t('Person') : t('Andet')}{r.role ? ` · ${r.role}` : ''}</div>
                   </td>
                   <td className="mono num" style={{ textAlign: 'right', color: r.cvr === undefined ? 'var(--c-text-4)' : 'var(--c-text)' }}>
                     {r.cvr === undefined ? '-' : r.cvr.toFixed(1) + '%'}
@@ -193,15 +193,15 @@ function OwnershipCompare() {
                     {r.uploaded === undefined ? '-' : r.uploaded.toFixed(1) + '%'}
                   </td>
                   <td className="mono num" style={{ textAlign: 'right' }}>
-                    {onlyInUploaded ? <span style={{ color: 'var(--c-warn)' }}>NY</span>
-                     : onlyInCvr ? <span style={{ color: 'var(--c-danger)' }}>FJERNET</span>
+                    {onlyInUploaded ? <span style={{ color: 'var(--c-warn)' }}>{t('NY')}</span>
+                     : onlyInCvr ? <span style={{ color: 'var(--c-danger)' }}>{t('FJERNET')}</span>
                      : isDiff ? <span style={{ color: diff > 0 ? 'var(--c-success)' : 'var(--c-danger)' }}>{diff > 0 ? '+' : ''}{diff.toFixed(1)}pp</span>
                      : <span style={{ color: 'var(--c-text-4)' }}>-</span>}
                   </td>
                   <td style={{ fontSize: 12, color: 'var(--c-text-2)' }}>
-                    {onlyInUploaded && r.name === "Medarbejder­warrants" && "Warrant-program oprettet marts 2025"}
-                    {isDiff && r.name === "Anders Holding ApS" && "Konsekvens af warrant-fortynding"}
-                    {isDiff && r.name === "Industrifonden A/S" && "Konsekvens af warrant-fortynding"}
+                    {onlyInUploaded && r.name === "Medarbejder­warrants" && t("Warrant-program oprettet marts 2025")}
+                    {isDiff && r.name === "Anders Holding ApS" && t("Konsekvens af warrant-fortynding")}
+                    {isDiff && r.name === "Industrifonden A/S" && t("Konsekvens af warrant-fortynding")}
                     {!isDiff && !onlyInUploaded && !onlyInCvr && r.name !== "Medarbejder­warrants" && <span className="muted">-</span>}
                   </td>
                 </tr>
@@ -211,11 +211,11 @@ function OwnershipCompare() {
         </table>
         <div style={{ padding: '12px 18px', borderTop: '1px solid var(--c-line-2)', background: 'var(--c-surface-2)', display: 'flex', alignItems: 'center', gap: 14 }}>
           <div style={{ flex: 1, fontSize: 12.5, color: 'var(--c-text-2)' }}>
-            <b style={{ color: 'var(--c-ink)' }}>Anbefaling:</b> Brug uploadet ejerbog som primær kilde - den er nyere og afspejler den aktuelle situation. Behold CVR-version som reference.
+            <b style={{ color: 'var(--c-ink)' }}>{t('Anbefaling:')}</b> {t('Brug uploadet ejerbog som primær kilde - den er nyere og afspejler den aktuelle situation. Behold CVR-version som reference.')}
           </div>
-          <button className="btn btn-sm"><I.Plus className="ic"/> Til spørgsmål</button>
-          <button className="btn btn-sm">Behold begge</button>
-          <button className="btn btn-sm btn-primary">Brug uploadet ejerbog</button>
+          <button className="btn btn-sm"><I.Plus className="ic"/> {t('Til spørgsmål')}</button>
+          <button className="btn btn-sm">{t('Behold begge')}</button>
+          <button className="btn btn-sm btn-primary">{t('Brug uploadet ejerbog')}</button>
         </div>
       </div>
     </div>
@@ -230,22 +230,22 @@ function OwnershipTree({ variant = "uploaded" }) {
       <g fontFamily="var(--font)" fontSize="11">
         <g transform="translate(20, 20)">
           <rect width="120" height="48" rx="6" fill="#fff" stroke="var(--c-line)"/>
-          <text x="60" y="20" textAnchor="middle" fill="var(--c-text-2)" fontSize="9">PERSON</text>
+          <text x="60" y="20" textAnchor="middle" fill="var(--c-text-2)" fontSize="9">{t('PERSON')}</text>
           <text x="60" y="36" textAnchor="middle" fontWeight="500" fill="var(--c-ink)">Anders Holding ApS</text>
         </g>
         <g transform="translate(155, 20)">
           <rect width="110" height="48" rx="6" fill="#fff" stroke="var(--c-line)"/>
-          <text x="55" y="20" textAnchor="middle" fill="var(--c-text-2)" fontSize="9">FOND</text>
+          <text x="55" y="20" textAnchor="middle" fill="var(--c-text-2)" fontSize="9">{t('FOND')}</text>
           <text x="55" y="36" textAnchor="middle" fontWeight="500" fill="var(--c-ink)">Erhvervsfonden</text>
         </g>
         <g transform="translate(280, 20)">
           <rect width="120" height="48" rx="6" fill="#fff" stroke="var(--c-line)"/>
-          <text x="60" y="20" textAnchor="middle" fill="var(--c-text-2)" fontSize="9">PERSON</text>
+          <text x="60" y="20" textAnchor="middle" fill="var(--c-text-2)" fontSize="9">{t('PERSON')}</text>
           <text x="60" y="36" textAnchor="middle" fontWeight="500" fill="var(--c-ink)">Maria Lindbjerg</text>
         </g>
         <g transform="translate(415, 20)">
           <rect width="105" height="48" rx="6" fill="#fff" stroke="var(--c-line)"/>
-          <text x="52" y="20" textAnchor="middle" fill="var(--c-text-2)" fontSize="9">FOND</text>
+          <text x="52" y="20" textAnchor="middle" fill="var(--c-text-2)" fontSize="9">{t('FOND')}</text>
           <text x="52" y="36" textAnchor="middle" fontWeight="500" fill="var(--c-ink)">Industrifonden</text>
         </g>
 
@@ -261,8 +261,8 @@ function OwnershipTree({ variant = "uploaded" }) {
         {showWarrants && (
           <g transform="translate(155, 195)">
             <rect width="110" height="40" rx="6" fill="#fff" stroke="var(--c-line)" strokeDasharray="3 3"/>
-            <text x="55" y="17" textAnchor="middle" fill="var(--c-text-3)" fontSize="9">WARRANTS</text>
-            <text x="55" y="32" textAnchor="middle" fontWeight="500" fill="var(--c-text-2)" fontSize="10">Medarbejdere · 5%</text>
+            <text x="55" y="17" textAnchor="middle" fill="var(--c-text-3)" fontSize="9">{t('WARRANTS')}</text>
+            <text x="55" y="32" textAnchor="middle" fontWeight="500" fill="var(--c-text-2)" fontSize="10">{t('Medarbejdere · 5%')}</text>
           </g>
         )}
 

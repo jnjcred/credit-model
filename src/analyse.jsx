@@ -153,17 +153,17 @@ function CriteriaRow({ c, onChange, onRemove, canRemove, showLabels }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginTop: 10 }}>
       <div style={{ flex: "0 0 216px" }}>
-        <Lbl>Kriterie</Lbl>
+        <Lbl>{t('Kriterie')}</Lbl>
         <select value={c.metric} onChange={e => {
           const m = metaFor(e.target.value);
           onChange({ ...c, metric: e.target.value, unit: m.unit, minAmt: "" });
         }} style={{ ...S, borderRadius: 6, padding: "0 10px", width: "100%", cursor: "pointer" }}>
-          {METRICS.map(m => <option key={m.k} value={m.k}>{m.l}</option>)}
+          {METRICS.map(m => <option key={m.k} value={m.k}>{t(m.l)}</option>)}
         </select>
       </div>
 
       <div>
-        <Lbl>Ændring</Lbl>
+        <Lbl>{t('Ændring')}</Lbl>
         <div style={{ display: "flex" }}>
           <select value={c.op} onChange={e => onChange({ ...c, op: e.target.value })}
             style={{ ...S, padding: "0 6px", borderRadius: "6px 0 0 6px", borderRight: "none", width: 42, cursor: "pointer", textAlign: "center" }}>
@@ -174,26 +174,26 @@ function CriteriaRow({ c, onChange, onRemove, canRemove, showLabels }) {
             style={{ ...S, borderRadius: 0, width: 110, textAlign: "right", padding: "0 8px", fontFamily: "var(--mono)" }}/>
           <div style={{ ...S, borderRadius: "0 6px 6px 0", borderLeft: "none", padding: "0 10px",
             background: "var(--c-surface-2)", color: "var(--c-text-2)", display: "flex", alignItems: "center", fontSize: 12 }}>
-            {meta.unit}
+            {t(meta.unit)}
           </div>
         </div>
       </div>
 
       {meta.amtField ? (
         <div>
-          <Lbl>Minimum beløb</Lbl>
+          <Lbl>{t('Minimum beløb')}</Lbl>
           <div style={{ display: "flex" }}>
             <select value={c.minAmtOp} onChange={e => onChange({ ...c, minAmtOp: e.target.value })}
               style={{ ...S, padding: "0 6px", borderRadius: "6px 0 0 6px", borderRight: "none", width: 42, cursor: "pointer" }}>
               <option value=">">{">"}</option>
               <option value="<">{"<"}</option>
             </select>
-            <input type="number" value={c.minAmt} placeholder="valgfri"
+            <input type="number" value={c.minAmt} placeholder={t('valgfri')}
               onChange={e => onChange({ ...c, minAmt: e.target.value })}
               style={{ ...S, borderRadius: 0, width: 130, textAlign: "right", padding: "0 8px", fontFamily: "var(--mono)" }}/>
             <div style={{ ...S, borderRadius: "0 6px 6px 0", borderLeft: "none", padding: "0 10px",
               background: "var(--c-surface-2)", color: "var(--c-text-2)", display: "flex", alignItems: "center", fontSize: 12 }}>
-              kr.
+              {t('kr.')}
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@ function CriteriaRow({ c, onChange, onRemove, canRemove, showLabels }) {
         color: "var(--c-danger)", fontSize: 12, fontWeight: 500,
         padding: "0 4px", alignSelf: "flex-end", height: 36, flexShrink: 0,
       }}>
-        Fjern
+        {t('Fjern')}
       </button>
     </div>
   );
@@ -221,7 +221,7 @@ function JoinToggle({ value, onChange }) {
         color: value === "AND" ? "var(--c-ink)" : "#c47b00",
         letterSpacing: "0.06em", userSelect: "none",
       }}>
-        {value === "AND" ? "OG" : "ELLER"}
+        {value === "AND" ? t('OG') : t('ELLER')}
       </button>
       <div style={{ flex: 1, height: 1, background: "var(--c-line-2)" }}/>
     </div>
@@ -237,8 +237,8 @@ function fmtVal(val, unit) {
 
 function ChipSummary({ c, onRemove }) {
   const m = metaFor(c.metric);
-  const parts = [`${m.l} ${c.op} ${fmtVal(c.val, m.unit)} ${m.unit}`];
-  if (m.amtField && c.minAmt !== "") parts.push(`og ${c.minAmtOp} ${Number(c.minAmt).toLocaleString("da-DK")} kr.`);
+  const parts = [t(m.l) + " " + c.op + " " + fmtVal(c.val, m.unit) + " " + t(m.unit)];
+  if (m.amtField && c.minAmt !== "") parts.push(t('og') + " " + c.minAmtOp + " " + Number(c.minAmt).toLocaleString("da-DK") + " " + t('kr.'));
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 6,
@@ -261,12 +261,12 @@ function describeTemplateCriteria(crits) {
   const PCT_CHANGE = new Set(["revPct", "ebitdaPct"]);
   return crits.map((c, i) => {
     const m = metaFor(c.metric);
-    const valStr = m.unit === "kr." ? Number(c.val).toLocaleString("da-DK") + " kr." : c.val + m.unit;
+    const valStr = m.unit === "kr." ? Number(c.val).toLocaleString("da-DK") + " " + t('kr.') : c.val + m.unit;
     let op;
     if (PCT_CHANGE.has(c.metric)) op = c.op === ">" ? "↑" : "↓";
     else op = c.op;
-    const part = (m.short || m.l) + " " + op + " " + valStr;
-    if (i < crits.length - 1) return part + (c.joinNext === "AND" ? " og " : " eller ");
+    const part = t(m.short || m.l) + " " + op + " " + valStr;
+    if (i < crits.length - 1) return part + (c.joinNext === "AND" ? " " + t('og') + " " : " " + t('eller') + " ");
     return part;
   }).join("");
 }
@@ -288,9 +288,9 @@ function SortTh({ col, label, title, align, sortCol, sortDir, onSort, width }) {
 }
 
 // ----- Template card -----
-function TemplateCard({ t, active, onClick, grid }) {
+function TemplateCard({ t: tpl, active, onClick, grid }) {
   const [hover, setHover] = React.useState(false);
-  const isGod = t.group === "god";
+  const isGod = tpl.group === "god";
   const accentColor = isGod ? "#15803d" : "#b91c1c";
   const bg = active ? (isGod ? "#f0fdf4" : "#fef2f2") : hover ? "#f3f4f6" : "transparent";
 
@@ -309,9 +309,9 @@ function TemplateCard({ t, active, onClick, grid }) {
           background: bg, borderRadius: "0 4px 4px 0", transition: "background 0.1s",
         }}
       >
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#111827" }}>{t.label}</div>
-        <div style={{ fontSize: 10.5, color: "#6b7280", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{t.desc}</div>
-        {active && <span style={{ fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>Valgt</span>}
+        <div style={{ fontSize: 12, fontWeight: 600, color: "#111827" }}>{t(tpl.label)}</div>
+        <div style={{ fontSize: 10.5, color: "#6b7280", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{tpl.desc}</div>
+        {active && <span style={{ fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>{t('Valgt')}</span>}
       </button>
     );
   }
@@ -331,10 +331,10 @@ function TemplateCard({ t, active, onClick, grid }) {
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.label}</div>
-        <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.desc}</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t(tpl.label)}</div>
+        <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tpl.desc}</div>
       </div>
-      {active && <span style={{ fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: "0.05em", textTransform: "uppercase", flexShrink: 0 }}>Valgt</span>}
+      {active && <span style={{ fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: "0.05em", textTransform: "uppercase", flexShrink: 0 }}>{t('Valgt')}</span>}
     </button>
   );
 }
@@ -409,14 +409,14 @@ function PortfolioAnalyse({ go }) {
 
   return (
     <>
-      <Topbar crumbs={["Porteføljeanalyse"]} right={null}/>
+      <Topbar crumbs={[t('Porteføljeanalyse')]} right={null}/>
 
       <div className="scroll">
         <div className="page page-wide" style={{ maxWidth: 1360, padding: "20px 28px 80px" }}>
 
           <div style={{ marginBottom: 20 }}>
-            <h1 className="page-title">Porteføljeanalyse</h1>
-            <div className="page-sub">Find kunder på tværs af porteføljen ud fra finansielle kriterier</div>
+            <h1 className="page-title">{t('Porteføljeanalyse')}</h1>
+            <div className="page-sub">{t('Find kunder på tværs af porteføljen ud fra finansielle kriterier')}</div>
           </div>
 
           {/* Filter panel */}
@@ -425,14 +425,14 @@ function PortfolioAnalyse({ go }) {
             {/* Templates */}
             <div style={{ padding: "14px 20px", borderBottom: "1px solid #E5E7EB", background: "#f9fafb" }}>
               <div style={{ fontSize: 10.5, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10 }}>
-                Vælg skabelon
+                {t('Vælg skabelon')}
               </div>
               <div style={{ display: "flex", gap: 0 }}>
                 {/* Good group */}
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6, paddingLeft: 12 }}>
                     <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#15803d", flexShrink: 0 }}/>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", letterSpacing: "0.02em" }}>Klarer det godt</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", letterSpacing: "0.02em" }}>{t('Klarer det godt')}</span>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     {godTemplates.map(t => (
@@ -454,7 +454,7 @@ function PortfolioAnalyse({ go }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6, paddingLeft: 12 }}>
                     <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#b91c1c", flexShrink: 0 }}/>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", letterSpacing: "0.02em" }}>Faresignaler</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", letterSpacing: "0.02em" }}>{t('Faresignaler')}</span>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
                     {fareTemplates.map(t => (
@@ -477,21 +477,21 @@ function PortfolioAnalyse({ go }) {
             {/* Dept + branche row */}
             <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 20px", borderBottom: "1px solid var(--c-line-2)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 13, color: "var(--c-text-2)", fontWeight: 500, flexShrink: 0 }}>Afdeling</span>
+                <span style={{ fontSize: 13, color: "var(--c-text-2)", fontWeight: 500, flexShrink: 0 }}>{t('Afdeling')}</span>
                 <select value={dept} onChange={e => { setDept(e.target.value); setResults(null); }} style={selectStyle}>
-                  <option value="alle">Alle afdelinger</option>
+                  <option value="alle">{t('Alle afdelinger')}</option>
                   {depts.filter(d => d !== "alle").map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 13, color: "var(--c-text-2)", fontWeight: 500, flexShrink: 0 }}>Branche</span>
+                <span style={{ fontSize: 13, color: "var(--c-text-2)", fontWeight: 500, flexShrink: 0 }}>{t('Branche')}</span>
                 <select value={branche} onChange={e => { setBranche(e.target.value); setResults(null); }} style={selectStyle}>
-                  <option value="alle">Alle brancher</option>
-                  {branches.filter(b => b !== "alle").map(b => <option key={b} value={b}>{b}</option>)}
+                  <option value="alle">{t('Alle brancher')}</option>
+                  {branches.filter(b => b !== "alle").map(b => <option key={b} value={b}>{t(b)}</option>)}
                 </select>
               </div>
               <button className="btn btn-sm btn-ghost" style={{ marginLeft: "auto" }} onClick={reset}>
-                <I.Refresh size={12}/> Nulstil alle valg
+                <I.Refresh size={12}/> {t('Nulstil alle valg')}
               </button>
             </div>
 
@@ -506,7 +506,7 @@ function PortfolioAnalyse({ go }) {
                 }}
               >
                 <I.ChevronRight size={13} style={{ color: "var(--c-text-3)", transition: "transform 0.15s", transform: advOpen ? "rotate(90deg)" : "none" }}/>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--c-text-2)" }}>Avanceret søgning</span>
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--c-text-2)" }}>{t('Avanceret søgning')}</span>
                 {!activeTemplate && criteria.length > 0 && (
                   <span style={{ fontSize: 11, background: "var(--c-surface-2)", border: "1px solid var(--c-line-strong)", padding: "1px 6px", borderRadius: 99, fontWeight: 600, color: "var(--c-text-2)" }}>
                     {criteria.length}
@@ -517,7 +517,7 @@ function PortfolioAnalyse({ go }) {
                 <div style={{ padding: "4px 20px 16px", borderTop: "1px solid var(--c-line-2)" }}>
                   {criteria.length === 0 && (
                     <div style={{ fontSize: 12.5, color: "var(--c-text-3)", margin: "8px 0 10px" }}>
-                      Ingen aktive kriterier. Klik "Tilføj kriterie" for at filtrere manuelt.
+                      {t('Ingen aktive kriterier. Klik "Tilføj kriterie" for at filtrere manuelt.')}
                     </div>
                   )}
                   {criteria.map((c, i) => (
@@ -536,7 +536,7 @@ function PortfolioAnalyse({ go }) {
                   ))}
                   <div style={{ marginTop: criteria.length > 0 ? 10 : 0 }}>
                     <button className="btn btn-sm btn-ghost" onClick={add}>
-                      <I.Plus size={12}/> Tilføj kriterie
+                      <I.Plus size={12}/> {t('Tilføj kriterie')}
                     </button>
                   </div>
                 </div>
@@ -547,13 +547,13 @@ function PortfolioAnalyse({ go }) {
             {activeTemplate && criteria.length > 0 && (
               <div style={{ padding: "12px 20px" }}>
                 <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--c-text-2)" }}>Aktive kriterier</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--c-text-2)" }}>{t('Aktive kriterier')}</span>
                   <button
                     className="btn btn-sm btn-ghost"
                     style={{ marginLeft: "auto", fontSize: 12 }}
                     onClick={() => { setActiveTemplate(null); setCriteria([]); }}
                   >
-                    <I.X size={11}/> Fjern skabelon
+                    <I.X size={11}/> {t('Fjern skabelon')}
                   </button>
                 </div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
@@ -562,7 +562,7 @@ function PortfolioAnalyse({ go }) {
                       <ChipSummary c={c} onRemove={() => criteria.length > 1 && remove(c.id)}/>
                       {i < criteria.length - 1 && (
                         <span style={{ fontSize: 11, fontWeight: 700, color: c.joinNext === "AND" ? "var(--c-text-3)" : "#c47b00", letterSpacing: "0.08em", padding: "0 2px" }}>
-                          {c.joinNext === "AND" ? "OG" : "ELLER"}
+                          {c.joinNext === "AND" ? t('OG') : t('ELLER')}
                         </span>
                       )}
                     </React.Fragment>
@@ -578,33 +578,33 @@ function PortfolioAnalyse({ go }) {
               <style>{`@keyframes cw-spin { to { transform: rotate(360deg); } }`}</style>
               <div className="card" style={{ marginTop: 4, minHeight: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
                 <div style={{ width: 22, height: 22, border: '2px solid var(--c-line)', borderTopColor: 'var(--c-accent)', borderRadius: '50%', animation: 'cw-spin 0.75s linear infinite' }}/>
-                <div style={{ color: 'var(--c-text-2)', fontSize: 13 }}>Søger i porteføljen…</div>
+                <div style={{ color: 'var(--c-text-2)', fontSize: 13 }}>{t('Søger i porteføljen…')}</div>
               </div>
             </>
           ) : results === null || results.length === 0 ? (
             <div className="card empty" style={{ marginTop: 4 }}>
               <I.Search className="ic" style={{ width: 26, height: 26 }}/>
-              <div>Ingen kunder matcher de valgte kriterier</div>
-              <div style={{ fontSize: 11.5, marginTop: 4, color: "var(--c-text-3)" }}>Prøv at justere tærskelværdierne</div>
+              <div>{t('Ingen kunder matcher de valgte kriterier')}</div>
+              <div style={{ fontSize: 11.5, marginTop: 4, color: "var(--c-text-3)" }}>{t('Prøv at justere tærskelværdierne')}</div>
             </div>
           ) : (
             <div className="card" style={{ overflow: "hidden" }}>
               <div className="card-head">
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--c-ink)" }}>Dine kunder</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--c-ink)" }}>{t('Dine kunder')}</span>
                   <span style={{ background: "var(--c-surface-2)", border: "1px solid var(--c-line-strong)", padding: "1px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
-                    {results.length} kunder
+                    {results.length} {t('kunder')}
                   </span>
                   {activeTemplate && (
                     <span style={{ fontSize: 12, color: "var(--c-text-2)", marginLeft: 4 }}>
-                      · Skabelon: <b>{activeTemplate}</b>
+                      · {t('Skabelon')}: <b>{t(activeTemplate)}</b>
                     </span>
                   )}
                 </div>
               </div>
               {/* Periode-filter toolbar */}
               <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderBottom: "1px solid var(--c-line-2)", background: "var(--c-surface-1)" }}>
-                <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--c-text-2)", flexShrink: 0 }}>Periode:</span>
+                <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--c-text-2)", flexShrink: 0 }}>{t('Periode')}:</span>
                 {["2023", "2024", "2025"].map(yr => {
                   const active = selectedYear === yr;
                   return (
@@ -628,15 +628,15 @@ function PortfolioAnalyse({ go }) {
               <table className="tbl" style={{ tableLayout: "fixed", width: "100%", fontSize: 12 }}>
                 <thead>
                   <tr>
-                    <SortTh col="name"      label="Kundenavn"                         title="Virksomhedens navn"                                                         align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="20%"/>
-                    <SortTh col="dept"      label="Afdeling"                          title="Ansvarlig afdeling"                                                         align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="branche"   label="Branche"                           title="Branche / sektor"                                                           align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
-                    <SortTh col="rev12"     label={"Omsætning " + selectedYear}       title={"Samlet omsætning " + selectedYear + " (kr.)"}                              align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="revPct"    label="Oms. %"                            title="Omsætningsvækst i % - seneste 12 mdr. ift. foregående 12 mdr."             align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
-                    <SortTh col="ebitda12"  label={"EBITDA " + selectedYear}          title={"EBITDA " + selectedYear + " (kr.)"}                                        align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="ebitdaPct" label="EBITDA %"                          title="EBITDA-ændring i % - seneste 12 mdr. ift. foregående 12 mdr."              align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
-                    <SortTh col="equity"    label={"Egenkapital " + selectedYear}     title={"Bogført egenkapital " + selectedYear + " (kr.)"}                           align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="bigCust"   label="Største kunde"                     title="Andel af omsætning fra største enkelt kunde - gennemsnit seneste 24 mdr. (%)" align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
+                    <SortTh col="name"      label={t('Kundenavn')}                    title={t('Virksomhedens navn')}                                                    align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="20%"/>
+                    <SortTh col="dept"      label={t('Afdeling')}                     title={t('Ansvarlig afdeling')}                                                    align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
+                    <SortTh col="branche"   label={t('Branche')}                      title={t('Branche / sektor')}                                                      align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
+                    <SortTh col="rev12"     label={t('Omsætning') + " " + selectedYear} title={t('Samlet omsætning') + " " + selectedYear + " (" + t('kr.') + ")"}      align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
+                    <SortTh col="revPct"    label={t('Oms. %')}                       title={t('Omsætningsvækst i % - seneste 12 mdr. ift. foregående 12 mdr.')}        align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
+                    <SortTh col="ebitda12"  label={"EBITDA " + selectedYear}          title={"EBITDA " + selectedYear + " (" + t('kr.') + ")"}                          align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
+                    <SortTh col="ebitdaPct" label="EBITDA %"                          title={t('EBITDA-ændring i % - seneste 12 mdr. ift. foregående 12 mdr.')}         align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
+                    <SortTh col="equity"    label={t('Egenkapital') + " " + selectedYear} title={t('Bogført egenkapital') + " " + selectedYear + " (" + t('kr.') + ")"} align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
+                    <SortTh col="bigCust"   label={t('Største kunde')}                title={t('Andel af omsætning fra største enkelt kunde - gennemsnit seneste 24 mdr. (%)')} align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
                   </tr>
                 </thead>
                 <tbody>
@@ -649,7 +649,7 @@ function PortfolioAnalyse({ go }) {
                           <span className="mono" style={{ color: "var(--c-text-3)", fontSize: 11, marginLeft: 6 }}>({r.cvr})</span>
                         </td>
                         <td style={{ ...td, color: "var(--c-text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }}>{r.dept}</td>
-                        <td title={r.branche} style={{ ...td, color: "var(--c-text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }}>{r.branche}</td>
+                        <td title={t(r.branche)} style={{ ...td, color: "var(--c-text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }}>{t(r.branche)}</td>
                         <td className="mono num" style={{ ...td, textAlign: "right" }}>{fmt(r.rev12)}</td>
                         <td style={{ ...td, textAlign: "right" }}>{pct(r.revPct)}</td>
                         <td className="mono num" style={{ ...td, textAlign: "right", color: r.ebitda12 < 0 ? "var(--c-danger)" : "inherit", fontWeight: r.ebitda12 < 0 ? 600 : 400 }}>{fmt(r.ebitda12)}</td>
@@ -662,7 +662,7 @@ function PortfolioAnalyse({ go }) {
                 </tbody>
               </table>
               <div style={{ padding: "10px 16px", borderTop: "1px solid var(--c-line-2)", fontSize: 12, color: "var(--c-text-3)" }}>
-                Viser {results.length} af {ANALYSE_CASES.length} kunder
+                {t('Viser')} {results.length} {t('af')} {ANALYSE_CASES.length} {t('kunder')}
               </div>
             </div>
           )}

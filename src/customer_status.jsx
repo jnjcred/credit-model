@@ -106,16 +106,16 @@ function WSCustomerStatus() {
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>{co.name}</div>
             <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 3, display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
-              <span>Sagsnr. 2026-0184</span>
+              <span>{t('Sagsnr.')} 2026-0184</span>
               <span style={{ color: 'var(--c-line-strong)' }}>·</span>
-              <span>Ansvarlig: Mette Larsen</span>
+              <span>{t('Ansvarlig')}: Mette Larsen</span>
             </div>
           </div>
         </div>
 
         {/* ── Progress timeline ── */}
         <div className="card" style={{ marginBottom: 20, padding: '28px 32px' }}>
-          <div className="label-mini" style={{ marginBottom: 20 }}>Behandlingsstatus</div>
+          <div className="label-mini" style={{ marginBottom: 20 }}>{t('Behandlingsstatus')}</div>
           <div style={{ display: 'flex', alignItems: 'flex-start' }}>
             {stages.map((s, i) => (
               <div key={s.k} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
@@ -126,8 +126,8 @@ function WSCustomerStatus() {
                   {s.done ? <I.Check size={13}/> : s.active ? <I.Refresh size={12}/> : <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--c-line-strong)' }}/>}
                 </div>
                 <div style={{ marginTop: 10, textAlign: 'center', padding: '0 4px' }}>
-                  <div style={{ fontSize: 12, fontWeight: s.active ? 700 : 500, color: s.done ? 'var(--c-ink)' : s.active ? 'var(--c-primary)' : 'var(--c-text-3)' }}>{s.label}</div>
-                  <div style={{ fontSize: 10.5, color: s.active ? 'var(--c-primary)' : 'var(--c-text-4)', marginTop: 2 }}>{s.date}</div>
+                  <div style={{ fontSize: 12, fontWeight: s.active ? 700 : 500, color: s.done ? 'var(--c-ink)' : s.active ? 'var(--c-primary)' : 'var(--c-text-3)' }}>{t(s.label)}</div>
+                  <div style={{ fontSize: 10.5, color: s.active ? 'var(--c-primary)' : 'var(--c-text-4)', marginTop: 2 }}>{t(s.date)}</div>
                 </div>
               </div>
             ))}
@@ -137,9 +137,9 @@ function WSCustomerStatus() {
         {/* ── Questions / Dialog ── */}
         <div className="card" style={{ marginBottom: 20 }}>
           <div className="card-head" style={{ borderBottom: '1px solid var(--c-line-2)' }}>
-            <div className="card-title">Dialog med kreditafdelingen</div>
+            <div className="card-title">{t('Dialog med kreditafdelingen')}</div>
             <button className="btn btn-sm btn-ghost" onClick={() => setAddingQuestion(v => !v)}>
-              <I.Plus size={12}/> Stil et spørgsmål
+              <I.Plus size={12}/> {t('Stil et spørgsmål')}
             </button>
           </div>
 
@@ -150,11 +150,11 @@ function WSCustomerStatus() {
                 value={newQuestion}
                 onChange={e => setNewQuestion(e.target.value)}
                 rows={3}
-                placeholder="Skriv dit spørgsmål til kreditafdelingen..."
+                placeholder={t('Skriv dit spørgsmål til kreditafdelingen...')}
                 style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--c-line-strong)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.55, color: 'var(--c-text)', outline: 'none', boxSizing: 'border-box', background: '#fff' }}
               />
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
-                <button className="btn btn-sm btn-ghost" onClick={() => { setAddingQuestion(false); setNewQuestion(''); }}>Annullér</button>
+                <button className="btn btn-sm btn-ghost" onClick={() => { setAddingQuestion(false); setNewQuestion(''); }}>{t('Annullér')}</button>
                 <button
                   className="btn btn-sm btn-primary"
                   disabled={!newQuestion.trim()}
@@ -166,7 +166,7 @@ function WSCustomerStatus() {
                   }}
                   style={newQuestion.trim() ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.45, cursor: 'not-allowed' }}
                 >
-                  <I.Send size={12}/> Send
+                  <I.Send size={12}/> {t('Send')}
                 </button>
               </div>
             </div>
@@ -175,7 +175,7 @@ function WSCustomerStatus() {
           <div>
             {customerQuestions.length === 0 ? (
               <div style={{ padding: '28px 20px', textAlign: 'center', color: 'var(--c-text-3)', fontSize: 13 }}>
-                Ingen spørgsmål på nuværende tidspunkt
+                {t('Ingen spørgsmål på nuværende tidspunkt')}
               </div>
             ) : (
               customerQuestions.map((q, i) => (
@@ -184,8 +184,8 @@ function WSCustomerStatus() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                       <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>Anders Nielsen</span>
-                      <span style={{ fontSize: 11, color: 'var(--c-text-4)' }}>{q.date}</span>
-                      <span style={{ fontSize: 11, color: 'var(--c-success)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Check size={10}/> Sendt</span>
+                      <span style={{ fontSize: 11, color: 'var(--c-text-4)' }}>{t(q.date)}</span>
+                      <span style={{ fontSize: 11, color: 'var(--c-success)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Check size={10}/> {t('Sendt')}</span>
                     </div>
                     <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.65 }}>{q.text}</div>
                   </div>
@@ -199,11 +199,11 @@ function WSCustomerStatus() {
         <div className="card">
           <div className="card-head" style={{ borderBottom: '1px solid var(--c-line-2)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div className="card-title">Dokumenter</div>
-              <span style={{ fontSize: 12, color: 'var(--c-text-3)' }}>{docsOk}/{docs.length} modtaget</span>
+              <div className="card-title">{t('Dokumenter')}</div>
+              <span style={{ fontSize: 12, color: 'var(--c-text-3)' }}>{docsOk}/{docs.length} {t('modtaget')}</span>
             </div>
             <button className="btn btn-sm btn-ghost" onClick={() => setUploadOpen(o => !o)}>
-              <I.Upload size={12}/> Upload nyt dokument
+              <I.Upload size={12}/> {t('Upload nyt dokument')}
             </button>
           </div>
 
@@ -223,8 +223,8 @@ function WSCustomerStatus() {
                 }}
               >
                 <I.Upload size={20} style={{ color: 'var(--c-text-3)', marginBottom: 8 }}/>
-                <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>Træk filer hertil - eller klik for at vælge</div>
-                <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 4 }}>PDF, Excel, Word · max 50 MB pr. fil</div>
+                <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>{t('Træk filer hertil - eller klik for at vælge')}</div>
+                <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 4 }}>{t('PDF, Excel, Word · max 50 MB pr. fil')}</div>
               </div>
             </div>
           )}
@@ -244,12 +244,12 @@ function WSCustomerStatus() {
                   : <I.AlertCircle size={13} style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
                 }
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 500, color: d.status === 'ok' ? 'var(--c-text)' : d.status === 'pending' ? 'var(--c-warn)' : 'var(--c-text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text-4)', marginTop: 1 }}>{d.note}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 500, color: d.status === 'ok' ? 'var(--c-text)' : d.status === 'pending' ? 'var(--c-warn)' : 'var(--c-text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t(d.name)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--c-text-4)', marginTop: 1 }}>{t(d.note)}</div>
                 </div>
                 {d.status !== 'ok' && (
                   <button className="btn btn-sm btn-ghost" style={{ fontSize: 11.5 }} onClick={() => handleDrop(d.name)}>
-                    <I.Upload size={11}/> Upload
+                    <I.Upload size={11}/> {t('Upload')}
                   </button>
                 )}
               </div>

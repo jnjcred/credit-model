@@ -26,20 +26,20 @@ function WorkspaceShell({ tab, go, openMemo, caseId }) {
   }, [tab]);
 
   const tabs = [
-    { k: "overview", label: "Overblik", ic: <I.Layout className="ic"/> },
-    { k: "financials", label: "Finansielt overblik", ic: <I.BarChart className="ic"/> },
-    { k: "documents", label: "Dokumenter", ic: <I.FileText className="ic"/>, badge: "12" },
-    { k: "memo", label: "Credit memo", ic: <I.File className="ic"/> },
+    { k: "overview", label: t("Overblik"), ic: <I.Layout className="ic"/> },
+    { k: "financials", label: t("Finansielt overblik"), ic: <I.BarChart className="ic"/> },
+    { k: "documents", label: t("Dokumenter"), ic: <I.FileText className="ic"/>, badge: "12" },
+    { k: "memo", label: t("Credit memo"), ic: <I.File className="ic"/> },
   ];
 
   return (
     <>
       <Topbar
-        crumbs={[{ label: "Mine opgaver", onClick: () => go("cases") }, co.name]}
+        crumbs={[{ label: t("Mine opgaver"), onClick: () => go("cases") }, co.name]}
         right={
           <>
-            <button className="btn btn-sm btn-ghost"><I.Share className="ic"/> Del</button>
-            <button className="btn btn-sm" onClick={() => go("workspace:" + caseId + ":memo")}><I.FileText className="ic"/> Credit memo</button>
+            <button className="btn btn-sm btn-ghost"><I.Share className="ic"/> {t('Del')}</button>
+            <button className="btn btn-sm" onClick={() => go("workspace:" + caseId + ":memo")}><I.FileText className="ic"/> {t('Credit memo')}</button>
           </>
         }
       />
@@ -53,7 +53,7 @@ function WorkspaceShell({ tab, go, openMemo, caseId }) {
               {tab === "indstil" && indstillet ? statusPill("Indstillet") : statusPill(co.status)}
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2 }}>
-              <span className="mono">Sagsnr. {caseData.caseNr}</span>
+              <span className="mono">{t('Sagsnr.')} {caseData.caseNr}</span>
               <span style={{ margin: '0 6px', color: 'var(--c-line-strong)' }}>·</span>
               <span className="mono">CVR {co.cvr}</span>
             </div>
@@ -75,13 +75,13 @@ function WorkspaceShell({ tab, go, openMemo, caseId }) {
               }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-primary)'; e.currentTarget.style.color = 'var(--c-primary)'; e.currentTarget.style.background = 'rgba(59,130,246,0.05)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-line-strong)'; e.currentTarget.style.color = 'var(--c-text-3)'; e.currentTarget.style.background = 'transparent'; }}
-              title="Se hvad kunden ser"
+              title={t("Se hvad kunden ser")}
             >
-              <I.Eye size={12}/> Kundeside
+              <I.Eye size={12}/> {t('Kundeside')}
             </button>
             {tab === "indstil" && indstillet
-              ? <button className="btn btn-sm" style={{ background: 'var(--c-success)', borderColor: 'var(--c-success)', color: '#fff' }}><I.Check className="ic"/> Indstillet</button>
-              : <button className="btn btn-sm btn-primary" onClick={() => setConfirmIndstil(true)}>Indstil kunde <I.ArrowRight className="ic"/></button>
+              ? <button className="btn btn-sm" style={{ background: 'var(--c-success)', borderColor: 'var(--c-success)', color: '#fff' }}><I.Check className="ic"/> {t('Indstillet')}</button>
+              : <button className="btn btn-sm btn-primary" onClick={() => setConfirmIndstil(true)}>{t('Indstil kunde')} <I.ArrowRight className="ic"/></button>
             }
           </div>
         </div>
@@ -140,15 +140,15 @@ function WorkspaceShell({ tab, go, openMemo, caseId }) {
               padding: '10px 20px', background: '#1a1d22', color: '#fff',
             }}
           >
-            <span style={{ fontSize: 10.5, letterSpacing: '0.07em', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Forhåndsvisning</span>
-            <span style={{ fontSize: 11.5, padding: '2px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 4, color: 'rgba(255,255,255,0.6)' }}>Hvad kunden ser</span>
+            <span style={{ fontSize: 10.5, letterSpacing: '0.07em', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>{t('Forhåndsvisning')}</span>
+            <span style={{ fontSize: 11.5, padding: '2px 8px', background: 'rgba(255,255,255,0.1)', borderRadius: 4, color: 'rgba(255,255,255,0.6)' }}>{t('Hvad kunden ser')}</span>
             <div style={{ flex: 1 }}/>
-            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{co.name} · Sagsnr. {caseData.caseNr}</span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>{co.name} · {t('Sagsnr.')} {caseData.caseNr}</span>
             <button
               onClick={() => setShowCustomerStatus(false)}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit' }}
             >
-              <I.X size={12}/> Luk
+              <I.X size={12}/> {t('Luk')}
             </button>
           </div>
           {/* Content */}
@@ -174,17 +174,17 @@ function WorkspaceShell({ tab, go, openMemo, caseId }) {
               boxShadow: 'var(--shadow-lg)', padding: '28px 28px 24px',
             }}
           >
-            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-ink)', marginBottom: 8 }}>Er du sikker?</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--c-ink)', marginBottom: 8 }}>{t('Er du sikker?')}</div>
             <div style={{ fontSize: 13.5, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 24 }}>
-              Du er ved at indstille kunden til kreditkomitéen. Vil du fortsætte?
+              {t('Du er ved at indstille kunden til kreditkomitéen. Vil du fortsætte?')}
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button className="btn btn-sm" onClick={() => setConfirmIndstil(false)}>Annullér</button>
+              <button className="btn btn-sm" onClick={() => setConfirmIndstil(false)}>{t('Annullér')}</button>
               <button
                 className="btn btn-sm btn-primary"
                 onClick={() => { setConfirmIndstil(false); go("workspace:" + caseId + ":indstil"); }}
               >
-                Ja, indstil kunde
+                {t('Ja, indstil kunde')}
               </button>
             </div>
           </div>
@@ -245,8 +245,8 @@ function WSOverview({ go, caseId }) {
       {/* Declined */}
       {stage === 'declined' && (
         <>
-          <SectionLead kind="done" eyebrow="Status" title="Sagen er markeret til afslag"
-            sub="Sagen er stoppet her. Skriv eller redigér din afslagsnote nedenfor."/>
+          <SectionLead kind="done" eyebrow={t("Status")} title={t("Sagen er markeret til afslag")}
+            sub={t("Sagen er stoppet her. Skriv eller redigér din afslagsnote nedenfor.")}/>
           <DeclinedBlock onReopen={() => setStage('review-public')}/>
         </>
       )}
@@ -256,9 +256,9 @@ function WSOverview({ go, caseId }) {
         <div ref={materialRef} style={{ scrollMarginTop: 16 }}>
           <SectionLead
             kind="todo"
-            eyebrow="Næste skridt"
-            title="Vælg yderligere materiale"
-            sub="Vælg det materiale og de adgange, kunden skal levere for at fortsætte sagen."
+            eyebrow={t("Næste skridt")}
+            title={t("Vælg yderligere materiale")}
+            sub={t("Vælg det materiale og de adgange, kunden skal levere for at fortsætte sagen.")}
           />
           <MaterialSelector
             onCreateRequest={() => setStage('awaiting-customer')}
@@ -272,11 +272,11 @@ function WSOverview({ go, caseId }) {
         <>
           <SectionLead
             kind="todo"
-            eyebrow={stage === 'ready' ? 'Klar' : 'Til dig nu'}
-            title={stage === 'ready' ? 'Klar til indstilling' : 'Udestående fra kunden'}
+            eyebrow={stage === 'ready' ? t('Klar') : t('Til dig nu')}
+            title={stage === 'ready' ? t('Klar til indstilling') : t('Udestående fra kunden')}
             sub={stage === 'ready'
-              ? 'Alle påkrævede punkter er modtaget. Du kan færdiggøre indstillingen.'
-              : 'Materiale og afklaringer, som kunden mangler at sende.'}
+              ? t('Alle påkrævede punkter er modtaget. Du kan færdiggøre indstillingen.')
+              : t('Materiale og afklaringer, som kunden mangler at sende.')}
           />
           <CustomerStatusBlock stage={stage} go={go} onMarkReady={() => setStage('ready')}/>
         </>
@@ -286,9 +286,9 @@ function WSOverview({ go, caseId }) {
       {stage === 'ready-skip' && (
         <SectionLead
           kind="todo"
-          eyebrow="Klar"
-          title="Klar til indstilling"
-          sub="Du har valgt at indstille direkte. Du kan fortsætte til memo og indstillingsbrev."
+          eyebrow={t("Klar")}
+          title={t("Klar til indstilling")}
+          sub={t("Du har valgt at indstille direkte. Du kan fortsætte til memo og indstillingsbrev.")}
         />
       )}
 
@@ -340,72 +340,72 @@ function StageHero({ stage, setStage, go, caseId }) {
   };
 
   const PROCESS = [
-    { k: "public",   label: "Offentligt data",       sub: "Indsamlet automatisk" },
-    { k: "decision", label: "Vurdering af offentligt data", sub: "Godkend eller afslå sagen" },
-    { k: "material", label: "Materialevalg",        sub: stage === 'ready-skip' ? "Markeret færdig" : "Vælg hvad kunden skal sende" },
-    { k: "customer", label: "Kundeinput",           sub: (() => {
-        if (stage === 'ready-skip') return "Sprunget over";
+    { k: "public",   label: t("Offentligt data"),       sub: t("Indsamlet automatisk") },
+    { k: "decision", label: t("Vurdering af offentligt data"), sub: t("Godkend eller afslå sagen") },
+    { k: "material", label: t("Materialevalg"),        sub: stage === 'ready-skip' ? t("Markeret færdig") : t("Vælg hvad kunden skal sende") },
+    { k: "customer", label: t("Kundeinput"),           sub: (() => {
+        if (stage === 'ready-skip') return t("Sprunget over");
         if (stage === 'awaiting-customer') {
           try {
             const raw = localStorage.getItem(MATERIAL_SELECTION_KEY);
             const s = raw ? { ...DEFAULT_MATERIAL_SELECTION, ...JSON.parse(raw) } : { ...DEFAULT_MATERIAL_SELECTION };
             const pending = MATERIAL_GROUPS.reduce((acc, g) => acc + g.items.filter(it => s[it.id]).length, 0);
-            return `${pending} punkter afventer`;
-          } catch (e) { return "Afventer kundens materiale"; }
+            return pending + ' ' + t('punkter afventer');
+          } catch (e) { return t("Afventer kundens materiale"); }
         }
-        return "Afventer kundens materiale";
+        return t("Afventer kundens materiale");
       })() },
-    { k: "memo",     label: "Klar til indstilling", sub: "Kreditmemo til komité" },
+    { k: "memo",     label: t("Klar til indstilling"), sub: t("Kreditmemo til komité") },
   ].map(s => ({ ...s, status: stepState(s.k) }));
 
   // Stage-aware narrative + actions
   let eyebrow, title, body, actions, publicFacts = null, progressBar = null;
   if (stage === 'declined') {
-    eyebrow = "Status";
-    title = "Sagen er stoppet";
-    body = "Du har valgt at give afslag på det offentlige grundlag. Du kan genoptage sagen, hvis du har skiftet vurdering.";
+    eyebrow = t("Status");
+    title = t("Sagen er stoppet");
+    body = t("Du har valgt at give afslag på det offentlige grundlag. Du kan genoptage sagen, hvis du har skiftet vurdering.");
     actions = (
-      <button className="btn" onClick={() => setStage('review-public')}>Genoptag sag</button>
+      <button className="btn" onClick={() => setStage('review-public')}>{t('Genoptag sag')}</button>
     );
   } else if (stage === 'review-public') {
-    eyebrow = "Sagens fremgang";
-    title = "Offentligt data indsamlet";
-    body = "Vi har hentet tilgængelige offentlige data, så du kan vurdere om sagen skal fortsætte.";
+    eyebrow = t("Sagens fremgang");
+    title = t("Offentligt data indsamlet");
+    body = t("Vi har hentet tilgængelige offentlige data, så du kan vurdere om sagen skal fortsætte.");
     actions = (
       <>
         <button className="btn btn-primary" onClick={() => setStage('material-selection')}>
-          Indhent mere materiale <I.ArrowRight className="ic"/>
+          {t('Indhent mere materiale')} <I.ArrowRight className="ic"/>
         </button>
         <button className="btn" onClick={() => go && go("workspace:" + caseId + ":financials")}>
-          <I.BarChart className="ic"/> Se materiale
+          <I.BarChart className="ic"/> {t('Se materiale')}
         </button>
-        <button className="btn btn-danger" style={{ color: 'var(--c-success)', borderColor: 'var(--c-success)' }} onClick={() => setStage('ready-skip')}>Indstil kunde</button>
-        <button className="btn btn-danger" onClick={() => setStage('declined')}>Giv afslag</button>
+        <button className="btn btn-danger" style={{ color: 'var(--c-success)', borderColor: 'var(--c-success)' }} onClick={() => setStage('ready-skip')}>{t('Indstil kunde')}</button>
+        <button className="btn btn-danger" onClick={() => setStage('declined')}>{t('Giv afslag')}</button>
       </>
     );
   } else if (stage === 'ready-skip') {
-    eyebrow = "Klar";
-    title = "Klar til indstilling";
-    body = "Du har valgt at gå direkte til indstilling. Materialevalg er markeret færdig og Kundeinput er sprunget over.";
+    eyebrow = t("Klar");
+    title = t("Klar til indstilling");
+    body = t("Du har valgt at gå direkte til indstilling. Materialevalg er markeret færdig og Kundeinput er sprunget over.");
     actions = (
       <>
         <button className="btn btn-primary" onClick={() => go && go("workspace:" + caseId + ":memo")}>
-          Fortsæt til memo <I.ArrowRight className="ic"/>
+          {t('Fortsæt til memo')} <I.ArrowRight className="ic"/>
         </button>
-        <button className="btn" onClick={() => setStage('review-public')}>Tilbage</button>
+        <button className="btn" onClick={() => setStage('review-public')}>{t('Tilbage')}</button>
       </>
     );
   } else if (stage === 'material-selection') {
-    eyebrow = "Sagens fremgang";
-    title = "Vælg hvad kunden skal sende";
-    body = "Marker det materiale og de adgange, kunden skal levere, og opret en samlet kundeanmodning.";
+    eyebrow = t("Sagens fremgang");
+    title = t("Vælg hvad kunden skal sende");
+    body = t("Marker det materiale og de adgange, kunden skal levere, og opret en samlet kundeanmodning.");
     actions = (
-      <button className="btn" onClick={() => setStage('review-public')}>Tilbage til beslutning</button>
+      <button className="btn" onClick={() => setStage('review-public')}>{t('Tilbage til beslutning')}</button>
     );
   } else if (stage === 'awaiting-customer') {
-    eyebrow = "Sagens fremgang";
-    title = "Anmodning sendt - afventer kunden";
-    body = "Kunden har modtaget anmodningen. Status opdateres efterhånden som materiale uploades eller systemer kobles til.";
+    eyebrow = t("Sagens fremgang");
+    title = t("Anmodning sendt - afventer kunden");
+    body = t("Kunden har modtaget anmodningen. Status opdateres efterhånden som materiale uploades eller systemer kobles til.");
     (() => {
       try {
         const raw = localStorage.getItem(MATERIAL_SELECTION_KEY);
@@ -418,20 +418,20 @@ function StageHero({ stage, setStage, go, caseId }) {
     })();
     actions = (
       <>
-        <button className="btn btn-primary" onClick={() => setStage('ready')}>Markér som modtaget</button>
-        <button className="btn" onClick={() => setStage('material-selection')}>Justér anmodning</button>
+        <button className="btn btn-primary" onClick={() => setStage('ready')}>{t('Markér som modtaget')}</button>
+        <button className="btn" onClick={() => setStage('material-selection')}>{t('Justér anmodning')}</button>
       </>
     );
   } else { // ready
-    eyebrow = "Klar";
-    title = "Datagrundlag komplet";
-    body = "Alle påkrævede punkter er modtaget. Du kan fortsætte til kreditmemo.";
+    eyebrow = t("Klar");
+    title = t("Datagrundlag komplet");
+    body = t("Alle påkrævede punkter er modtaget. Du kan fortsætte til kreditmemo.");
     actions = (
       <>
         <button className="btn btn-primary" onClick={() => go && go("workspace:" + caseId + ":memo")}>
-          Fortsæt til memo <I.ArrowRight className="ic"/>
+          {t('Fortsæt til memo')} <I.ArrowRight className="ic"/>
         </button>
-        <button className="btn" onClick={() => setStage('awaiting-customer')}>Tilbage</button>
+        <button className="btn" onClick={() => setStage('awaiting-customer')}>{t('Tilbage')}</button>
       </>
     );
   }
@@ -465,7 +465,7 @@ function StageHero({ stage, setStage, go, caseId }) {
           {progressBar && (
             <div style={{ marginTop: 12, maxWidth: 360 }}>
               <div style={{ fontSize: 12, color: 'var(--c-text-2)', marginBottom: 5, fontWeight: 500 }}>
-                {progressBar.received} af {progressBar.total} punkter modtaget
+                {progressBar.received} {t('af')} {progressBar.total} {t('punkter modtaget')}
               </div>
               <div style={{ height: 6, borderRadius: 999, background: 'var(--c-line-strong)', overflow: 'hidden' }}>
                 <div style={{
@@ -674,11 +674,11 @@ function BudgetChart({ data }) {
       {/* Legend */}
       <g transform={`translate(${w - 170}, ${pad.t - 6})`}>
         <rect x="0" y="0" width="10" height="10" fill="#e8e9ec"/>
-        <text x="14" y="9" fill="var(--c-text-2)" fontSize="10">Budget</text>
+        <text x="14" y="9" fill="var(--c-text-2)" fontSize="10">{t('Budget')}</text>
         <rect x="60" y="0" width="10" height="10" fill="var(--c-ink)"/>
-        <text x="74" y="9" fill="var(--c-text-2)" fontSize="10">Realiseret</text>
+        <text x="74" y="9" fill="var(--c-text-2)" fontSize="10">{t('Realiseret')}</text>
         <circle cx="138" cy="5" r="3" fill="var(--c-warn)"/>
-        <text x="146" y="9" fill="var(--c-text-2)" fontSize="10">Markering</text>
+        <text x="146" y="9" fill="var(--c-text-2)" fontSize="10">{t('Markering')}</text>
       </g>
     </svg>
   );
@@ -700,7 +700,7 @@ function StamoplysningerCard() {
     setTimeout(() => setCopied(c => (c === key ? null : c)), 1400);
   };
 
-  const NA = <span style={{ color: 'var(--c-text-3)', fontStyle: 'italic', fontWeight: 400 }}>Ikke oplyst</span>;
+  const NA = <span style={{ color: 'var(--c-text-3)', fontStyle: 'italic', fontWeight: 400 }}>{t('Ikke oplyst')}</span>;
   const present = (val) => val != null && val !== "" && val !== "-";
   const v = (val) => (present(val) ? val : NA);
 
@@ -712,7 +712,7 @@ function StamoplysningerCard() {
     <button
       type="button"
       aria-label={label}
-      title={copied === k ? "Kopieret" : label}
+      title={copied === k ? t("Kopieret") : label}
       onClick={() => copy(k, text)}
       style={{
         marginLeft: 4,
@@ -733,15 +733,15 @@ function StamoplysningerCard() {
 
   // Full grid for expanded view
   const fields = [
-    { label: "Virksomhedsnavn", value: v(co.name) },
-    { label: "CVR-nr.", value: v(co.cvr), mono: true },
-    { label: "Juridisk form", value: v(co.legalForm) },
-    { label: "Branche", value: v(co.industry) },
-    { label: "Stiftelsesdato", value: v(co.founded) },
-    { label: "Antal ansatte", value: present(co.employees) ? `${co.employees}` : NA },
-    { label: "Adresse", value: v(co.address) },
-    { label: "Postnummer/by", value: v(co.postal) },
-    { label: "Land", value: v(co.country) },
+    { label: t("Virksomhedsnavn"), value: v(co.name) },
+    { label: t("CVR-nr."), value: v(co.cvr), mono: true },
+    { label: t("Juridisk form"), value: v(co.legalForm) },
+    { label: t("Branche"), value: v(co.industry) },
+    { label: t("Stiftelsesdato"), value: v(co.founded) },
+    { label: t("Antal ansatte"), value: present(co.employees) ? `${co.employees}` : NA },
+    { label: t("Adresse"), value: v(co.address) },
+    { label: t("Postnummer/by"), value: v(co.postal) },
+    { label: t("Land"), value: v(co.country) },
   ];
 
   return (
@@ -753,23 +753,23 @@ function StamoplysningerCard() {
         borderBottom: '1px solid var(--c-line-2)',
         minHeight: 36,
       }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>Stamoplysninger</div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Stamoplysninger')}</div>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 4,
           fontSize: 10.5, padding: '1px 7px', borderRadius: 999,
           background: 'var(--c-primary-bg)', color: 'var(--c-primary)',
           fontWeight: 500, whiteSpace: 'nowrap',
         }}>
-          <I.Database size={9}/> {co.masterDataSource || 'CVR-registret'}
+          <I.Database size={9}/> {t(co.masterDataSource || 'CVR-registret')}
         </span>
         <div style={{ flex: 1 }}/>
         <span style={{ fontSize: 11, color: 'var(--c-text-3)', whiteSpace: 'nowrap' }}>
-          Opdateret {co.masterDataUpdated || '-'}
+          {t('Opdateret')} {co.masterDataUpdated || '-'}
         </span>
         <button
           type="button"
           aria-expanded={expanded}
-          aria-label={expanded ? 'Skjul flere oplysninger' : 'Vis flere oplysninger'}
+          aria-label={expanded ? t('Skjul flere oplysninger') : t('Vis flere oplysninger')}
           onClick={() => setExpanded(e => !e)}
           style={{
             width: 22, height: 22, padding: 0,
@@ -787,17 +787,17 @@ function StamoplysningerCard() {
           <b style={{ fontWeight: 600 }}>{v(co.name)}</b>
           <Sep/>
           <span className="mono">CVR {present(co.cvr) ? cvrPlain : NA}</span>
-          {present(co.cvr) && <InlineCopy k="cvr" text={cvrPlain} label="Kopiér CVR-nummer"/>}
+          {present(co.cvr) && <InlineCopy k="cvr" text={cvrPlain} label={t("Kopiér CVR-nummer")}/>}
         </div>
         <div style={{ fontSize: 12, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.5 }}>
           <span>{v(co.industry)}</span>
           <Sep/>
-          <span>{present(co.employees) ? `${co.employees} ansatte` : NA}</span>
+          <span>{present(co.employees) ? co.employees + ' ' + t('ansatte') : NA}</span>
           <Sep/>
-          <span>Stiftet {v(co.founded)}</span>
+          <span>{t('Stiftet')} {v(co.founded)}</span>
           <Sep/>
           <span>{[co.address, co.postal].filter(present).join(', ') || NA}</span>
-          {present(co.address) && <InlineCopy k="addr" text={fullAddress} label="Kopiér adresse"/>}
+          {present(co.address) && <InlineCopy k="addr" text={fullAddress} label={t("Kopiér adresse")}/>}
         </div>
       </div>
 
@@ -841,7 +841,7 @@ function StamoplysningerCard() {
         background: 'var(--c-surface-2)',
         fontSize: 11, color: 'var(--c-text-3)',
       }}>
-        <span>Data hentes automatisk fra {co.masterDataSource || 'CVR-registret'}</span>
+        <span>{t('Data hentes automatisk fra')} {t(co.masterDataSource || 'CVR-registret')}</span>
         {co.cvrUrl && (
           <a
             href={co.cvrUrl}
@@ -854,7 +854,7 @@ function StamoplysningerCard() {
             onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
             onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
           >
-            Åbn i CVR <I.Link size={10}/>
+            {t('Åbn i CVR')} <I.Link size={10}/>
           </a>
         )}
       </div>
@@ -886,7 +886,7 @@ function GroupHeader({ label, helper, count }) {
   );
 }
 
-function DoneCheck({ label = "Indsamlet" }) {
+function DoneCheck({ label = t("Indsamlet") }) {
   return (
     <span
       role="img"
@@ -923,8 +923,8 @@ function AutoSourceCard({ src, what, last }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>{src}</div>
-          <span aria-label="Automatisk indsamlet" style={{
+          <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>{t(src)}</div>
+          <span aria-label={t("Automatisk indsamlet")} style={{
             display: 'inline-flex', alignItems: 'center', gap: 3,
             fontSize: 10, fontWeight: 500, color: 'var(--c-primary)',
             background: 'var(--c-primary-bg)', border: '1px solid var(--c-primary-border)',
@@ -933,10 +933,10 @@ function AutoSourceCard({ src, what, last }) {
             <I.Spark size={9}/> Auto
           </span>
         </div>
-        <div style={{ fontSize: 11.5, color: 'var(--c-text-2)', marginTop: 2, lineHeight: 1.4 }}>{what}</div>
-        <div style={{ fontSize: 10.5, color: 'var(--c-text-3)', marginTop: 5 }}>Indsamlet automatisk · {last}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--c-text-2)', marginTop: 2, lineHeight: 1.4 }}>{t(what)}</div>
+        <div style={{ fontSize: 10.5, color: 'var(--c-text-3)', marginTop: 5 }}>{t('Indsamlet automatisk')} · {t(last)}</div>
       </div>
-      <DoneCheck label="Indsamlet"/>
+      <DoneCheck label={t("Indsamlet")}/>
     </div>
   );
 }
@@ -963,21 +963,21 @@ function CustomerTypeCard({ type, what, count, last }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>
-            {type}{count > 1 ? ` (${count})` : ''}
+            {t(type)}{count > 1 ? ` (${count})` : ''}
           </div>
-          <span aria-label="Modtaget fra kunden" style={{
+          <span aria-label={t("Modtaget fra kunden")} style={{
             display: 'inline-flex', alignItems: 'center', gap: 3,
             fontSize: 10, fontWeight: 500, color: 'var(--c-text-2)',
             background: 'var(--c-surface-2)', border: '1px solid var(--c-line)',
             padding: '0 6px', borderRadius: 999, lineHeight: 1.6,
           }}>
-            <I.Upload size={9}/> Kunde
+            <I.Upload size={9}/> {t('Kunde')}
           </span>
         </div>
-        <div style={{ fontSize: 11.5, color: 'var(--c-text-2)', marginTop: 2, lineHeight: 1.4 }}>{what}</div>
-        <div style={{ fontSize: 10.5, color: 'var(--c-text-3)', marginTop: 5 }}>Modtaget · {last}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--c-text-2)', marginTop: 2, lineHeight: 1.4 }}>{t(what)}</div>
+        <div style={{ fontSize: 10.5, color: 'var(--c-text-3)', marginTop: 5 }}>{t('Modtaget')} · {t(last)}</div>
       </div>
-      <DoneCheck label="Modtaget"/>
+      <DoneCheck label={t("Modtaget")}/>
     </div>
   );
 }
@@ -987,11 +987,11 @@ function CollectedDataSection({ go }) {
   return (
     <ExpandSection
       icon={<I.Check size={15}/>}
-      title="Offentlige data klar"
+      title={t("Offentlige data klar")}
       tone="success"
       summary={
         <div style={{ fontSize: 12, color: 'var(--c-text-3)' }}>
-          <b style={{ color: 'var(--c-text-2)', fontWeight: 500 }}>{autoCount} offentlige kilder indsamlet automatisk</b>
+          <b style={{ color: 'var(--c-text-2)', fontWeight: 500 }}>{autoCount} {t('offentlige kilder indsamlet automatisk')}</b>
         </div>
       }
       defaultOpen
@@ -1111,14 +1111,14 @@ function MissingSection({ go }) {
                 <I.Mail size={13}/>
               </span>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.005em' }}>
-                Kontakt kunden
+                {t('Kontakt kunden')}
               </div>
             </div>
             <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 5, lineHeight: 1.5 }}>
-              Vi har samlet de manglende dokumenter og afklaringer i én anmodning.
+              {t('Vi har samlet de manglende dokumenter og afklaringer i én anmodning.')}
             </div>
             <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 6 }}>
-              9 dokumenter · 2 afklaringer · 1 valgfrit punkt
+              {t('9 dokumenter · 2 afklaringer · 1 valgfrit punkt')}
             </div>
 
             {detailsOpen && (
@@ -1129,8 +1129,8 @@ function MissingSection({ go }) {
                 {CHECKLIST.map(it => (
                   <li key={it.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, fontSize: 13, color: 'var(--c-text)' }}>
                     <span aria-hidden="true" style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--c-text-4)', flexShrink: 0, transform: 'translateY(-2px)' }}/>
-                    <span>{it.label}</span>
-                    {it.optional && <span style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>Valgfri</span>}
+                    <span>{t(it.label)}</span>
+                    {it.optional && <span style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>{t('Valgfri')}</span>}
                   </li>
                 ))}
               </ul>
@@ -1142,7 +1142,7 @@ function MissingSection({ go }) {
               onClick={() => setComposerOpen(true)}
               style={{ width: '100%', justifyContent: 'center' }}
             >
-              Forbered anmodning
+              {t('Forbered anmodning')}
             </button>
             <button
               type="button"
@@ -1153,7 +1153,7 @@ function MissingSection({ go }) {
                 fontSize: 12.5, color: 'var(--c-primary)', fontWeight: 500,
               }}
             >
-              {detailsOpen ? 'Skjul detaljer' : 'Se detaljer'}
+              {detailsOpen ? t('Skjul detaljer') : t('Se detaljer')}
             </button>
           </div>
         </div>
@@ -1173,11 +1173,11 @@ function MissingSection({ go }) {
               <I.User size={13}/>
             </span>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.005em' }}>
-              Tag stilling
+              {t('Tag stilling')}
             </div>
           </div>
           <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 5, lineHeight: 1.5 }}>
-            Punkter der kræver din vurdering, før sagen kan færdiggøres.
+            {t('Punkter der kræver din vurdering, før sagen kan færdiggøres.')}
           </div>
 
           <ol style={{
@@ -1208,15 +1208,15 @@ function MissingSection({ go }) {
                   {i + 1}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>{task.t}</div>
-                  <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 3, lineHeight: 1.5 }}>{task.w}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>{t(task.t)}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 3, lineHeight: 1.5 }}>{t(task.w)}</div>
                 </div>
                 <button
                   className="btn btn-primary"
                   onClick={() => go(task.to)}
                   style={{ width: 180, justifyContent: 'center', flexShrink: 0 }}
                 >
-                  {task.action}
+                  {t(task.action)}
                 </button>
               </li>
             ))}
@@ -1271,14 +1271,14 @@ function CustomerRequestComposer({ docs, questions, onClose }) {
         checked={!!sel[it.id]}
         onChange={() => toggle(it.id)}
         style={{ marginTop: 3, accentColor: 'var(--c-primary)' }}
-        aria-label={it.t}
+        aria-label={t(it.t)}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>{it.t}</span>
-          {it.optional && <span style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>Valgfri</span>}
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>{t(it.t)}</span>
+          {it.optional && <span style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>{t('Valgfri')}</span>}
         </div>
-        <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2, lineHeight: 1.4 }}>{it.w}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2, lineHeight: 1.4 }}>{t(it.w)}</div>
       </div>
     </label>
   );
@@ -1315,24 +1315,24 @@ function CustomerRequestComposer({ docs, questions, onClose }) {
             <I.Mail size={15}/>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div id="composer-title" style={{ fontSize: 15, fontWeight: 600, color: 'var(--c-ink)' }}>Samlet anmodning til kunden</div>
+            <div id="composer-title" style={{ fontSize: 15, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Samlet anmodning til kunden')}</div>
             <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 2 }}>
-              {selectedCount} af {Object.keys(sel).length} punkter inkluderet - du kan fjerne valgfrie punkter inden afsendelse.
+              {selectedCount} {t('af')} {Object.keys(sel).length} {t('punkter inkluderet - du kan fjerne valgfrie punkter inden afsendelse.')}
             </div>
           </div>
-          <button onClick={onClose} className="icon-btn" aria-label="Luk"><I.X size={14}/></button>
+          <button onClick={onClose} className="icon-btn" aria-label={t('Luk')}><I.X size={14}/></button>
         </div>
 
         <div style={{ padding: '16px 20px', overflow: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <section>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>Dokumenter vi mangler</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>{t('Dokumenter vi mangler')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {requiredDocs.map(it => <ItemRow key={it.id} it={it}/>)}
             </div>
           </section>
 
           <section>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>Afklaringer vi mangler</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>{t('Afklaringer vi mangler')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {requiredQs.map(it => <ItemRow key={it.id} it={it}/>)}
             </div>
@@ -1340,7 +1340,7 @@ function CustomerRequestComposer({ docs, questions, onClose }) {
 
           {optionalItems.length > 0 && (
             <section>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>Valgfrit materiale</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>{t('Valgfrit materiale')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {optionalItems.map(it => <ItemRow key={it.id} it={it}/>)}
               </div>
@@ -1348,7 +1348,7 @@ function CustomerRequestComposer({ docs, questions, onClose }) {
           )}
 
           <section>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 6 }}>Besked til kunden (forhåndsudfyldt)</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 6 }}>{t('Besked til kunden (forhåndsudfyldt)')}</div>
             <textarea
               defaultValue={`Hej,\n\nFor at færdiggøre kreditvurderingen mangler vi følgende. Du kan uploade/svare via linket nedenfor.\n\nVenlig hilsen\nMette L. · EIFO`}
               rows={5}
@@ -1363,11 +1363,11 @@ function CustomerRequestComposer({ docs, questions, onClose }) {
         </div>
 
         <div style={{ padding: '12px 20px', borderTop: '1px solid var(--c-line-2)', background: 'var(--c-surface-2)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button className="btn btn-sm btn-ghost" onClick={removeSelected}>Fjern valgte punkter</button>
+          <button className="btn btn-sm btn-ghost" onClick={removeSelected}>{t('Fjern valgte punkter')}</button>
           <div style={{ flex: 1 }}/>
-          <button className="btn btn-sm btn-ghost" onClick={onClose}>Gem som kladde</button>
+          <button className="btn btn-sm btn-ghost" onClick={onClose}>{t('Gem som kladde')}</button>
           <button className="btn btn-sm btn-primary" onClick={onClose} disabled={selectedCount === 0}>
-            <I.Mail size={12}/> Send anmodning ({selectedCount})
+            <I.Mail size={12}/> {t('Send anmodning')} ({selectedCount})
           </button>
         </div>
       </div>
@@ -1383,7 +1383,7 @@ function DecisionBlock({ go }) {
   return (
     <div className="card" style={{ padding: '16px 20px' }}>
       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>
-        Vigtigste observationer fra det offentlige grundlag
+        {t('Vigtigste observationer fra det offentlige grundlag')}
       </div>
       <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {[
@@ -1399,10 +1399,10 @@ function DecisionBlock({ go }) {
         ))}
       </ul>
       <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--c-line-2)', fontSize: 12.5, color: 'var(--c-text-3)' }}>
-        Brug knapperne ovenfor til at gå videre med yderligere materiale fra kunden - eller give afslag på sagen.
+        {t('Brug knapperne ovenfor til at gå videre med yderligere materiale fra kunden - eller give afslag på sagen.')}
         {' '}
         <button onClick={() => go && go("workspace:" + caseId + ":financials")} style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer', color: 'var(--c-primary)', fontSize: 'inherit', fontWeight: 500 }}>
-          Se datagrundlag
+          {t('Se datagrundlag')}
         </button>
       </div>
     </div>
@@ -1423,11 +1423,11 @@ function DeclinedBlock({ onReopen }) {
   };
   return (
     <div className="card" style={{ padding: '16px 20px' }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>Afslagsnote</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>{t('Afslagsnote')}</div>
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        placeholder="Begrund afslaget - fx 'For høj gældsgrad i forhold til EBITDA og uafklarede ejerforhold.'"
+        placeholder={t("Begrund afslaget - fx 'For høj gældsgrad i forhold til EBITDA og uafklarede ejerforhold.'")}
         rows={4}
         style={{
           width: '100%', resize: 'vertical', padding: '10px 12px',
@@ -1438,9 +1438,9 @@ function DeclinedBlock({ onReopen }) {
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
         <button className="btn btn-sm btn-primary" onClick={save} disabled={!note.trim()}>
-          {saved ? <>Gemt <I.Check className="ic"/></> : 'Gem note'}
+          {saved ? <>{t('Gemt')} <I.Check className="ic"/></> : t('Gem note')}
         </button>
-        <button className="btn btn-sm" onClick={onReopen}>Genoptag sag</button>
+        <button className="btn btn-sm" onClick={onReopen}>{t('Genoptag sag')}</button>
       </div>
     </div>
   );
@@ -1511,7 +1511,7 @@ function MaterialSelector({ onCreateRequest, onBack }) {
   }));
   const count = selectedItems.length;
   const canCreate = count > 0 && draft.name.trim() && draft.email.trim();
-  const subject = `Materiale til kreditvurdering af ${DATA.COMPANY.name}`;
+  const subject = t('Materiale til kreditvurdering af') + ' ' + DATA.COMPANY.name;
   const saveDraft = () => {
     try {
       localStorage.setItem(MATERIAL_SELECTION_KEY, JSON.stringify(sel));
@@ -1540,13 +1540,13 @@ function MaterialSelector({ onCreateRequest, onBack }) {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{g.label}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t(g.label)}</div>
             <button
               type="button"
               onClick={selectAllRecommended}
               style={{ background: 'transparent', border: 0, padding: 0, cursor: 'pointer', fontSize: 12.5, color: 'var(--c-primary)', fontWeight: 500, whiteSpace: 'nowrap' }}
             >
-              Vælg alle anbefalede
+              {t('Vælg alle anbefalede')}
             </button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
@@ -1561,13 +1561,13 @@ function MaterialSelector({ onCreateRequest, onBack }) {
                   onChange={() => toggle(it.id)}
                   style={{ accentColor: 'var(--c-primary)', flexShrink: 0 }}
                 />
-                <span style={{ flex: 1, fontSize: 13, color: 'var(--c-text)' }}>{it.label}</span>
+                <span style={{ flex: 1, fontSize: 13, color: 'var(--c-text)' }}>{t(it.label)}</span>
                 <span style={{
                   fontSize: 10.5, fontWeight: 500,
                   color: it.tag === 'Anbefalet' ? 'var(--c-primary)' : 'var(--c-text-3)',
                   whiteSpace: 'nowrap',
                 }}>
-                  {it.tag}
+                  {t(it.tag)}
                 </span>
               </label>
             ))}
@@ -1576,16 +1576,16 @@ function MaterialSelector({ onCreateRequest, onBack }) {
       ))}
 
       <div style={{ padding: '16px 0 14px', borderTop: '1px solid var(--c-line-2)' }}>
-        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 10 }}>Send anmodning til</div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 10 }}>{t('Send anmodning til')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 0.9fr) minmax(360px, 1.1fr)', gap: 18, alignItems: 'start' }}>
           <div>
             <div className="grid g-2" style={{ gap: 10, marginBottom: 10 }}>
               <div className="field">
-                <label>Modtagernavn</label>
+                <label>{t('Modtagernavn')}</label>
                 <input className="input" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}/>
               </div>
               <div className="field">
-                <label>Rolle</label>
+                <label>{t('Rolle')}</label>
                 <input className="input" value={draft.role} onChange={e => setDraft({ ...draft, role: e.target.value })}/>
               </div>
             </div>
@@ -1595,28 +1595,28 @@ function MaterialSelector({ onCreateRequest, onBack }) {
             </div>
 
             <div style={{ marginTop: 14 }}>
-              <div className="label-mini" style={{ marginBottom: 8 }}>Forhåndsvisning af link</div>
+              <div className="label-mini" style={{ marginBottom: 8 }}>{t('Forhåndsvisning af link')}</div>
               <div className="link-banner">
                 <I.Link size={14} style={{ color: 'var(--c-text-3)' }}/>
                 <span className="url">{DATA.REQUEST_LINK}</span>
               </div>
               <div className="muted" style={{ fontSize: 11.5, marginTop: 6 }}>
-                Linket er personligt til {draft.name || 'modtageren'} og udløber efter 30 dage.
+                {t('Linket er personligt til')} {draft.name || t('modtageren')} {t('og udløber efter 30 dage.')}
               </div>
             </div>
           </div>
 
           <div>
-            <div className="label-mini" style={{ marginBottom: 8 }}>Forhåndsvisning af mail</div>
+            <div className="label-mini" style={{ marginBottom: 8 }}>{t('Forhåndsvisning af mail')}</div>
             <div style={{
               border: '1px solid var(--c-line)', borderRadius: 8,
               background: 'var(--c-surface-2)', padding: 12,
               fontSize: 12.5, color: 'var(--c-text)', lineHeight: 1.45,
             }}>
               <div style={{ display: 'grid', gridTemplateColumns: '44px 1fr', gap: 6, marginBottom: 8 }}>
-                <span className="muted">Til</span>
-                <span style={{ color: 'var(--c-ink)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || 'Modtager'} · {draft.email || 'email'}</span>
-                <span className="muted">Emne</span>
+                <span className="muted">{t('Til')}</span>
+                <span style={{ color: 'var(--c-ink)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{draft.name || t('Modtager')} · {draft.email || 'email'}</span>
+                <span className="muted">{t('Emne')}</span>
                 <span style={{ color: 'var(--c-ink)' }}>{subject}</span>
               </div>
               <textarea
@@ -1626,10 +1626,10 @@ function MaterialSelector({ onCreateRequest, onBack }) {
                 rows={5}
                 style={{ height: 'auto', resize: 'vertical', padding: 10, lineHeight: 1.45, marginBottom: 10 }}
               />
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 5 }}>Valgte punkter</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 5 }}>{t('Valgte punkter')}</div>
               <ul style={{ margin: 0, paddingLeft: 17, color: 'var(--c-text-2)' }}>
-                {selectedItems.slice(0, 6).map(it => <li key={it.id}>{it.label}</li>)}
-                {selectedItems.length > 6 && <li>+ {selectedItems.length - 6} yderligere punkter</li>}
+                {selectedItems.slice(0, 6).map(it => <li key={it.id}>{t(it.label)}</li>)}
+                {selectedItems.length > 6 && <li>+ {selectedItems.length - 6} {t('yderligere punkter')}</li>}
               </ul>
             </div>
           </div>
@@ -1638,12 +1638,12 @@ function MaterialSelector({ onCreateRequest, onBack }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 0', borderTop: '1px solid var(--c-line-2)' }}>
         <div style={{ flex: 1, fontSize: 12.5, color: 'var(--c-text-3)' }}>
-          {count} {count === 1 ? 'punkt' : 'punkter'} valgt til kundeanmodning
+          {count} {count === 1 ? t('punkt') : t('punkter')} {t('valgt til kundeanmodning')}
         </div>
-        <button className="btn btn-sm btn-ghost" onClick={onBack}>Tilbage</button>
-        <button className="btn btn-sm" onClick={saveDraft}>{saved ? 'Kladde gemt' : 'Gem som kladde'}</button>
+        <button className="btn btn-sm btn-ghost" onClick={onBack}>{t('Tilbage')}</button>
+        <button className="btn btn-sm" onClick={saveDraft}>{saved ? t('Kladde gemt') : t('Gem som kladde')}</button>
         <button className="btn btn-sm btn-primary" onClick={onCreateRequest} disabled={!canCreate}>
-          Opret kundeanmodning <I.ArrowRight className="ic"/>
+          {t('Opret kundeanmodning')} <I.ArrowRight className="ic"/>
         </button>
       </div>
     </div>
@@ -1676,11 +1676,11 @@ function CustomerStatusBlock({ stage, go, onMarkReady }) {
       <div style={{ padding: '14px 0' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
           <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>
-            Afventer {pending.length > 0 && <span style={{ fontWeight: 500, color: 'var(--c-text-3)' }}>· {pending.length}</span>}
+            {t('Afventer')} {pending.length > 0 && <span style={{ fontWeight: 500, color: 'var(--c-text-3)' }}>· {pending.length}</span>}
           </div>
         </div>
         {pending.length === 0 ? (
-          <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', padding: '6px 0' }}>Intet udestår fra kunden.</div>
+          <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', padding: '6px 0' }}>{t('Intet udestår fra kunden.')}</div>
         ) : (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {pending.map(it => (
@@ -1694,10 +1694,10 @@ function CustomerStatusBlock({ stage, go, onMarkReady }) {
                   flexShrink: 0,
                 }}/>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, color: 'var(--c-ink)' }}>{it.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 1 }}>{it.group}</div>
+                  <div style={{ fontSize: 13, color: 'var(--c-ink)' }}>{t(it.label)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 1 }}>{t(it.group)}</div>
                 </div>
-                <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--c-warn)' }}>Afventer</span>
+                <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--c-warn)' }}>{t('Afventer')}</span>
               </li>
             ))}
           </ul>
@@ -1708,7 +1708,7 @@ function CustomerStatusBlock({ stage, go, onMarkReady }) {
       {received.length > 0 && (
         <div style={{ padding: '14px 0', borderTop: '1px solid var(--c-line-2)' }}>
           <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>
-            Modtaget <span style={{ fontWeight: 500, color: 'var(--c-text-3)' }}>· {received.length}</span>
+            {t('Modtaget')} <span style={{ fontWeight: 500, color: 'var(--c-text-3)' }}>· {received.length}</span>
           </div>
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {received.map(it => (
@@ -1724,10 +1724,10 @@ function CustomerStatusBlock({ stage, go, onMarkReady }) {
                   <I.Check size={10}/>
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, color: 'var(--c-ink)' }}>{it.label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 1 }}>{it.group} · Uploadet af kunde</div>
+                  <div style={{ fontSize: 13, color: 'var(--c-ink)' }}>{t(it.label)}</div>
+                  <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 1 }}>{t(it.group)} · {t('Uploadet af kunde')}</div>
                 </div>
-                <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--c-success)' }}>Modtaget</span>
+                <span style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--c-success)' }}>{t('Modtaget')}</span>
               </li>
             ))}
           </ul>
@@ -1751,21 +1751,21 @@ function WSIndstil({ go, caseId, indstillet, indstilletAt, onIndstil, onReset })
             <I.Check size={26}/>
           </div>
           <div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.02em' }}>Sagen er indstillet</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.02em' }}>{t('Sagen er indstillet')}</div>
             <div style={{ fontSize: 14, color: 'var(--c-text-2)', marginTop: 6, lineHeight: 1.55, maxWidth: 480 }}>
-              Indstillingen er sendt til kreditkomitéen d. {dateStr}. Kreditkomitéen behandler sagen og vender tilbage med en beslutning.
+              {t('Indstillingen er sendt til kreditkomitéen d.')} {dateStr}. {t('Kreditkomitéen behandler sagen og vender tilbage med en beslutning.')}
             </div>
           </div>
         </div>
 
         <div className="card" style={{ padding: '16px 22px', marginBottom: 24 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Indstillingsoversigt</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>{t('Indstillingsoversigt')}</div>
             {[
-              { label: "Indstillet af", value: "Mette Larsen" },
-              { label: "Dato", value: dateStr + ' · ' + timeStr },
-              { label: "Sagsnr.", value: caseData.caseNr || "2026-0184" },
-              { label: "Kreditmemo", value: "Vedhæftet indstillingen" },
+              { label: t("Indstillet af"), value: "Mette Larsen" },
+              { label: t("Dato"), value: dateStr + ' · ' + timeStr },
+              { label: t("Sagsnr."), value: caseData.caseNr || "2026-0184" },
+              { label: t("Kreditmemo"), value: t("Vedhæftet indstillingen") },
             ].map((r, i) => (
               <div key={i} style={{ display: 'flex', gap: 12, padding: '7px 0', borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)', fontSize: 13.5 }}>
                 <span style={{ color: 'var(--c-text-3)', width: 130, flexShrink: 0 }}>{r.label}</span>
@@ -1786,19 +1786,19 @@ function WSIndstil({ go, caseId, indstillet, indstilletAt, onIndstil, onReset })
           <I.Check size={26}/>
         </div>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.02em' }}>Klar til indstilling</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--c-ink)', letterSpacing: '-0.02em' }}>{t('Klar til indstilling')}</div>
           <div style={{ fontSize: 14, color: 'var(--c-text-2)', marginTop: 6, lineHeight: 1.55, maxWidth: 520 }}>
-            Sagen er klar til at blive indstillet til kreditkomitéen. Gennemgå kreditmemo og underskriv indstillingen nedenfor.
+            {t('Sagen er klar til at blive indstillet til kreditkomitéen. Gennemgå kreditmemo og underskriv indstillingen nedenfor.')}
           </div>
         </div>
       </div>
 
       <div className="card" style={{ padding: '6px 22px', marginBottom: 16 }}>
         {[
-          { label: "Finansielt overblik gennemgået" },
-          { label: "Sikkerheder vurderet" },
-          { label: "Kreditmemo udfyldt" },
-          { label: "Kundedialog afsluttet" },
+          { label: t("Finansielt overblik gennemgået") },
+          { label: t("Sikkerheder vurderet") },
+          { label: t("Kreditmemo udfyldt") },
+          { label: t("Kundedialog afsluttet") },
         ].map((it, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 0', borderTop: i === 0 ? 'none' : '1px solid var(--c-line-2)' }}>
             <span style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--c-success)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
@@ -1811,10 +1811,10 @@ function WSIndstil({ go, caseId, indstillet, indstilletAt, onIndstil, onReset })
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <button className="btn btn-primary" style={{ flex: 1, justifyContent: 'center', height: 40, fontSize: 14 }} onClick={() => go && go("workspace:" + caseId + ":memo")}>
-          <I.FileText className="ic"/> Åbn kreditmemo
+          <I.FileText className="ic"/> {t('Åbn kreditmemo')}
         </button>
         <button onClick={onIndstil} style={{ flex: 1, height: 40, fontSize: 14, fontWeight: 600, background: 'var(--c-success)', color: '#fff', border: 'none', borderRadius: 7, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <I.Check size={15}/> Send til kreditkomité
+          <I.Check size={15}/> {t('Send til kreditkomité')}
         </button>
       </div>
     </div>

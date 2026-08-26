@@ -26,12 +26,12 @@ function WSCollection() {
                 <I.Database size={18}/>
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--c-ink)' }}>ERP-forbindelse <span className="ai-hint" style={{ marginLeft: 8 }}>Aktiv</span></div>
+                <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t('ERP-forbindelse')} <span className="ai-hint" style={{ marginLeft: 8 }}>{t('Aktiv')}</span></div>
                 <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 2 }}>
-                  Tilsluttet <b style={{ color: 'var(--c-ink)' }}>e-conomic</b> · seneste synkronisering <b>i dag 09:01</b> · periodetal, kontoplan og kreditorer hentes automatisk
+                  {t('Tilsluttet')} <b style={{ color: 'var(--c-ink)' }}>e-conomic</b> · {t('seneste synkronisering')} <b>{t('i dag 09:01')}</b> · {t('periodetal, kontoplan og kreditorer hentes automatisk')}
                 </div>
               </div>
-              <button className="btn btn-sm btn-ghost"><I.Refresh className="ic"/> Synkroniser</button>
+              <button className="btn btn-sm btn-ghost"><I.Refresh className="ic"/> {t('Synkroniser')}</button>
               <button className="btn btn-sm btn-ghost"><I.Settings className="ic"/></button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: 'var(--c-line-2)' }}>
@@ -42,10 +42,10 @@ function WSCollection() {
                 { l: "Banktransaktioner", v: "Beriger", s: "loading" },
               ].map((x, i) => (
                 <div key={i} style={{ background: '#fff', padding: '10px 14px' }}>
-                  <div className="label-mini">{x.l}</div>
+                  <div className="label-mini">{t(x.l)}</div>
                   <div style={{ fontSize: 13, fontWeight: 500, marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {x.s === 'ok' ? <I.Check size={11} style={{ color: 'var(--c-success)' }}/> : <I.Refresh size={11} style={{ color: 'var(--c-text-3)' }}/>}
-                    {x.v}
+                    {t(x.v)}
                   </div>
                 </div>
               ))}
@@ -65,22 +65,22 @@ function WSCollection() {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>{received} af {total} elementer modtaget</div>
-                  <span className="ai-hint"><I.Spark className="spark"/> Klar til memo om ~2 elementer</span>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>{received} {t('af')} {total} {t('elementer modtaget')}</div>
+                  <span className="ai-hint"><I.Spark className="spark"/> {t('Klar til memo om ~2 elementer')}</span>
                 </div>
                 <div style={{ color: 'var(--c-text-2)', fontSize: 13, marginTop: 4 }}>
-                  Du kan begynde gennemgangen nu. {review} element kræver opfølgning, og {waiting} afventer kunde.
+                  {t('Du kan begynde gennemgangen nu.')} {review} {t('element kræver opfølgning, og')} {waiting} {t('afventer kunde.')}
                 </div>
                 <div style={{ display: 'flex', gap: 18, marginTop: 14, fontSize: 12.5 }}>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--c-ink)' }}/> Modtaget · <b>{received}</b></span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--c-warn)' }}/> Til gennemgang · <b>{review}</b></span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--c-line-strong)' }}/> Afventer · <b>{waiting}</b></span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--c-line-2)', border: '1px solid var(--c-line-strong)' }}/> Mangler · <b>{missing}</b></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--c-ink)' }}/> {t('Modtaget')} · <b>{received}</b></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--c-warn)' }}/> {t('Til gennemgang')} · <b>{review}</b></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--c-line-strong)' }}/> {t('Afventer')} · <b>{waiting}</b></span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--c-line-2)', border: '1px solid var(--c-line-strong)' }}/> {t('Mangler')} · <b>{missing}</b></span>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <button className="btn btn-sm btn-primary"><I.Send className="ic"/> Send påmindelse</button>
-                <button className="btn btn-sm"><I.Plus className="ic"/> Anmod om mere</button>
+                <button className="btn btn-sm btn-primary"><I.Send className="ic"/> {t('Send påmindelse')}</button>
+                <button className="btn btn-sm"><I.Plus className="ic"/> {t('Anmod om mere')}</button>
               </div>
             </div>
 
@@ -88,9 +88,9 @@ function WSCollection() {
             {byCat.map(cat => (
               <div key={cat.name}>
                 <div style={{ padding: '12px 20px 6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div className="label-mini">{cat.name} <span style={{ color: 'var(--c-text-4)', marginLeft: 4 }}>· {cat.items.length}</span></div>
+                  <div className="label-mini">{t(cat.name)} <span style={{ color: 'var(--c-text-4)', marginLeft: 4 }}>· {cat.items.length}</span></div>
                   <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>
-                    {cat.items.filter(i=>i.status==='received').length} modtaget
+                    {cat.items.filter(i=>i.status==='received').length} {t('modtaget')}
                   </div>
                 </div>
                 <div>
@@ -116,10 +116,10 @@ function WSCollection() {
               <I.Upload size={20}/>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 500, fontSize: 14 }}>Træk PDF'er, regneark eller billeder her</div>
-              <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 3 }}>Systemet aflæser automatisk og foreslår dokumenttype. <span className="ai-hint"><I.Spark className="spark"/>OCR + udtræk</span></div>
+              <div style={{ fontWeight: 500, fontSize: 14 }}>{t("Træk PDF'er, regneark eller billeder her")}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 3 }}>{t('Systemet aflæser automatisk og foreslår dokumenttype.')} <span className="ai-hint"><I.Spark className="spark"/>{t('OCR + udtræk')}</span></div>
             </div>
-            <button className="btn"><I.Folder className="ic"/> Vælg filer</button>
+            <button className="btn"><I.Folder className="ic"/> {t('Vælg filer')}</button>
           </div>
         </div>
 
@@ -128,24 +128,24 @@ function WSCollection() {
           {/* Customer link */}
           <div className="card">
             <div className="card-head">
-              <div className="card-title">Kundens indhentnings­link</div>
-              <span className="pill outline"><span className="pill-dot" style={{ background: 'var(--c-success)' }}/>Aktivt</span>
+              <div className="card-title">{t('Kundens indhentnings­link')}</div>
+              <span className="pill outline"><span className="pill-dot" style={{ background: 'var(--c-success)' }}/>{t('Aktivt')}</span>
             </div>
             <div style={{ padding: '14px 16px' }}>
-              <div style={{ fontSize: 12, color: 'var(--c-text-2)', marginBottom: 8 }}>Sendt til <b style={{ color: 'var(--c-ink)' }}>{DATA.REQUEST_RECIPIENT.name}</b> · {DATA.REQUEST_RECIPIENT.email}</div>
+              <div style={{ fontSize: 12, color: 'var(--c-text-2)', marginBottom: 8 }}>{t('Sendt til')} <b style={{ color: 'var(--c-ink)' }}>{DATA.REQUEST_RECIPIENT.name}</b> · {DATA.REQUEST_RECIPIENT.email}</div>
               <div className="link-banner">
                 <I.Link size={14} style={{ color: 'var(--c-text-3)' }}/>
                 <span className="url">{DATA.REQUEST_LINK}</span>
                 <button className="btn btn-sm btn-ghost" onClick={() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }}>
-                  {copied ? <><I.Check className="ic"/> Kopieret</> : <><I.Copy className="ic"/> Kopier</>}
+                  {copied ? <><I.Check className="ic"/> {t('Kopieret')}</> : <><I.Copy className="ic"/> {t('Kopier')}</>}
                 </button>
               </div>
               <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                <button className="btn btn-sm" style={{ flex: 1 }}><I.Mail className="ic"/> Send igen</button>
-                <button className="btn btn-sm" style={{ flex: 1 }}><I.Eye className="ic"/> Forhåndsvis</button>
+                <button className="btn btn-sm" style={{ flex: 1 }}><I.Mail className="ic"/> {t('Send igen')}</button>
+                <button className="btn btn-sm" style={{ flex: 1 }}><I.Eye className="ic"/> {t('Forhåndsvis')}</button>
               </div>
               <div style={{ marginTop: 14, borderTop: '1px solid var(--c-line-2)', paddingTop: 12 }}>
-                <div className="label-mini" style={{ marginBottom: 8 }}>Aktivitet på link</div>
+                <div className="label-mini" style={{ marginBottom: 8 }}>{t('Aktivitet på link')}</div>
                 {[
                   { t: "Åbnet af kunde", w: "i dag, 08:54", dot: 'var(--c-success)' },
                   { t: "Uploadede 3 dokumenter", w: "24. maj, 09:01", dot: 'var(--c-ink)' },
@@ -154,8 +154,8 @@ function WSCollection() {
                 ].map((a, i) => (
                   <div key={i} style={{ display: 'flex', gap: 9, padding: '6px 0', fontSize: 12.5 }}>
                     <span style={{ width: 5, height: 5, borderRadius: '50%', background: a.dot, marginTop: 7, flexShrink: 0 }}/>
-                    <div style={{ flex: 1 }}>{a.t}</div>
-                    <div style={{ color: 'var(--c-text-3)', fontSize: 11.5 }}>{a.w}</div>
+                    <div style={{ flex: 1 }}>{t(a.t)}</div>
+                    <div style={{ color: 'var(--c-text-3)', fontSize: 11.5 }}>{t(a.w)}</div>
                   </div>
                 ))}
               </div>
@@ -166,8 +166,8 @@ function WSCollection() {
           <div className="card">
             <div className="card-head">
               <div>
-                <div className="card-title">Kundens visning</div>
-                <div className="card-sub">Sådan ser linket ud for {DATA.REQUEST_RECIPIENT.name}</div>
+                <div className="card-title">{t('Kundens visning')}</div>
+                <div className="card-sub">{t('Sådan ser linket ud for')} {DATA.REQUEST_RECIPIENT.name}</div>
               </div>
               <button className="btn btn-sm btn-ghost"><I.Maximize className="ic"/></button>
             </div>
@@ -180,7 +180,7 @@ function WSCollection() {
           <div className="card">
             <div className="card-head">
               <div className="hstack">
-                <div className="card-title">Automatiske kilder</div>
+                <div className="card-title">{t('Automatiske kilder')}</div>
               </div>
             </div>
             <div style={{ padding: '4px 16px 14px' }}>
@@ -193,11 +193,11 @@ function WSCollection() {
                   <div style={{ width: 26, height: 26, borderRadius: 5, background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 600, color: 'var(--c-text-2)' }}>{s.name.slice(0,2).toUpperCase()}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 500 }}>{s.name}</div>
-                    <div className="muted" style={{ fontSize: 11.5 }}>{s.what}</div>
+                    <div className="muted" style={{ fontSize: 11.5 }}>{t(s.what)}</div>
                   </div>
                   {s.st === 'connected'
-                    ? <span style={{ color: 'var(--c-success)', fontSize: 11.5, display: 'inline-flex', gap: 4, alignItems: 'center' }}><I.Check size={12}/> Tilsluttet</span>
-                    : <button className="btn btn-sm btn-ghost">Tilslut</button>}
+                    ? <span style={{ color: 'var(--c-success)', fontSize: 11.5, display: 'inline-flex', gap: 4, alignItems: 'center' }}><I.Check size={12}/> {t('Tilsluttet')}</span>
+                    : <button className="btn btn-sm btn-ghost">{t('Tilslut')}</button>}
                 </div>
               ))}
             </div>
@@ -212,13 +212,13 @@ function CollectionRow({ item }) {
   const [open, setOpen] = React.useState(false);
   let icon, color, statusText, sub;
   if (item.status === "received") {
-    icon = <I.CheckCircle size={16}/>; color = 'var(--c-success)'; statusText = "Modtaget"; sub = item.uploaded;
+    icon = <I.CheckCircle size={16}/>; color = 'var(--c-success)'; statusText = t("Modtaget"); sub = item.uploaded;
   } else if (item.status === "review") {
-    icon = <I.AlertTriangle size={16}/>; color = 'var(--c-warn)'; statusText = "Til gennemgang"; sub = item.note;
+    icon = <I.AlertTriangle size={16}/>; color = 'var(--c-warn)'; statusText = t("Til gennemgang"); sub = item.note;
   } else if (item.status === "waiting") {
-    icon = <I.Clock size={16}/>; color = 'var(--c-text-3)'; statusText = "Afventer"; sub = item.reminder;
+    icon = <I.Clock size={16}/>; color = 'var(--c-text-3)'; statusText = t("Afventer"); sub = item.reminder;
   } else {
-    icon = <I.CircleDashed size={16}/>; color = 'var(--c-text-4)'; statusText = "Ikke anmodet"; sub = "";
+    icon = <I.CircleDashed size={16}/>; color = 'var(--c-text-4)'; statusText = t("Ikke anmodet"); sub = "";
   }
 
   return (
@@ -230,24 +230,24 @@ function CollectionRow({ item }) {
         <span style={{ color }}>{icon}</span>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)', display: 'flex', alignItems: 'center', gap: 7 }}>
-            {item.label}
-            {!item.required && <span className="tag" style={{ fontSize: 10 }}>Valgfri</span>}
+            {t(item.label)}
+            {!item.required && <span className="tag" style={{ fontSize: 10 }}>{t('Valgfri')}</span>}
             {item.ai && item.ai.confidence === 'high' && item.status === 'received' && (
-              <span className="ai-hint"><I.Spark className="spark"/> Aflæst</span>
+              <span className="ai-hint"><I.Spark className="spark"/> {t('Aflæst')}</span>
             )}
           </div>
           <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
-            {item.file ? <span className="mono">{item.file}</span> : null}
+            {item.file ? <span className="mono">{t(item.file)}</span> : null}
             {item.file && item.size ? <span> · {item.size}</span> : null}
-            {!item.file && item.source ? <span>{item.source}</span> : null}
-            {sub ? <span style={{ marginLeft: item.file || item.source ? 8 : 0, color: item.status === 'review' ? 'var(--c-warn)' : undefined }}>{item.file || item.source ? '· ' : ''}{sub}</span> : null}
+            {!item.file && item.source ? <span>{t(item.source)}</span> : null}
+            {sub ? <span style={{ marginLeft: item.file || item.source ? 8 : 0, color: item.status === 'review' ? 'var(--c-warn)' : undefined }}>{item.file || item.source ? '· ' : ''}{t(sub)}</span> : null}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {item.status === 'received' && <button className="btn btn-sm btn-ghost" onClick={e => e.stopPropagation()}><I.Eye className="ic"/></button>}
-          {item.status === 'waiting' && <button className="btn btn-sm" onClick={e => e.stopPropagation()}><I.Send className="ic"/> Påmind</button>}
-          {item.status === 'missing' && <button className="btn btn-sm" onClick={e => e.stopPropagation()}><I.Plus className="ic"/> Anmod</button>}
-          {item.status === 'review' && <button className="btn btn-sm btn-primary" onClick={e => e.stopPropagation()}>Gennemgå</button>}
+          {item.status === 'waiting' && <button className="btn btn-sm" onClick={e => e.stopPropagation()}><I.Send className="ic"/> {t('Påmind')}</button>}
+          {item.status === 'missing' && <button className="btn btn-sm" onClick={e => e.stopPropagation()}><I.Plus className="ic"/> {t('Anmod')}</button>}
+          {item.status === 'review' && <button className="btn btn-sm btn-primary" onClick={e => e.stopPropagation()}>{t('Gennemgå')}</button>}
         </div>
         <I.ChevronDown size={14} style={{ color: 'var(--c-text-3)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}/>
       </div>
@@ -255,23 +255,23 @@ function CollectionRow({ item }) {
         <div style={{ padding: '10px 20px 14px 54px', background: 'var(--c-surface-2)', borderTop: '1px solid var(--c-line-2)', fontSize: 12.5 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
-              <div className="label-mini" style={{ marginBottom: 4 }}>Kilde</div>
-              <div>{item.source}</div>
-              {item.uploaded && <div className="muted" style={{ marginTop: 2 }}>{item.uploaded}</div>}
+              <div className="label-mini" style={{ marginBottom: 4 }}>{t('Kilde')}</div>
+              <div>{t(item.source)}</div>
+              {item.uploaded && <div className="muted" style={{ marginTop: 2 }}>{t(item.uploaded)}</div>}
             </div>
             {item.ai && (
               <div>
-                <div className="label-mini" style={{ marginBottom: 4 }}>AI-ekstraktion</div>
+                <div className="label-mini" style={{ marginBottom: 4 }}>{t('AI-ekstraktion')}</div>
                 <div>
-                  {item.ai.extracted ? <><b>{item.ai.extracted}</b> nøglepunkter udtrukket · </> : null}
-                  Konfidens: <b style={{ color: item.ai.confidence === 'high' ? 'var(--c-success)' : 'var(--c-warn)' }}>{item.ai.confidence === 'high' ? 'høj' : 'middel'}</b>
+                  {item.ai.extracted ? <><b>{item.ai.extracted}</b> {t('nøglepunkter udtrukket')} · </> : null}
+                  {t('Konfidens')}: <b style={{ color: item.ai.confidence === 'high' ? 'var(--c-success)' : 'var(--c-warn)' }}>{item.ai.confidence === 'high' ? t('høj') : t('middel')}</b>
                 </div>
               </div>
             )}
           </div>
           {item.note && (
             <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--c-warn-bg)', borderRadius: 6, color: 'var(--c-warn)', fontSize: 12.5 }}>
-              <I.AlertTriangle size={12} style={{ verticalAlign: -2, marginRight: 5 }}/>{item.note}
+              <I.AlertTriangle size={12} style={{ verticalAlign: -2, marginRight: 5 }}/>{t(item.note)}
             </div>
           )}
         </div>
@@ -286,11 +286,11 @@ function CustomerMiniPreview() {
     <div style={{ border: '1px solid var(--c-line)', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
       <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--c-line-2)', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--c-surface-2)' }}>
         <div style={{ width: 18, height: 18, borderRadius: 4, background: 'var(--c-ink)', color: '#fff', display: 'grid', placeItems: 'center', fontSize: 9, fontWeight: 600 }}>cw</div>
-        <div style={{ fontSize: 12, fontWeight: 500 }}>Kreditmateriale</div>
+        <div style={{ fontSize: 12, fontWeight: 500 }}>{t('Kreditmateriale')}</div>
       </div>
       <div style={{ padding: 14 }}>
-        <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>Hej Anders,</div>
-        <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>Mette fra kreditafdelingen har bedt om følgende materiale for at vurdere jeres ansøgning.</div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>{t('Hej')} Anders,</div>
+        <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>{t('Mette fra kreditafdelingen har bedt om følgende materiale for at vurdere jeres ansøgning.')}</div>
         <div style={{ marginTop: 12 }}>
           {[
             { l: 'Seneste årsrapport', d: true },
@@ -302,13 +302,13 @@ function CustomerMiniPreview() {
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', fontSize: 12.5, borderBottom: i < 4 ? '1px solid var(--c-line-2)' : 'none' }}>
               {x.d ? <I.Check size={12} style={{ color: 'var(--c-success)' }}/>
                    : <I.Circle size={12} style={{ color: x.h ? 'var(--c-warn)' : 'var(--c-text-4)' }}/>}
-              <span style={{ flex: 1, color: x.d ? 'var(--c-text-3)' : 'var(--c-ink)', textDecoration: x.d ? 'line-through' : 'none' }}>{x.l}</span>
-              {!x.d && <span style={{ fontSize: 10.5, color: x.h ? 'var(--c-warn)' : 'var(--c-text-3)' }}>{x.h ? 'Påbegyndt' : ''}</span>}
+              <span style={{ flex: 1, color: x.d ? 'var(--c-text-3)' : 'var(--c-ink)', textDecoration: x.d ? 'line-through' : 'none' }}>{t(x.l)}</span>
+              {!x.d && <span style={{ fontSize: 10.5, color: x.h ? 'var(--c-warn)' : 'var(--c-text-3)' }}>{x.h ? t('Påbegyndt') : ''}</span>}
             </div>
           ))}
         </div>
         <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--c-surface-2)', borderRadius: 6, fontSize: 11.5, color: 'var(--c-text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <I.Lock size={11}/> Sikker forbindelse · ingen login krævet
+          <I.Lock size={11}/> {t('Sikker forbindelse · ingen login krævet')}
         </div>
       </div>
     </div>

@@ -42,13 +42,13 @@
        der bruges ingen API-kredit. Kræver ingen nøgle, men virker kun lokalt. */
     local: {
       id: 'local',
-      label: 'Dit abonnement',
-      vendor: 'din egen maskine',
+      label: t('Dit abonnement'),
+      vendor: t('din egen maskine'),
       noKey: true,
       defaultModel: 'claude',
       engines: [
-        { id: 'claude', label: 'Claude Code', hint: 'Bruger dit Claude-abonnement' },
-        { id: 'codex', label: 'Codex CLI', hint: 'Bruger dit ChatGPT-abonnement' },
+        { id: 'claude', label: 'Claude Code', hint: t('Bruger dit Claude-abonnement') },
+        { id: 'codex', label: 'Codex CLI', hint: t('Bruger dit ChatGPT-abonnement') },
       ],
     },
   };
@@ -69,7 +69,7 @@
     if (localStatus && !force) return localStatus;
 
     if (!isLocalHost()) {
-      var hosted = 'Kører kun når prototypen er startet på din egen maskine med devserver.js. Brug en API-nøgle her.';
+      var hosted = t('Kører kun når prototypen er startet på din egen maskine med devserver.js. Brug en API-nøgle her.');
       localStatus = {
         hosted: true,
         claude: { available: false, detail: hosted },
@@ -83,7 +83,7 @@
       if (!res.ok) throw new Error('status ' + res.status);
       localStatus = await res.json();
     } catch (e) {
-      var msg = 'Dev-serveren svarer ikke. Start den med: node devserver.js';
+      var msg = t('Dev-serveren svarer ikke. Start den med: node devserver.js');
       localStatus = {
         claude: { available: false, detail: msg },
         codex: { available: false, detail: msg },
@@ -112,7 +112,7 @@
       signal: signal,
     });
     if (!res.ok) {
-      var msg = 'Den lokale bro svarede ' + res.status + '.';
+      var msg = t('Den lokale bro svarede') + ' ' + res.status + '.';
       try { var j = await res.json(); if (j && j.error) msg = j.error; } catch (e) {}
       throw new Error(msg);
     }
@@ -209,33 +209,35 @@
       code = (e && (e.code || e.type)) || '';
     } catch (e2) { detail = typeof body === 'string' ? body.slice(0, 300) : ''; }
 
-    var name = prov ? prov.label : 'udbyderen';
-    var vendor = prov ? prov.vendor : 'udbyderen';
+    var name = prov ? prov.label : t('udbyderen');
+    var vendor = prov ? prov.vendor : t('udbyderen');
     // Udbyderens egen tekst siger næsten altid præcis hvad der er galt.
     // Den skal med, ellers gætter man i blinde.
-    var raw = detail ? ' ' + vendor + ' skriver: “' + detail + '”' : '';
+    var raw = detail ? ' ' + vendor + ' ' + t('skriver:') + ' “' + detail + '”' : '';
     var head;
 
-    if (status === 401) head = 'Nøglen blev afvist af ' + name + '. Tjek at den er kopieret helt med, og at den ikke er tilbagekaldt.';
-    else if (status === 403) head = 'Nøglen har ikke adgang til den valgte model. Vælg en anden model, eller brug en nøgle med bredere adgang.';
-    else if (status === 404) head = 'Modellen findes ikke på din konto. Hent modellisten og vælg en fra listen.';
-    else if (status === 413) head = 'Materialet er for stort til ét kald. Vælg færre dokumenter som grundlag.';
+    if (status === 401) head = t('Nøglen blev afvist af') + ' ' + name + '. ' + t('Tjek at den er kopieret helt med, og at den ikke er tilbagekaldt.');
+    else if (status === 403) head = t('Nøglen har ikke adgang til den valgte model. Vælg en anden model, eller brug en nøgle med bredere adgang.');
+    else if (status === 404) head = t('Modellen findes ikke på din konto. Hent modellisten og vælg en fra listen.');
+    else if (status === 413) head = t('Materialet er for stort til ét kald. Vælg færre dokumenter som grundlag.');
     else if (status === 429) {
       // 429 dækker to helt forskellige ting hos OpenAI: for mange kald i minuttet,
       // og en konto uden kredit. Det sidste er langt det almindeligste på en ny
       // nøgle, og "vent et øjeblik" er da et ubrugeligt råd.
       if (/insufficient_quota|billing|exceeded your current quota|credit balance/i.test(code + ' ' + detail)) {
-        head = 'Der er ikke kredit nok på din ' + vendor + '-konto. Det er ikke en hastighedsgrænse: kontoen skal have et beløb sat ind, før nøglen kan bruges. ' +
+        head = t('Der er ikke kredit nok på din konto hos') + ' ' + vendor + '. ' +
+               t('Det er ikke en hastighedsgrænse: kontoen skal have et beløb sat ind, før nøglen kan bruges.') + ' ' +
+               t('Tjek') +
                (prov && prov.id === 'openai'
-                 ? 'Tjek platform.openai.com/settings/organization/billing.'
-                 : 'Tjek console.anthropic.com/settings/billing.');
+                 ? ' platform.openai.com/settings/organization/billing.'
+                 : ' console.anthropic.com/settings/billing.');
       } else {
-        head = 'Du har ramt en hastighedsgrænse hos ' + name + '. Vent et øjeblik og prøv igen.';
+        head = t('Du har ramt en hastighedsgrænse hos') + ' ' + name + '. ' + t('Vent et øjeblik og prøv igen.');
       }
     }
-    else if (status >= 500) head = name + ' svarer ikke lige nu (' + status + '). Prøv igen om lidt.';
+    else if (status >= 500) head = name + ' ' + t('svarer ikke lige nu') + ' (' + status + '). ' + t('Prøv igen om lidt.');
     else if (detail) return detail + ' (' + status + ')';
-    else head = 'Kaldet fejlede (' + status + ').';
+    else head = t('Kaldet fejlede') + ' (' + status + ').';
 
     return head + raw;
   }
@@ -330,11 +332,11 @@
       } else if (ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) {
         stopReason = ev.delta.stop_reason;
       } else if (ev.type === 'error' && ev.error) {
-        throw new Error(ev.error.message || 'Streamen fejlede.');
+        throw new Error(ev.error.message || t('Streamen fejlede.'));
       }
     });
     if (stopReason === 'refusal') {
-      throw new Error('Claude afviste opgaven af sikkerhedsgrunde. Omformulér instruktionen.');
+      throw new Error(t('Claude afviste opgaven af sikkerhedsgrunde. Omformulér instruktionen.'));
     }
     return { text: out, stopReason: stopReason };
   }
@@ -426,7 +428,7 @@
     if (cfg.provider === 'local') {
       await probeLocal();
       if (!localReady(cfg)) {
-        var le = new Error('Den lokale motor er ikke klar. Åbn indstillingerne og vælg en anden.');
+        var le = new Error(t('Den lokale motor er ikke klar. Åbn indstillingerne og vælg en anden.'));
         le.code = 'no-key';
         throw le;
       }
@@ -437,14 +439,14 @@
           messages: opts.messages || [],
         }, opts.onDelta || function () {}, opts.signal);
       } catch (err) {
-        if (err && err.name === 'AbortError') { var la = new Error('Afbrudt.'); la.code = 'abort'; throw la; }
-        if (err instanceof TypeError) throw new Error('Kunne ikke nå dev-serveren. Kører devserver.js stadig?');
+        if (err && err.name === 'AbortError') { var la = new Error(t('Afbrudt.')); la.code = 'abort'; throw la; }
+        if (err instanceof TypeError) throw new Error(t('Kunne ikke nå dev-serveren. Kører devserver.js stadig?'));
         throw err;
       }
     }
     var key = activeKey(cfg);
     if (!key) {
-      var e = new Error('Der er ikke forbundet til Claude eller ChatGPT endnu.');
+      var e = new Error(t('Der er ikke forbundet til Claude eller ChatGPT endnu.'));
       e.code = 'no-key';
       throw e;
     }
@@ -462,10 +464,10 @@
       if (cfg.provider === 'anthropic') return await anthropicStream(full, onDelta, opts.signal, false);
       return await openaiStream(full, onDelta, opts.signal, false);
     } catch (err) {
-      if (err && err.name === 'AbortError') { var a = new Error('Afbrudt.'); a.code = 'abort'; throw a; }
+      if (err && err.name === 'AbortError') { var a = new Error(t('Afbrudt.')); a.code = 'abort'; throw a; }
       if (err instanceof TypeError) {
         // fetch kaster TypeError ved netværks- og CORS-fejl
-        throw new Error('Kunne ikke nå ' + provider(cfg).vendor + '. Tjek din netværksforbindelse.');
+        throw new Error(t('Kunne ikke nå') + ' ' + provider(cfg).vendor + '. ' + t('Tjek din netværksforbindelse.'));
       }
       throw err;
     }
@@ -475,7 +477,7 @@
     var cfg = getConfig();
     var pid = providerId || cfg.provider;
     var k = key || cfg.keys[pid];
-    if (!k) throw new Error('Indsæt først en API-nøgle.');
+    if (!k) throw new Error(t('Indsæt først en API-nøgle.'));
     var base = (baseUrl || '').replace(/\/+$/, '') || baseUrlFor(pid, cfg);
     if (pid === 'anthropic') return anthropicModels(k, base);
     return openaiModels(k, base);
@@ -488,7 +490,7 @@
     if (pid === 'local') {
       var st = await probeLocal(true);
       var engine = model || cfg.models.local || 'claude';
-      if (!st[engine] || !st[engine].available) throw new Error(st[engine] ? st[engine].detail : 'Ukendt motor.');
+      if (!st[engine] || !st[engine].available) throw new Error(st[engine] ? st[engine].detail : t('Ukendt motor.'));
       var out = await localStream({
         model: engine,
         system: 'Svar med præcis ordet OK. Intet andet.',

@@ -47,7 +47,7 @@ function BudgetPreview() {
         fontFamily: 'ui-sans-serif, system-ui, sans-serif',
       }}>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {warn != null && <span title="Afvigelse fra årsrapport" style={{ fontSize: 12, color: 'var(--c-warn)', lineHeight: 1 }}>⚠</span>}
+          {warn != null && <span title={t('Afvigelse fra årsrapport')} style={{ fontSize: 12, color: 'var(--c-warn)', lineHeight: 1 }}>⚠</span>}
           {label}
         </span>
       </td>
@@ -100,10 +100,10 @@ function BudgetPreview() {
         <span style={{ fontSize: 16, color: '#b06f17', lineHeight: 1.2, flexShrink: 0 }}>⚠</span>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 11.5, fontWeight: 600, color: '#7a4d0f', marginBottom: 3 }}>
-            Afvigelse fundet — primo egenkapital 2026
+            {t('Afvigelse fundet — primo egenkapital 2026')}
           </div>
           <div style={{ fontSize: 11, color: '#8a5e20', lineHeight: 1.55 }}>
-            Budgettets primo egenkapital 2026 er <b>4.200 tkr.</b>, men årsrapporten 2025 viser en slutegenkapital på <b>6.200 tkr.</b> — difference på <b>2.000 tkr.</b>
+            {t('Budgettets primo egenkapital 2026 er')} <b>4.200 tkr.</b>{t(', men årsrapporten 2025 viser en slutegenkapital på')} <b>6.200 tkr.</b> {t('— difference på')} <b>2.000 tkr.</b>
           </div>
         </div>
       </div>
@@ -280,7 +280,7 @@ function WSDocuments() {
               role="button"
               tabIndex={0}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current && fileInputRef.current.click(); } }}
-              aria-label="Upload dokumenter"
+              aria-label={t('Upload dokumenter')}
             >
               <span style={{
                 width: 28, height: 28, borderRadius: 6,
@@ -291,21 +291,21 @@ function WSDocuments() {
                 <I.Upload size={13}/>
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>Upload dokument</div>
-                <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 1 }}>Træk filer hertil eller klik for at vælge</div>
+                <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>{t('Upload dokument')}</div>
+                <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 1 }}>{t('Træk filer hertil eller klik for at vælge')}</div>
               </div>
             </div>
 
             <div style={{ position: 'relative' }}>
               <I.Search size={14} style={{ position: 'absolute', left: 11, top: 9, color: 'var(--c-text-3)' }}/>
-              <input value={q} onChange={e => setQ(e.target.value)} className="input" style={{ paddingLeft: 32, height: 30, fontSize: 12.5 }} placeholder="Søg dokumenter, indhold, citater…"/>
+              <input value={q} onChange={e => setQ(e.target.value)} className="input" style={{ paddingLeft: 32, height: 30, fontSize: 12.5 }} placeholder={t('Søg dokumenter, indhold, citater…')}/>
             </div>
 
             {/* Sort + filter row */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, position: 'relative' }}>
               <button onClick={() => setSortOpen(!sortOpen)} className="btn btn-sm" style={{ flex: 1, justifyContent: 'space-between' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <I.Sort className="ic"/> {sortLabels[sortMode]}
+                  <I.Sort className="ic"/> {t(sortLabels[sortMode])}
                 </span>
                 <I.ChevronDown size={12} style={{ transform: sortOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}/>
               </button>
@@ -324,8 +324,8 @@ function WSDocuments() {
                         position: 'relative',
                       }}>
                       <span style={{ width: 14, color: 'var(--c-ink)' }}>{sortMode === k && <I.Check size={12}/>}</span>
-                      <span style={{ flex: 1 }}>{l}</span>
-                      {k === "latest-per-type" && <span className="ai-hint" style={{ fontSize: 9.5, padding: '1px 5px' }}><I.Spark className="spark"/> Anbefalet</span>}
+                      <span style={{ flex: 1 }}>{t(l)}</span>
+                      {k === "latest-per-type" && <span className="ai-hint" style={{ fontSize: 9.5, padding: '1px 5px' }}><I.Spark className="spark"/> {t('Anbefalet')}</span>}
                     </button>
                   ))}
                 </div>
@@ -334,13 +334,13 @@ function WSDocuments() {
 
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
               <span onClick={() => setTypeFilter("all")} className="tag" style={{ cursor: 'pointer', background: typeFilter === "all" ? 'var(--c-ink)' : 'var(--c-surface-2)', color: typeFilter === "all" ? '#fff' : 'var(--c-text-2)', border: typeFilter === "all" ? 'none' : '1px solid var(--c-line)' }}>
-                Alle · {allDocs.length}
+                {t('Alle')} · {allDocs.length}
               </span>
-              {types.map(t => {
-                const n = allDocs.filter(d => d.type === t).length;
+              {types.map(tp => {
+                const n = allDocs.filter(d => d.type === tp).length;
                 return (
-                  <span key={t} onClick={() => setTypeFilter(t)} className="tag" style={{ cursor: 'pointer', background: typeFilter === t ? 'var(--c-ink)' : 'var(--c-surface-2)', color: typeFilter === t ? '#fff' : 'var(--c-text-2)', border: typeFilter === t ? 'none' : '1px solid var(--c-line)' }}>
-                    {t} · {n}
+                  <span key={tp} onClick={() => setTypeFilter(tp)} className="tag" style={{ cursor: 'pointer', background: typeFilter === tp ? 'var(--c-ink)' : 'var(--c-surface-2)', color: typeFilter === tp ? '#fff' : 'var(--c-text-2)', border: typeFilter === tp ? 'none' : '1px solid var(--c-line)' }}>
+                    {t(tp)} · {n}
                   </span>
                 );
               })}
@@ -349,8 +349,8 @@ function WSDocuments() {
 
           {/* Result count */}
           <div style={{ padding: '8px 14px', fontSize: 11, color: 'var(--c-text-3)', borderBottom: '1px solid var(--c-line-2)', display: 'flex', justifyContent: 'space-between' }}>
-            <span>{docs.length} {sortMode === "latest-per-type" ? "typer" : "dokumenter"}</span>
-            {sortMode === "latest-per-type" && <span style={{ color: 'var(--c-ink)' }}>Tidligere versioner skjult</span>}
+            <span>{docs.length} {sortMode === "latest-per-type" ? t('typer') : t('dokumenter')}</span>
+            {sortMode === "latest-per-type" && <span style={{ color: 'var(--c-ink)' }}>{t('Tidligere versioner skjult')}</span>}
           </div>
 
           <div style={{ overflow: 'auto', flex: 1 }}>
@@ -371,14 +371,14 @@ function WSDocuments() {
                     }}>
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                         <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--c-text-2)' }}>
-                          {g.label}
+                          {t(g.label)}
                         </div>
                         <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>
-                          · {g.items.length} {g.items.length === 1 ? 'dokument' : 'dokumenter'}
+                          · {g.items.length} {g.items.length === 1 ? t('dokument') : t('dokumenter')}
                         </div>
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2, lineHeight: 1.4 }}>
-                        {g.sub}
+                        {t(g.sub)}
                       </div>
                     </div>
                     {g.items.map((d, i) => (
@@ -390,7 +390,7 @@ function WSDocuments() {
             })()}
             {docs.length === 0 && (
               <div style={{ padding: '24px 14px', fontSize: 12.5, color: 'var(--c-text-3)', textAlign: 'center' }}>
-                Ingen dokumenter matcher filtrene.
+                {t('Ingen dokumenter matcher filtrene.')}
               </div>
             )}
           </div>
@@ -400,12 +400,12 @@ function WSDocuments() {
         <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
           <div className="card-head">
             <div>
-              <div className="card-title">{selected?.name || "Vælg dokument"}</div>
-              <div className="card-sub">{selected?.type} · uploadet {selected?.uploaded}</div>
+              <div className="card-title">{selected?.name || t('Vælg dokument')}</div>
+              <div className="card-sub">{t(selected?.type)} · {t('uploadet')} {selected?.uploaded}</div>
             </div>
             <div className="hstack">
               <button className="btn btn-sm btn-ghost"><I.Download className="ic"/></button>
-              <button className="btn btn-sm"><I.Maximize className="ic"/> Åbn</button>
+              <button className="btn btn-sm"><I.Maximize className="ic"/> {t('Åbn')}</button>
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 0, flex: 1, minHeight: 480 }}>
@@ -435,13 +435,13 @@ function WSDocuments() {
                     <I.File size={22}/>
                   </div>
                   <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{selected?.name || 'Intet dokument valgt'}</div>
+                    <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{selected?.name || t('Intet dokument valgt')}</div>
                     <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 3 }}>
-                      {selected ? `${selected.type} · ${selected.size}` : 'Vælg et dokument i listen til venstre'}
+                      {selected ? t(selected.type) + ' · ' + selected.size : t('Vælg et dokument i listen til venstre')}
                     </div>
                   </div>
                   {selected && (
-                    <button className="btn btn-sm" style={{ marginTop: 4 }}><I.Maximize className="ic"/> Åbn dokument</button>
+                    <button className="btn btn-sm" style={{ marginTop: 4 }}><I.Maximize className="ic"/> {t('Åbn dokument')}</button>
                   )}
                 </div>
               )}
@@ -499,7 +499,7 @@ function CaseDocReader({ doc }) {
           <input
             className="input"
             style={{ width: '100%', height: 28, fontSize: 12 }}
-            placeholder="Søg i dokumentet"
+            placeholder={t('Søg i dokumentet')}
             value={q}
             onChange={e => setQ(e.target.value)}
           />
@@ -522,7 +522,7 @@ function CaseDocReader({ doc }) {
             );
           })}
           {hits && hits.length === 0 && (
-            <div style={{ padding: '16px 12px', fontSize: 12, color: 'var(--c-text-3)' }}>Ingen træffere.</div>
+            <div style={{ padding: '16px 12px', fontSize: 12, color: 'var(--c-text-3)' }}>{t('Ingen træffere.')}</div>
           )}
         </div>
       </div>
@@ -556,14 +556,14 @@ function DocRow({ d, selected, onSelect, latestPerType }) {
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.name}</span>
-            {latestPerType && <span className="tag" style={{ fontSize: 9.5, background: 'var(--c-primary)', color: '#fff', border: 'none', flexShrink: 0 }}>SENESTE</span>}
+            {latestPerType && <span className="tag" style={{ fontSize: 9.5, background: 'var(--c-primary)', color: '#fff', border: 'none', flexShrink: 0 }}>{t('SENESTE')}</span>}
           </div>
-          <div className="muted" style={{ fontSize: 11.5 }}>{d.type} · {d.sourceLabel || (d.origin === 'public' ? 'CVR' : 'Kundeupload')} · {d.year} · {d.size}</div>
+          <div className="muted" style={{ fontSize: 11.5 }}>{t(d.type)} · {t(d.sourceLabel || (d.origin === 'public' ? 'CVR' : 'Kundeupload'))} · {t(d.year)} · {d.size}</div>
           {latestPerType && d._olderCount > 0 && (
             <button onClick={(e) => { e.stopPropagation(); setShowOlder(!showOlder); }}
               style={{ marginTop: 4, background: 'none', border: 'none', padding: 0, fontSize: 11, color: 'var(--c-text-3)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
               <I.ChevronDown size={10} style={{ transform: showOlder ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}/>
-              {d._olderCount} tidligere {d._olderCount === 1 ? 'version' : 'versioner'}
+              {d._olderCount} {t('tidligere')} {d._olderCount === 1 ? t('version') : t('versioner')}
             </button>
           )}
         </div>
@@ -571,7 +571,7 @@ function DocRow({ d, selected, onSelect, latestPerType }) {
           {isBudgetLatest && (
             <button
               onClick={(e) => { e.stopPropagation(); onSelect(d); }}
-              title="Afvigelse fundet — klik for detaljer"
+              title={t('Afvigelse fundet — klik for detaljer')}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
                 background: 'var(--c-warn-bg, #fff8ec)',
@@ -585,11 +585,11 @@ function DocRow({ d, selected, onSelect, latestPerType }) {
                 lineHeight: 1.4,
               }}
             >
-              <span style={{ fontSize: 13 }}>⚠</span> Se afvigelse
+              <span style={{ fontSize: 13 }}>⚠</span> {t('Se afvigelse')}
             </button>
           )}
           {visibleStatus && !isBudgetLatest && (
-            <div style={{ fontSize: 11.5, color: d.status === 'Erstattet' ? 'var(--c-text-4)' : 'var(--c-text-3)' }}>{visibleStatus}</div>
+            <div style={{ fontSize: 11.5, color: d.status === 'Erstattet' ? 'var(--c-text-4)' : 'var(--c-text-3)' }}>{t(visibleStatus)}</div>
           )}
           <div className="muted" style={{ fontSize: 10.5 }}>{d.uploaded}</div>
         </div>
@@ -599,10 +599,10 @@ function DocRow({ d, selected, onSelect, latestPerType }) {
           <div className="doc-ic" style={{ opacity: 0.55 }}/>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</div>
-            <div className="muted" style={{ fontSize: 11 }}>{o.year} · {o.size}</div>
+            <div className="muted" style={{ fontSize: 11 }}>{t(o.year)} · {o.size}</div>
           </div>
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: 11, color: 'var(--c-text-4)' }}>{o.status}</div>
+            <div style={{ fontSize: 11, color: 'var(--c-text-4)' }}>{t(o.status)}</div>
             <div className="muted" style={{ fontSize: 10.5 }}>{o.uploaded}</div>
           </div>
         </div>

@@ -167,10 +167,17 @@ function sectionHasTable(sKey) {
 
 /* ── Instruktioner til modellen ──────────────────────────────────────────── */
 
+/* Language switch reloads the page, so a module-level branch is safe. When the
+   app runs in English the model is instructed to write professional English
+   credit-memo prose instead of Danish. */
+const AI_EN = (typeof window !== 'undefined' && window.CW_LANG === 'en');
+
 const SYSTEM_WRITER = `Du er erfaren kreditanalytiker i EIFO og skriver afsnit til en kreditindstilling, der skal forelægges kreditkomitéen.
 
 GRUNDREGLER
-- Skriv udelukkende på dansk, sagligt og præcist. Ingen salgssprog, ingen floskler.
+- ${AI_EN
+    ? 'Write exclusively in professional English, in the register of a formal bank credit memorandum. Factual and precise; no sales language, no filler. Source material and template guidance may be in Danish — still answer in English, but keep company names, document names and figures exactly as they appear in the sources.'
+    : 'Skriv udelukkende på dansk, sagligt og præcist. Ingen salgssprog, ingen floskler.'}
 - Du må kun bruge oplysninger fra det vedlagte sagsgrundlag. Opfind aldrig tal, datoer, navne, citater eller dokumenter.
 - Mangler grundlaget noget templaten beder om, så skriv <span class="tpl-blank">[mangler: hvad der skal indhentes]</span> i stedet for at gætte.
 - Vær konkret frem for generel. Et tal med kilde er mere værd end en velformuleret sætning uden.
@@ -185,11 +192,15 @@ FORMAT
 - Svar med ét HTML-fragment og intet andet. Ingen indledning, ingen forklaring, ingen markdown, ingen kodeblokke.
 - Tilladte tags: <p> <strong> <em> <ul> <ol> <li> <h3 class="tpl-subhead"> <table> <thead> <tbody> <tr> <th> <td> <span class="memo-cite"> <span class="tpl-blank">
 - Brug <h3 class="tpl-subhead"> til de underafsnit templaten beder om.
-- Dansk talformat: 41,1 mio. og 45,7 %. Brug aldrig lange tankestreger.`;
+- ${AI_EN
+    ? 'Keep the number formatting used in the source material (e.g. 41,1M and 45,7 %) so figures stay verbatim. Never use em dashes.'
+    : 'Dansk talformat: 41,1 mio. og 45,7 %. Brug aldrig lange tankestreger.'}`;
 
 const SYSTEM_CHAT = `Du er sparringspartner for en kreditmedarbejder i EIFO, der sidder med en kreditindstilling.
 
-- Svar på dansk, kort og konkret. Kom til pointen i første sætning.
+- ${AI_EN
+    ? 'Answer in professional English, briefly and concretely. Get to the point in the first sentence. The case material may be in Danish — still answer in English, keeping figures, company names and document names verbatim.'
+    : 'Svar på dansk, kort og konkret. Kom til pointen i første sætning.'}
 - Du må kun bygge på sagsgrundlaget og memoets nuværende tekst. Opfind aldrig tal eller kilder.
 - Bliver du bedt om at foreslå tekst til et afsnit, så skriv forslaget som et HTML-fragment i en kodeblok mærket \`\`\`html, og hold resten af svaret udenfor blokken. Så kan rådgiveren indsætte det med ét klik.
 - Bliver du spurgt om noget grundlaget ikke dækker, så sig det direkte i stedet for at gætte.
@@ -292,7 +303,7 @@ function markAsDraft(html, origin) {
   if (!html) return html;
   const src = origin || 'ai';
   const stamped = stampOrigin(html, src);
-  return '<div class="tpl-draft"><span class="tpl-draft-label" contenteditable="false">AI-udkast</span>' + stamped + '</div>';
+  return '<div class="tpl-draft"><span class="tpl-draft-label" contenteditable="false">' + t('AI-udkast') + '</span>' + stamped + '</div>';
 }
 
 /** Sætter ophavsmærke på hver blok på øverste niveau. */
@@ -313,9 +324,9 @@ function stampOrigin(html, origin) {
 }
 
 const ORIGIN_LABEL = {
-  ai: 'Skrevet af AI',
-  chat: 'Indsat fra sagschatten',
-  edited: 'Skrevet af AI, rettet af rådgiveren',
+  ai: t('Skrevet af AI'),
+  chat: t('Indsat fra sagschatten'),
+  edited: t('Skrevet af AI, rettet af rådgiveren'),
 };
 
 /**
@@ -544,7 +555,7 @@ function AiSettingsDialog({ open, onClose }) {
     try {
       const list = await window.AI.listModels(tab, key, baseUrl);
       setModels(list);
-      if (!list.length) setMsg({ kind: 'warn', text: 'Kontoen returnerede ingen modeller.' });
+      if (!list.length) setMsg({ kind: 'warn', text: t('Kontoen returnerede ingen modeller.') });
       else if (!list.some(m => m.id === model)) setModel(list[0].id);
     } catch (e) { setMsg({ kind: 'err', text: e.message }); }
     setBusy('');
@@ -554,7 +565,7 @@ function AiSettingsDialog({ open, onClose }) {
     setBusy('test'); setMsg(null);
     try {
       const reply = await window.AI.testConnection(tab, key, model, baseUrl);
-      setMsg({ kind: 'ok', text: 'Forbindelsen virker. ' + P.label + ' svarede "' + (reply || '').slice(0, 40) + '".' });
+      setMsg({ kind: 'ok', text: t('Forbindelsen virker.') + ' ' + t(P.label) + ' ' + t('svarede') + ' "' + (reply || '').slice(0, 40) + '".' });
     } catch (e) { setMsg({ kind: 'err', text: e.message }); }
     setBusy('');
   }
@@ -568,7 +579,7 @@ function AiSettingsDialog({ open, onClose }) {
     const next = { ...cfg, keys: { ...cfg.keys, [tab]: '' } };
     setCfg(next);
     window.AI.setConfig({ ...next, provider: tab });
-    setMsg({ kind: 'ok', text: 'Nøglen er slettet fra denne browser.' });
+    setMsg({ kind: 'ok', text: t('Nøglen er slettet fra denne browser.') });
   }
 
   const masked = key && !reveal ? key.slice(0, 7) + '•'.repeat(Math.max(0, Math.min(24, key.length - 11))) + key.slice(-4) : key;
@@ -585,13 +596,13 @@ function AiSettingsDialog({ open, onClose }) {
         style={{ width: 'min(560px, 100%)', background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}
       >
         <div style={{ padding: '20px 24px 0' }}>
-          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>Forbind din AI-konto</div>
+          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Forbind din AI-konto')}</div>
           <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 5, lineHeight: 1.55 }}>
             {isLocal
               ? (local && local.hosted
-                ? 'Denne mulighed kalder Claude Code eller Codex på din egen maskine, så der ikke bruges API-kredit. Den virker kun når prototypen er startet lokalt med devserver.js. Her på nettet skal du bruge en API-nøgle.'
-                : 'Memoet skrives med den Claude Code eller Codex du allerede har installeret. De logger ind med selve abonnementet, så der bruges ingen API-kredit. Til gengæld virker det kun på din egen maskine.')
-              : 'Memoet skrives med din egen konto hos ' + P.vendor + '. Nøglen gemmes kun i denne browser og sendes udelukkende til den udbyder du vælger. Forbruget afregnes som API-forbrug på din konto, ikke på dit abonnement.'}
+                ? t('Denne mulighed kalder Claude Code eller Codex på din egen maskine, så der ikke bruges API-kredit. Den virker kun når prototypen er startet lokalt med devserver.js. Her på nettet skal du bruge en API-nøgle.')
+                : t('Memoet skrives med den Claude Code eller Codex du allerede har installeret. De logger ind med selve abonnementet, så der bruges ingen API-kredit. Til gengæld virker det kun på din egen maskine.'))
+              : t('Memoet skrives med din egen konto hos') + ' ' + P.vendor + '. ' + t('Nøglen gemmes kun i denne browser og sendes udelukkende til den udbyder du vælger. Forbruget afregnes som API-forbrug på din konto, ikke på dit abonnement.')}
           </div>
         </div>
 
@@ -611,7 +622,7 @@ function AiSettingsDialog({ open, onClose }) {
                   color: on ? '#fff' : 'var(--c-text-2)',
                   fontSize: 13, fontWeight: 500,
                 }}>
-                {window.AI.PROVIDERS[p].label}
+                {t(window.AI.PROVIDERS[p].label)}
                 {has && <span style={{ width: 6, height: 6, borderRadius: '50%', background: on ? '#7ee2b8' : 'var(--c-success)' }}/>}
               </button>
             );
@@ -620,10 +631,10 @@ function AiSettingsDialog({ open, onClose }) {
 
         {isLocal ? (
         <div style={{ padding: '18px 24px 4px' }}>
-          <div className="field-label">Motor</div>
+          <div className="field-label">{t('Motor')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {P.engines.map(en => {
-              const st = (local && local[en.id]) || { available: false, detail: 'Undersøger…' };
+              const st = (local && local[en.id]) || { available: false, detail: t('Undersøger…') };
               const on = model === en.id;
               return (
                 <button
@@ -649,10 +660,10 @@ function AiSettingsDialog({ open, onClose }) {
                         fontSize: 10.5, padding: '1px 6px', borderRadius: 4,
                         background: st.available ? 'rgba(16,138,80,0.1)' : 'var(--c-surface-2)',
                         color: st.available ? 'var(--c-success)' : 'var(--c-text-3)',
-                      }}>{st.available ? 'klar' : 'ikke klar'}</span>
+                      }}>{st.available ? t('klar') : t('ikke klar')}</span>
                     </span>
                     <span style={{ display: 'block', fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 3, lineHeight: 1.45 }}>
-                      {en.hint}. {st.detail}
+                      {t(en.hint)}. {t(st.detail)}
                     </span>
                   </span>
                 </button>
@@ -661,14 +672,12 @@ function AiSettingsDialog({ open, onClose }) {
           </div>
 
           <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 12, lineHeight: 1.55 }}>
-            Kaldene går gennem prototypens dev-server til kommandolinjen på din maskine. Intet forlader maskinen
-            ud over det, kommandolinjen selv sender til leverandøren. Første svar tager typisk 5 til 10 sekunder,
-            fordi kommandolinjen skal starte op. Dit abonnements forbrugslofter gælder stadig.
+            {t('Kaldene går gennem prototypens dev-server til kommandolinjen på din maskine. Intet forlader maskinen ud over det, kommandolinjen selv sender til leverandøren. Første svar tager typisk 5 til 10 sekunder, fordi kommandolinjen skal starte op. Dit abonnements forbrugslofter gælder stadig.')}
           </div>
         </div>
         ) : (
         <div style={{ padding: '18px 24px 4px' }}>
-          <div className="field-label">API-nøgle fra {P.vendor}</div>
+          <div className="field-label">{t('API-nøgle fra')} {P.vendor}</div>
           <div style={{ display: 'flex', gap: 6 }}>
             <input
               className="input"
@@ -681,13 +690,13 @@ function AiSettingsDialog({ open, onClose }) {
               onFocus={() => setReveal(true)}
               onChange={e => setKey(e.target.value)}
             />
-            <button className="btn btn-sm" onClick={() => setReveal(r => !r)} title={reveal ? 'Skjul' : 'Vis'}>{reveal ? 'Skjul' : 'Vis'}</button>
+            <button className="btn btn-sm" onClick={() => setReveal(r => !r)} title={reveal ? t('Skjul') : t('Vis')}>{reveal ? t('Skjul') : t('Vis')}</button>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 6 }}>
-            Hent en nøgle på <a href={P.consoleUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c-primary)' }}>{P.consoleUrl.replace('https://', '')}</a>
+            {t('Hent en nøgle på')} <a href={P.consoleUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c-primary)' }}>{P.consoleUrl.replace('https://', '')}</a>
           </div>
 
-          <div className="field-label" style={{ marginTop: 16 }}>Model</div>
+          <div className="field-label" style={{ marginTop: 16 }}>{t('Model')}</div>
           <div style={{ display: 'flex', gap: 6 }}>
             {models.length ? (
               <select className="input" style={{ flex: 1, fontSize: 13 }} value={model} onChange={e => setModel(e.target.value)}>
@@ -697,17 +706,17 @@ function AiSettingsDialog({ open, onClose }) {
               <input className="input" style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 12 }} value={model} onChange={e => setModel(e.target.value)} spellCheck={false}/>
             )}
             <button className="btn btn-sm" disabled={!key || busy === 'models'} onClick={fetchModels}>
-              {busy === 'models' ? 'Henter…' : 'Hent modeller'}
+              {busy === 'models' ? t('Henter…') : t('Hent modeller')}
             </button>
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 6 }}>
-            Hent modeller viser dem din konto faktisk har adgang til, så du ikke skal gætte et modelnavn.
+            {t('Hent modeller viser dem din konto faktisk har adgang til, så du ikke skal gætte et modelnavn.')}
           </div>
 
           <details style={{ marginTop: 14 }}>
-            <summary style={{ fontSize: 11.5, color: 'var(--c-text-3)', cursor: 'pointer' }}>Avanceret</summary>
+            <summary style={{ fontSize: 11.5, color: 'var(--c-text-3)', cursor: 'pointer' }}>{t('Avanceret')}</summary>
             <div style={{ marginTop: 8 }}>
-              <div className="field-label">Endpoint</div>
+              <div className="field-label">{t('Endpoint')}</div>
               <input
                 className="input"
                 style={{ width: '100%', fontFamily: 'var(--mono)', fontSize: 12 }}
@@ -717,8 +726,7 @@ function AiSettingsDialog({ open, onClose }) {
                 onChange={e => setBaseUrl(e.target.value)}
               />
               <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 6, lineHeight: 1.5 }}>
-                Lad feltet stå tomt for at gå direkte til {P.vendor}. Udfyld det kun hvis kaldene skal gennem
-                en proxy i huset eller et testmiljø.
+                {t('Lad feltet stå tomt for at gå direkte til')} {P.vendor}. {t('Udfyld det kun hvis kaldene skal gennem en proxy i huset eller et testmiljø.')}
               </div>
             </div>
           </details>
@@ -737,11 +745,11 @@ function AiSettingsDialog({ open, onClose }) {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '18px 24px 20px' }}>
-          {!isLocal && key && <button className="btn btn-sm btn-ghost" onClick={forget} style={{ color: 'var(--c-text-3)' }}>Glem nøglen</button>}
+          {!isLocal && key && <button className="btn btn-sm btn-ghost" onClick={forget} style={{ color: 'var(--c-text-3)' }}>{t('Glem nøglen')}</button>}
           <div style={{ flex: 1 }}/>
-          <button className="btn btn-sm" disabled={!canUse || busy === 'test'} onClick={test}>{busy === 'test' ? 'Tester…' : 'Test forbindelse'}</button>
-          <button className="btn btn-sm" onClick={onClose}>Annullér</button>
-          <button className="btn btn-sm btn-primary" disabled={!canUse} onClick={save}>Gem</button>
+          <button className="btn btn-sm" disabled={!canUse || busy === 'test'} onClick={test}>{busy === 'test' ? t('Tester…') : t('Test forbindelse')}</button>
+          <button className="btn btn-sm" onClick={onClose}>{t('Annullér')}</button>
+          <button className="btn btn-sm btn-primary" disabled={!canUse} onClick={save}>{t('Gem')}</button>
         </div>
       </div>
     </div>
@@ -796,9 +804,9 @@ function StreamWaiting() {
   const codex = local && cfg.models.local === 'codex';
 
   let what;
-  if (codex) what = 'Codex skriver. Den sender først teksten når hele svaret er færdigt.';
-  else if (local) what = secs < 8 ? 'Starter Claude Code på din maskine.' : 'Claude Code tænker.';
-  else what = 'Venter på svar.';
+  if (codex) what = t('Codex skriver. Den sender først teksten når hele svaret er færdigt.');
+  else if (local) what = secs < 8 ? t('Starter Claude Code på din maskine.') : t('Claude Code tænker.');
+  else what = t('Venter på svar.');
 
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--c-text-3)' }}>
@@ -848,10 +856,10 @@ function AiWarnings({ html }) {
   if (!html) return null;
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 11.5, color: 'var(--c-text-3)' }}>
-      <span>{n} kildehenvisning{n === 1 ? '' : 'er'}</span>
+      <span>{n} {n === 1 ? t('kildehenvisning') : t('kildehenvisninger')}</span>
       {bad.length > 0 && (
         <span style={{ color: 'var(--c-warn)' }}>
-          Peger på {bad.length} dokument{bad.length === 1 ? '' : 'er'} der ikke findes i sagen: {bad.join(', ')}
+          {t('Peger på')} {bad.length} {bad.length === 1 ? t('dokument der ikke findes i sagen:') : t('dokumenter der ikke findes i sagen:')} {bad.join(', ')}
         </span>
       )}
     </div>
@@ -901,13 +909,13 @@ function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, on
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
         <span className="ai-chip">AI</span>
         <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>
-          {selection ? 'Omskriv markeret tekst' : title}
+          {selection ? t('Omskriv markeret tekst') : t(title)}
         </span>
         <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>
-          {status.ready ? status.provider.label + ' · ' + status.model : 'ikke forbundet'}
+          {status.ready ? t(status.provider.label) + ' · ' + status.model : t('ikke forbundet')}
         </span>
         <div style={{ flex: 1 }}/>
-        <button className="btn btn-sm btn-ghost" onClick={onClose} style={{ padding: '0 8px' }}>Luk</button>
+        <button className="btn btn-sm btn-ghost" onClick={onClose} style={{ padding: '0 8px' }}>{t('Luk')}</button>
       </div>
 
       {selection && (
@@ -920,30 +928,30 @@ function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, on
 
       {!status.ready ? (
         <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.6 }}>
-          Forbind din Claude- eller ChatGPT-konto først. Knappen sidder øverst i memoets værktøjslinje.
+          {t('Forbind din Claude- eller ChatGPT-konto først. Knappen sidder øverst i memoets værktøjslinje.')}
         </div>
       ) : (
         <>
           {!runner.running && !runner.done && (
             <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginBottom: 10, lineHeight: 1.55 }}>
-              Grundlag: regnskabstallene og{' '}
+              {t('Grundlag: regnskabstallene og')}{' '}
               {docsForSection(sKey).length
                 ? docsForSection(sKey).map(d => d.name).join(', ')
-                : 'ingen dokumenter fundet i sagen'}
+                : t('ingen dokumenter fundet i sagen')}
             </div>
           )}
 
           {!runner.running && !runner.done && (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
               {!selection && (
-                <button className="ai-preset" onClick={() => go('write')} title="Skriv afsnittet forfra ud fra dokumenterne">
-                  Skriv afsnittet forfra
+                <button className="ai-preset" onClick={() => go('write')} title={t('Skriv afsnittet forfra ud fra dokumenterne')}>
+                  {t('Skriv afsnittet forfra')}
                 </button>
               )}
               {REWRITE_PRESETS.map(p => (
-                <button key={p.id} className="ai-preset" title={p.hint}
+                <button key={p.id} className="ai-preset" title={t(p.hint)}
                   onClick={() => go(selection ? 'selection' : 'rewrite', p.instruction)}>
-                  {p.label}
+                  {t(p.label)}
                 </button>
               ))}
             </div>
@@ -974,27 +982,26 @@ function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, on
               background: 'var(--c-warn-bg)', border: '1px solid #f4dfb7',
               fontSize: 12, color: 'var(--c-warn)', lineHeight: 1.5,
             }}>
-              Markeringen findes ikke længere, formentlig fordi der er klikket et andet sted i memoet
-              mens teksten blev skrevet. Ingenting er indsat. Markér passagen igen, så er teksten her stadig.
+              {t('Markeringen findes ikke længere, formentlig fordi der er klikket et andet sted i memoet mens teksten blev skrevet. Ingenting er indsat. Markér passagen igen, så er teksten her stadig.')}
             </div>
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {runner.running ? (
               <>
-                <span style={{ fontSize: 12, color: 'var(--c-text-3)' }}>Skriver…</span>
+                <span style={{ fontSize: 12, color: 'var(--c-text-3)' }}>{t('Skriver…')}</span>
                 <div style={{ flex: 1 }}/>
-                <button className="btn btn-sm" onClick={runner.stop}>Stop</button>
+                <button className="btn btn-sm" onClick={runner.stop}>{t('Stop')}</button>
               </>
             ) : runner.done && !clean.trim() ? (
               // Et tomt svar må aldrig kunne indsættes: det ville sætte
               // afsnittet til tom streng og gemme det.
               <>
                 <span style={{ fontSize: 12, color: 'var(--c-warn)', flex: 1 }}>
-                  Modellen svarede ikke med brugbar tekst. Afsnittet er urørt.
+                  {t('Modellen svarede ikke med brugbar tekst. Afsnittet er urørt.')}
                 </span>
-                <button className="btn btn-sm" onClick={() => lastAction && go(lastAction.kind, lastAction.text)}>Prøv igen</button>
-                <button className="btn btn-sm btn-ghost" onClick={runner.reset} style={{ color: 'var(--c-text-3)' }}>Kassér</button>
+                <button className="btn btn-sm" onClick={() => lastAction && go(lastAction.kind, lastAction.text)}>{t('Prøv igen')}</button>
+                <button className="btn btn-sm btn-ghost" onClick={runner.reset} style={{ color: 'var(--c-text-3)' }}>{t('Kassér')}</button>
               </>
             ) : runner.done ? (
               <>
@@ -1003,12 +1010,12 @@ function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, on
                   if (ok === false) { setLostSelection(true); return; }
                   onClose();
                 }}>
-                  {selection ? 'Erstat det markerede' : 'Erstat afsnittet'}
+                  {selection ? t('Erstat det markerede') : t('Erstat afsnittet')}
                 </button>
-                {!selection && <button className="btn btn-sm" onClick={() => { onAppend(markAsDraft(clean)); onClose(); }}>Indsæt nedenfor</button>}
-                <button className="btn btn-sm btn-ghost" onClick={() => lastAction && go(lastAction.kind, lastAction.text)}>Prøv igen</button>
+                {!selection && <button className="btn btn-sm" onClick={() => { onAppend(markAsDraft(clean)); onClose(); }}>{t('Indsæt nedenfor')}</button>}
+                <button className="btn btn-sm btn-ghost" onClick={() => lastAction && go(lastAction.kind, lastAction.text)}>{t('Prøv igen')}</button>
                 <div style={{ flex: 1 }}/>
-                <button className="btn btn-sm btn-ghost" onClick={runner.reset} style={{ color: 'var(--c-text-3)' }}>Kassér</button>
+                <button className="btn btn-sm btn-ghost" onClick={runner.reset} style={{ color: 'var(--c-text-3)' }}>{t('Kassér')}</button>
               </>
             ) : (
               <form onSubmit={submitFree} style={{ display: 'flex', gap: 6, width: '100%' }}>
@@ -1016,11 +1023,11 @@ function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, on
                   ref={inputRef}
                   className="input"
                   style={{ flex: 1, fontSize: 12.5 }}
-                  placeholder={selection ? 'Hvad skal der ske med den markerede tekst?' : 'Skriv din egen instruktion, fx “tilføj et afsnit om valutarisikoen”'}
+                  placeholder={selection ? t('Hvad skal der ske med den markerede tekst?') : t('Skriv din egen instruktion, fx “tilføj et afsnit om valutarisikoen”')}
                   value={instruction}
                   onChange={e => setInstruction(e.target.value)}
                 />
-                <button className="btn btn-sm btn-primary" type="submit" disabled={!instruction.trim()}>Kør</button>
+                <button className="btn btn-sm btn-primary" type="submit" disabled={!instruction.trim()}>{t('Kør')}</button>
               </form>
             )}
           </div>
@@ -1116,27 +1123,26 @@ function AiChatPanel({ open, onClose, getMemoText, sections, onInsert }) {
     <div className="ai-chat">
       <div className="ai-chat-head">
         <span className="ai-chip">AI</span>
-        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>Spørg om sagen</span>
+        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>{t('Spørg om sagen')}</span>
         <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>
-          {status.ready ? status.provider.label : 'ikke forbundet'}
+          {status.ready ? t(status.provider.label) : t('ikke forbundet')}
         </span>
         <div style={{ flex: 1 }}/>
         {history.length > 0 && (
           <button className="btn btn-sm btn-ghost" style={{ padding: '0 8px', color: 'var(--c-text-3)' }}
-            onClick={() => { setHistory([]); runner.reset(); }}>Ryd</button>
+            onClick={() => { setHistory([]); runner.reset(); }}>{t('Ryd')}</button>
         )}
-        <button className="btn btn-sm btn-ghost" style={{ padding: '0 8px' }} onClick={onClose}>Luk</button>
+        <button className="btn btn-sm btn-ghost" style={{ padding: '0 8px' }} onClick={onClose}>{t('Luk')}</button>
       </div>
 
       <div ref={bodyRef} className="ai-chat-body">
         {history.length === 0 && !streaming && (
           <div>
             <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.6, marginBottom: 12 }}>
-              Chatten kender sagens dokumenter, regnskabstallene og memoets nuværende tekst. Foreslår den tekst,
-              kan du indsætte den direkte i et afsnit.
+              {t('Chatten kender sagens dokumenter, regnskabstallene og memoets nuværende tekst. Foreslår den tekst, kan du indsætte den direkte i et afsnit.')}
             </div>
             {CHAT_STARTERS.map(s => (
-              <button key={s} className="ai-starter" onClick={() => ask(s)}>{s}</button>
+              <button key={s} className="ai-starter" onClick={() => ask(s)}>{t(s)}</button>
             ))}
           </div>
         )}
@@ -1151,13 +1157,13 @@ function AiChatPanel({ open, onClose, getMemoText, sections, onInsert }) {
                   <div key={j} className="ai-suggest">
                     <div className="memo-body ai-suggest-body" dangerouslySetInnerHTML={{ __html: cleanHtml(part.body) }}/>
                     <div className="ai-suggest-foot">
-                      <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>Indsæt i</span>
+                      <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>{t('Indsæt i')}</span>
                       <select className="input" style={{ height: 26, fontSize: 11.5, padding: '0 6px', flex: 1, minWidth: 0 }}
                         value={target || ''} onChange={e => setTarget(e.target.value)}>
-                        {(sections || []).map(s => <option key={s.k} value={s.k}>{s.num}. {s.label}</option>)}
+                        {(sections || []).map(s => <option key={s.k} value={s.k}>{s.num}. {t(s.label)}</option>)}
                       </select>
                       <button className="btn btn-sm btn-primary" style={{ height: 26 }}
-                        onClick={() => onInsert(target, cleanHtml(part.body))}>Indsæt</button>
+                        onClick={() => onInsert(target, cleanHtml(part.body))}>{t('Indsæt')}</button>
                     </div>
                   </div>
                 ))}
@@ -1183,14 +1189,14 @@ function AiChatPanel({ open, onClose, getMemoText, sections, onInsert }) {
           ref={inputRef}
           className="input"
           style={{ flex: 1, fontSize: 12.5 }}
-          placeholder={status.ready ? 'Spørg om sagen…' : 'Forbind en AI-konto først'}
+          placeholder={status.ready ? t('Spørg om sagen…') : t('Forbind en AI-konto først')}
           disabled={!status.ready}
           value={q}
           onChange={e => setQ(e.target.value)}
         />
         {runner.running
-          ? <button className="btn btn-sm" type="button" onClick={runner.stop}>Stop</button>
-          : <button className="btn btn-sm btn-primary" type="submit" disabled={!status.ready || !q.trim()}>Send</button>}
+          ? <button className="btn btn-sm" type="button" onClick={runner.stop}>{t('Stop')}</button>
+          : <button className="btn btn-sm btn-primary" type="submit" disabled={!status.ready || !q.trim()}>{t('Send')}</button>}
       </form>
     </div>
   );
