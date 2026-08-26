@@ -74,9 +74,9 @@ function WSFinancials({ go }) {
     <div className="page page-wide" style={{ maxWidth: 1080, padding: '24px 32px 80px' }}>
       {/* Page header */}
       <div style={{ marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: 0 }}>Finansielt overblik</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: 0 }}>{t('Finansielt overblik')}</h1>
         <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 4, maxWidth: 720 }}>
-          Foreløbig vurdering baseret på offentlige årsregnskaber, branche og soft signals. Periodetal, budget og interne dokumenter mangler fra kunden.
+          {t('Foreløbig vurdering baseret på offentlige årsregnskaber, branche og soft signals. Periodetal, budget og interne dokumenter mangler fra kunden.')}
         </div>
         <div style={{
           marginTop: 10, display: 'flex', alignItems: 'flex-start', gap: 8,
@@ -86,9 +86,8 @@ function WSFinancials({ go }) {
         }}>
           <I.AlertCircle size={13} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 2 }}/>
           <span>
-            <b style={{ color: 'var(--c-ink)', fontWeight: 600 }}>AI kan tage fejl.</b>{' '}
-            Sammenfatninger og markedsdata er genereret af AI og kan indeholde fejl eller forældede oplysninger.
-            Verificér altid kritiske tal og udsagn mod kilden, før de bruges i kreditindstilling.
+            <b style={{ color: 'var(--c-ink)', fontWeight: 600 }}>{t('AI kan tage fejl.')}</b>{' '}
+            {t('Sammenfatninger og markedsdata er genereret af AI og kan indeholde fejl eller forældede oplysninger. Verificér altid kritiske tal og udsagn mod kilden, før de bruges i kreditindstilling.')}
           </span>
         </div>
       </div>
@@ -106,7 +105,7 @@ function WSFinancials({ go }) {
       >
         <div
           role="tablist"
-          aria-label="Filtrér sektioner"
+          aria-label={t('Filtrér sektioner')}
           style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1, minWidth: 0 }}
         >
           {FIN_VIEWS.map(v => {
@@ -127,7 +126,7 @@ function WSFinancials({ go }) {
                   whiteSpace: 'nowrap',
                 }}
               >
-                {v.l}
+                {t(v.l)}
               </button>
             );
           })}
@@ -135,18 +134,18 @@ function WSFinancials({ go }) {
         <button
           className="btn btn-sm btn-danger"
           onClick={() => go && go("workspace:1:memo")}
-          title="Afslå sagen baseret på det nuværende grundlag"
+          title={t('Afslå sagen baseret på det nuværende grundlag')}
           style={{ flexShrink: 0 }}
         >
-          Giv afslag
+          {t('Giv afslag')}
         </button>
         <button
           className="btn btn-sm btn-primary"
           onClick={() => go && go("workspace:1")}
-          title="Send anmodning til kunden om periodetal, budget og dokumenter"
+          title={t('Send anmodning til kunden om periodetal, budget og dokumenter')}
           style={{ flexShrink: 0 }}
         >
-          Gå videre <I.ArrowRight className="ic"/>
+          {t('Gå videre')} <I.ArrowRight className="ic"/>
         </button>
       </div>
 
@@ -221,8 +220,8 @@ function StatusTag({ kind, children }) {
 function DataBasisCard({ title, description, chips, source, status, stamp }) {
   return (
     <div style={{ padding: 4 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)' }}>{title}</div>
-      <div style={{ fontSize: 12, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.5 }}>{description}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)' }}>{t(title)}</div>
+      <div style={{ fontSize: 12, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.5 }}>{t(description)}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
         {chips.map((c, i) => (
           <span key={i} style={{
@@ -235,7 +234,7 @@ function DataBasisCard({ title, description, chips, source, status, stamp }) {
         ))}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, fontSize: 11.5, color: 'var(--c-text-3)', flexWrap: 'wrap' }}>
-        <span>Kilde: <b style={{ color: 'var(--c-text-2)', fontWeight: 500 }}>{source}</b></span>
+        <span>{t('Kilde:')} <b style={{ color: 'var(--c-text-2)', fontWeight: 500 }}>{source}</b></span>
         {status && <><span>·</span><StatusTag kind="success">{status}</StatusTag></>}
         {stamp && <><span>·</span><span>{stamp}</span></>}
       </div>
@@ -260,15 +259,15 @@ function KpiCard({ label, value, delta, dir, period, note }) {
       background: 'var(--c-surface)',
     }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <div style={{ fontSize: 11.5, color: 'var(--c-text-2)' }}>{label}</div>
-        <div style={{ fontSize: 10.5, color: 'var(--c-text-3)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{period}</div>
+        <div style={{ fontSize: 11.5, color: 'var(--c-text-2)' }}>{t(label)}</div>
+        <div style={{ fontSize: 10.5, color: 'var(--c-text-3)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{t(period)}</div>
       </div>
       <div className="mono" style={{ fontSize: 20, fontWeight: 600, color: 'var(--c-ink)', marginTop: 4, letterSpacing: '-0.01em' }}>{value}</div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 11.5, color: positive ? 'var(--c-success)' : 'var(--c-warn)', fontWeight: 500 }}>
         {positive ? <I.TrendUp size={11}/> : <I.TrendDown size={11}/>}
-        <span>{delta}</span>
+        <span>{t(delta)}</span>
       </div>
-      <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 6, lineHeight: 1.4 }}>{note}</div>
+      <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 6, lineHeight: 1.4 }}>{t(note)}</div>
     </div>
   );
 }
@@ -291,8 +290,8 @@ function SignalRow({ title, body, isFirst }) {
       padding: '12px 0',
       borderTop: isFirst ? 'none' : '1px solid var(--c-line-2)',
     }}>
-      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>{title}</div>
-      <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 3, lineHeight: 1.5 }}>{body}</div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>{t(title)}</div>
+      <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 3, lineHeight: 1.5 }}>{t(body)}</div>
     </div>
   );
 }
@@ -308,8 +307,8 @@ function MarketSection() {
   return (
     <>
       <FinSection
-        title="Produkt, marked og branche"
-        sub="Kontekst for branche, marked og makro. Kreditrelevante observationer ligger under Findings øverst."
+        title={t('Produkt, marked og branche')}
+        sub={t('Kontekst for branche, marked og makro. Kreditrelevante observationer ligger under Findings øverst.')}
       >
         {/* Markedssignaler - top numbers */}
         <div className="card" style={{ padding: '14px 18px', marginBottom: 14 }}>
@@ -320,10 +319,10 @@ function MarketSection() {
               { label: "Konkurrenceniveau",   value: "Moderat",  note: "5-7 spillere i DK-segment", src: "AI-vurdering · CVR-opslag på branchekode 28.11.00" },
             ].map((m, i) => (
               <div key={i} style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 11, color: 'var(--c-text-2)' }}>{m.label}</div>
-                <div className="mono" style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)', marginTop: 3 }}>{m.value}</div>
-                <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2 }}>{m.note}</div>
-                <div style={{ fontSize: 10.5, color: 'var(--c-text-4)', marginTop: 4, fontStyle: 'italic' }}>Kilde: {m.src}</div>
+                <div style={{ fontSize: 11, color: 'var(--c-text-2)' }}>{t(m.label)}</div>
+                <div className="mono" style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)', marginTop: 3 }}>{t(m.value)}</div>
+                <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2 }}>{t(m.note)}</div>
+                <div style={{ fontSize: 10.5, color: 'var(--c-text-4)', marginTop: 4, fontStyle: 'italic' }}>{t('Kilde:')} {t(m.src)}</div>
               </div>
             ))}
           </div>
@@ -332,21 +331,21 @@ function MarketSection() {
             fontSize: 11, color: 'var(--c-text-3)', display: 'flex', alignItems: 'center', gap: 6,
           }}>
             <I.Sparkles size={11} style={{ color: 'var(--c-primary)' }}/>
-            <span>AI-sammenfatning af eksterne brancheopslag · hentet 23. maj 2026</span>
+            <span>{t('AI-sammenfatning af eksterne brancheopslag · hentet 23. maj 2026')}</span>
           </div>
         </div>
 
         {/* PEST analyse */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>PEST-analyse</div>
-          <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>· kort overblik over makroforhold</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t('PEST-analyse')}</div>
+          <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>· {t('kort overblik over makroforhold')}</div>
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
             fontSize: 10.5, fontWeight: 500, color: 'var(--c-primary)',
             background: 'var(--c-primary-bg)', border: '1px solid var(--c-primary-border)',
             padding: '1px 7px', borderRadius: 999,
           }}>
-            <I.Sparkles size={9}/> AI-genereret
+            <I.Sparkles size={9}/> {t('AI-genereret')}
           </span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
@@ -358,24 +357,24 @@ function MarketSection() {
           ].map((p, i) => (
             <div key={i} className="card" style={{ padding: '12px 14px', minWidth: 0 }}>
               <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--c-primary)' }}>
-                {p.k}
+                {t(p.k)}
               </div>
-              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.5 }}>{p.desc}</div>
-              <div style={{ fontSize: 10.5, color: 'var(--c-text-4)', marginTop: 6, fontStyle: 'italic', lineHeight: 1.4 }}>Kilde: {p.src}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 4, lineHeight: 1.5 }}>{t(p.desc)}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--c-text-4)', marginTop: 6, fontStyle: 'italic', lineHeight: 1.4 }}>{t('Kilde:')} {t(p.src)}</div>
             </div>
           ))}
         </div>
         <div style={{ marginTop: 8, fontSize: 11, color: 'var(--c-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
           <I.Sparkles size={11} style={{ color: 'var(--c-primary)' }}/>
-          <span>AI-syntese baseret på offentlige rapporter og branchekilder · genereret 23. maj 2026. Bør valideres af kreditrådgiver inden brug i indstilling.</span>
+          <span>{t('AI-syntese baseret på offentlige rapporter og branchekilder · genereret 23. maj 2026. Bør valideres af kreditrådgiver inden brug i indstilling.')}</span>
         </div>
 
         {/* Produktbeskrivelse */}
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--c-line-2)' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>Produktbeskrivelse</div>
-              <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>· hentet automatisk fra web</div>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Produktbeskrivelse')}</div>
+              <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>· {t('hentet automatisk fra web')}</div>
             </div>
             {uploadState === 'uploaded' ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -388,7 +387,7 @@ function MarketSection() {
                   <I.File size={12} style={{ color: 'var(--c-primary)', flexShrink: 0 }}/>
                   <div>
                     <div style={{ fontSize: 11.5, fontWeight: 500, color: 'var(--c-ink)' }}>produktblad_nordhavn.pdf</div>
-                    <div style={{ fontSize: 10.5, color: 'var(--c-text-3)' }}>Uploadet 4. jun 2026</div>
+                    <div style={{ fontSize: 10.5, color: 'var(--c-text-3)' }}>{t('Uploadet')} 4. jun 2026</div>
                   </div>
                   <button
                     type="button"
@@ -396,7 +395,7 @@ function MarketSection() {
                     onClick={() => setDocModalOpen(true)}
                     style={{ marginLeft: 2, fontSize: 11.5 }}
                   >
-                    Åbn
+                    {t('Åbn')}
                   </button>
                 </div>
                 <button
@@ -405,7 +404,7 @@ function MarketSection() {
                   onClick={() => setUploadState('idle')}
                   style={{ color: 'var(--c-text-3)', fontSize: 11.5 }}
                 >
-                  Fjern
+                  {t('Fjern')}
                 </button>
               </div>
             ) : (
@@ -415,7 +414,7 @@ function MarketSection() {
                 onClick={() => setUploadModalOpen(true)}
                 style={{ flexShrink: 0 }}
               >
-                <I.File size={12} style={{ marginRight: 5 }}/> Upload produktdokumentation
+                <I.File size={12} style={{ marginRight: 5 }}/> {t('Upload produktdokumentation')}
               </button>
             )}
           </div>
@@ -429,19 +428,19 @@ function MarketSection() {
                 background: 'var(--c-success-bg)', border: '1px solid #cfe6d8',
                 padding: '1px 7px', borderRadius: 999,
               }}>
-                Suppleret af upload
+                {t('Suppleret af upload')}
               </div>
             )}
             <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.65, maxWidth: 760 }}>
               {uploadState === 'uploaded' ? (
                 <>
-                  NordHavn Composites A/S producerer avancerede kompositelementer til vindmølleindustrien med speciale i store offshore-vinger (80-115 m). Selskabets kernekompetence er high-precision finishing og tolerancestyring, der adskiller dem fra lavpriskonkurrenter i Østeuropa.
-                  {' '}<span style={{ color: 'var(--c-ink)', fontWeight: 500 }}>Tre ankerkunder (Vestas, Siemens Gamesa, Ørsted) udgør ca. 80% af omsætningen.</span>{' '}
-                  Selskabet investerer i 2026 i automatiseret NDT-scanning og planlægger kapacitetsudvidelse på 20% frem mod 2027.
+                  {t('NordHavn Composites A/S producerer avancerede kompositelementer til vindmølleindustrien med speciale i store offshore-vinger (80-115 m). Selskabets kernekompetence er high-precision finishing og tolerancestyring, der adskiller dem fra lavpriskonkurrenter i Østeuropa.')}
+                  {' '}<span style={{ color: 'var(--c-ink)', fontWeight: 500 }}>{t('Tre ankerkunder (Vestas, Siemens Gamesa, Ørsted) udgør ca. 80% af omsætningen.')}</span>{' '}
+                  {t('Selskabet investerer i 2026 i automatiseret NDT-scanning og planlægger kapacitetsudvidelse på 20% frem mod 2027.')}
                 </>
               ) : (
                 <>
-                  NordHavn Composites A/S producerer avancerede kompositelementer til vindmølleindustrien med speciale i store offshore-vinger (80-115 m). Selskabets kernekompetence er high-precision finishing og tolerancestyring, der adskiller dem fra lavpriskonkurrenter i Østeuropa. Faciliteter i Esbjerg med kapacitet til vinger op til 115 m og levering til de største globale OEM'er.
+                  {t("NordHavn Composites A/S producerer avancerede kompositelementer til vindmølleindustrien med speciale i store offshore-vinger (80-115 m). Selskabets kernekompetence er high-precision finishing og tolerancestyring, der adskiller dem fra lavpriskonkurrenter i Østeuropa. Faciliteter i Esbjerg med kapacitet til vinger op til 115 m og levering til de største globale OEM'er.")}
                 </>
               )}
             </div>
@@ -452,9 +451,9 @@ function MarketSection() {
             }}>
               <I.Sparkles size={11} style={{ color: 'var(--c-primary)' }}/>
               <span>
-                AI-sammenfatning · Kilder:{' '}
+                {t('AI-sammenfatning')} · {t('Kilder:')}{' '}
                 <a href="https://nordhavncomposites.dk" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c-primary)', textDecoration: 'none' }}>nordhavncomposites.dk</a>
-                {' '}· CVR-udtræk{uploadState === 'uploaded' ? ' · produktblad_nordhavn.pdf' : ''} — hentet 4. jun 2026
+                {' '}· {t('CVR-udtræk')}{uploadState === 'uploaded' ? ' · produktblad_nordhavn.pdf' : ''} — {t('hentet')} 4. jun 2026
               </span>
             </div>
           </div>
@@ -465,11 +464,11 @@ function MarketSection() {
       <FinModal
         open={uploadModalOpen}
         onClose={() => setUploadModalOpen(false)}
-        title="Upload produktdokumentation"
+        title={t('Upload produktdokumentation')}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.6 }}>
-            Upload produktblad, brochure, markedsnotat eller andet materiale om virksomhedens produkt og markedsposition. Dokumentet supplerer den automatisk hentede produktbeskrivelse.
+            {t('Upload produktblad, brochure, markedsnotat eller andet materiale om virksomhedens produkt og markedsposition. Dokumentet supplerer den automatisk hentede produktbeskrivelse.')}
           </div>
           <div style={{
             border: '2px dashed var(--c-line-strong)',
@@ -479,10 +478,10 @@ function MarketSection() {
           }}>
             <I.File size={24} style={{ color: 'var(--c-text-3)', marginBottom: 8 }}/>
             <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginBottom: 4 }}>
-              PDF, Word eller PowerPoint — maks. 20 MB
+              {t('PDF, Word eller PowerPoint — maks. 20 MB')}
             </div>
             <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginBottom: 14 }}>
-              Produktblad, brochure, markedsnotat eller lignende
+              {t('Produktblad, brochure, markedsnotat eller lignende')}
             </div>
             <button
               type="button"
@@ -492,7 +491,7 @@ function MarketSection() {
                 setUploadModalOpen(false);
               }}
             >
-              Vælg fil
+              {t('Vælg fil')}
             </button>
           </div>
         </div>
@@ -502,7 +501,7 @@ function MarketSection() {
       <FinModal
         open={docModalOpen}
         onClose={() => setDocModalOpen(false)}
-        title="produktblad_nordhavn.pdf — råvisning"
+        title={'produktblad_nordhavn.pdf — ' + t('råvisning')}
         width={560}
       >
         <div style={{ fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.8, color: 'var(--c-text-2)', whiteSpace: 'pre-wrap' }}>
@@ -562,15 +561,15 @@ function OwnershipSection() {
   return (
     <>
       <FinSection
-        title="Ejerskab og finansielle bindinger"
-        sub="Ejerstruktur fra CVR. Upload ejerbog eller ejerdiagram for at overskrive."
+        title={t('Ejerskab og finansielle bindinger')}
+        sub={t('Ejerstruktur fra CVR. Upload ejerbog eller ejerdiagram for at overskrive.')}
       >
         {/* Ejerstruktur — CVR eller upload */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>Ejerstruktur</div>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Ejerstruktur')}</div>
             <div style={{ fontSize: 11, color: ownershipUploaded ? 'var(--c-success)' : 'var(--c-text-3)' }}>
-              · {ownershipUploaded ? 'eget upload' : 'fra CVR'}
+              · {ownershipUploaded ? t('eget upload') : t('fra CVR')}
             </div>
           </div>
           {ownershipUploaded ? (
@@ -580,7 +579,7 @@ function OwnershipSection() {
               onClick={() => setOwnershipUploaded(false)}
               style={{ color: 'var(--c-text-3)', fontSize: 12 }}
             >
-              Gendan CVR-data
+              {t('Gendan CVR-data')}
             </button>
           ) : (
             <button
@@ -588,7 +587,7 @@ function OwnershipSection() {
               className="btn btn-sm"
               onClick={() => setOwnershipUploaded(true)}
             >
-              <I.File size={12} style={{ marginRight: 5 }}/> Upload ejerbog / ejerdiagram
+              <I.File size={12} style={{ marginRight: 5 }}/> {t('Upload ejerbog / ejerdiagram')}
             </button>
           )}
         </div>
@@ -605,7 +604,7 @@ function OwnershipSection() {
                 <I.File size={14} style={{ color: 'var(--c-primary)', flexShrink: 0 }}/>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>{f.name}</div>
-                  <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>Uploadet {f.date}</div>
+                  <div style={{ fontSize: 11, color: 'var(--c-text-3)' }}>{t('Uploadet')} {f.date}</div>
                 </div>
               </div>
             ))}
@@ -624,14 +623,14 @@ function OwnershipSection() {
                 fontSize: 10.5, fontWeight: 500, color: 'var(--c-text-3)',
                 letterSpacing: '0.04em',
               }}>
-                Fra Virk
+                {t('Fra Virk')}
               </div>
             )}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               gap: 16, padding: '10px 0',
             }}>
-              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>Bestyrelse</div>
+              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>{t('Bestyrelse')}</div>
               <button
                 type="button"
                 onClick={() => setBoardModalOpen(true)}
@@ -641,7 +640,7 @@ function OwnershipSection() {
                   fontSize: 13, color: 'var(--c-primary)', fontWeight: 500,
                 }}
               >
-                3 medlemmer · ingen PEP
+                {t('3 medlemmer · ingen PEP')}
                 <span style={{
                   display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                   width: 16, height: 16, borderRadius: '50%',
@@ -654,8 +653,8 @@ function OwnershipSection() {
               display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
               gap: 16, padding: '10px 0', borderTop: '1px solid var(--c-line-2)',
             }}>
-              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>Koncernforhold</div>
-              <div style={{ fontSize: 13, color: 'var(--c-ink)', fontWeight: 500, textAlign: 'right' }}>Selvstændigt selskab - ingen intercompany-balancer</div>
+              <div style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>{t('Koncernforhold')}</div>
+              <div style={{ fontSize: 13, color: 'var(--c-ink)', fontWeight: 500, textAlign: 'right' }}>{t('Selvstændigt selskab - ingen intercompany-balancer')}</div>
             </div>
           </div>
         )}
@@ -669,13 +668,13 @@ function OwnershipSection() {
               onClick={() => setShowCvrAfterUpload(v => !v)}
               style={{ alignSelf: 'flex-start', color: 'var(--c-text-2)', fontSize: 12 }}
             >
-              {showCvrAfterUpload ? 'Skjul Virk-data' : 'Vis Virk-data (bestyrelse og koncernforhold)'}
+              {showCvrAfterUpload ? t('Skjul Virk-data') : t('Vis Virk-data (bestyrelse og koncernforhold)')}
             </button>
             <div style={{ position: 'relative' }}>
               <textarea
                 value={comment}
                 onChange={e => setComment(e.target.value)}
-                placeholder="Tilføj kommentar om ejerskab…"
+                placeholder={t('Tilføj kommentar om ejerskab…')}
                 rows={2}
                 style={{
                   width: '100%', resize: 'vertical', padding: '8px 10px',
@@ -694,12 +693,12 @@ function OwnershipSection() {
       <FinModal
         open={boardModalOpen}
         onClose={() => setBoardModalOpen(false)}
-        title="Bestyrelse — PEP-tjek"
+        title={t('Bestyrelse — PEP-tjek')}
         width={520}
       >
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <StatusTag kind="success">Ingen PEP-match</StatusTag>
+            <StatusTag kind="success">{t('Ingen PEP-match')}</StatusTag>
             <button
               type="button"
               onClick={() => setPepInfoOpen(true)}
@@ -709,11 +708,11 @@ function OwnershipSection() {
                 fontSize: 12, color: 'var(--c-primary)',
               }}
             >
-              Hvad er PEP? <span style={{ fontSize: 14 }}>ⓘ</span>
+              {t('Hvad er PEP?')} <span style={{ fontSize: 14 }}>ⓘ</span>
             </button>
           </div>
           <div style={{ fontSize: 12, color: 'var(--c-text-3)' }}>
-            Automatisk opslag i PEP-register pr. 23. maj 2026
+            {t('Automatisk opslag i PEP-register pr. 23. maj 2026')}
           </div>
         </div>
 
@@ -734,9 +733,9 @@ function OwnershipSection() {
               </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{m.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 1 }}>{m.role}</div>
+                <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 1 }}>{t(m.role)}</div>
               </div>
-              <StatusTag kind="success">Ingen PEP-match</StatusTag>
+              <StatusTag kind="success">{t('Ingen PEP-match')}</StatusTag>
             </div>
           ))}
         </div>
@@ -746,7 +745,7 @@ function OwnershipSection() {
           background: 'var(--c-surface-2)', borderRadius: 6,
           fontSize: 11.5, color: 'var(--c-text-3)', lineHeight: 1.5,
         }}>
-          Opslag udført automatisk mod EU's konsoliderede sanktionsliste samt nationale PEP-registre. Seneste kontrol: 23. maj 2026.
+          {t("Opslag udført automatisk mod EU's konsoliderede sanktionsliste samt nationale PEP-registre. Seneste kontrol: 23. maj 2026.")}
         </div>
       </FinModal>
 
@@ -754,24 +753,20 @@ function OwnershipSection() {
       <FinModal
         open={pepInfoOpen}
         onClose={() => setPepInfoOpen(false)}
-        title="Hvad er PEP?"
+        title={t('Hvad er PEP?')}
         width={440}
       >
         <div style={{ fontSize: 13.5, color: 'var(--c-ink)', fontWeight: 600, marginBottom: 8 }}>
-          Politisk Eksponeret Person (PEP)
+          {t('Politisk Eksponeret Person (PEP)')}
         </div>
         <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.7 }}>
-          En PEP er en person, der beklæder eller har beklædt en fremtrædende offentlig stilling —
-          fx statsledere, ministre, parlamentsmedlemmer, højtstående embedsmænd eller ledende
-          personer i internationale organisationer.
+          {t('En PEP er en person, der beklæder eller har beklædt en fremtrædende offentlig stilling — fx statsledere, ministre, parlamentsmedlemmer, højtstående embedsmænd eller ledende personer i internationale organisationer.')}
         </div>
         <div style={{ marginTop: 12, fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.7 }}>
-          PEP-kontrol er lovpligtig under hvidvasklovens §§ 14–18 og kræver skærpet kundekendskab
-          (Enhanced Due Diligence) ved konstatering af PEP-status. Crediwire foretager automatisk
-          opslag og gemmer tidsstemplet kontrol-log.
+          {t('PEP-kontrol er lovpligtig under hvidvasklovens §§ 14–18 og kræver skærpet kundekendskab (Enhanced Due Diligence) ved konstatering af PEP-status. Crediwire foretager automatisk opslag og gemmer tidsstemplet kontrol-log.')}
         </div>
         <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--c-surface-2)', borderRadius: 6, fontSize: 12, color: 'var(--c-text-3)' }}>
-          Kilde: Lov om forebyggende foranstaltninger mod hvidvask og finansiering af terrorisme (hvidvaskloven), jf. Europa-Parlamentets direktiv (EU) 2015/849.
+          {t('Kilde: Lov om forebyggende foranstaltninger mod hvidvask og finansiering af terrorisme (hvidvaskloven), jf. Europa-Parlamentets direktiv (EU) 2015/849.')}
         </div>
       </FinModal>
     </>
@@ -781,7 +776,7 @@ function OwnershipSection() {
 function FinRow({ label, data }) {
   return (
     <tr>
-      <td style={{ fontWeight: 500 }}>{label}</td>
+      <td style={{ fontWeight: 500 }}>{t(label)}</td>
       {data.map((v, i) => (
         <td key={i} className="mono num" style={{ textAlign: 'right', color: v === null ? 'var(--c-text-4)' : 'var(--c-ink)' }}>
           {v === null ? '-' : v.toFixed(1)}
@@ -833,8 +828,8 @@ function IncomeChart({ years, revenue, ebitda, labels }) {
       {ebd.map((v, i) => <circle key={i} cx={x(i)} cy={y(v)} r="2" fill="var(--c-success)"/>)}
       {years.map((yr, i) => <text key={yr} x={x(i)} y={h - pad.b + 14} fill="var(--c-text-3)" fontSize="10" textAnchor="middle">{yr}</text>)}
       <g transform={`translate(${w-220}, 4)`}>
-        <rect x="0" y="0" width="10" height="10" fill="var(--c-ink)"/><text x="14" y="9" fill="var(--c-text-2)" fontSize="10">{labelA}</text>
-        <line x1={14 + 70} x2={14 + 84} y1="5" y2="5" stroke="var(--c-success)" strokeDasharray="3 3" strokeWidth="1.5"/><text x={14 + 88} y="9" fill="var(--c-text-2)" fontSize="10">{labelB}</text>
+        <rect x="0" y="0" width="10" height="10" fill="var(--c-ink)"/><text x="14" y="9" fill="var(--c-text-2)" fontSize="10">{t(labelA)}</text>
+        <line x1={14 + 70} x2={14 + 84} y1="5" y2="5" stroke="var(--c-success)" strokeDasharray="3 3" strokeWidth="1.5"/><text x={14 + 88} y="9" fill="var(--c-text-2)" fontSize="10">{t(labelB)}</text>
       </g>
     </svg>
   );
@@ -921,7 +916,7 @@ function ratio(a, b, factor) {
 }
 
 function formatNum(v, opts) {
-  if (v == null) return 'Ikke oplyst';
+  if (v == null) return t('Ikke oplyst');
   const decimals = opts && opts.decimals != null ? opts.decimals : 1;
   const negative = v < 0;
   const abs = Math.abs(v);
@@ -1066,14 +1061,14 @@ function AnnualReportSection({ go }) {
 
   return (
     <FinSection
-      title="Regnskab"
-      sub="Officielle årsrapporter fra CVR sammenstillet med virksomhedens egne tal for indeværende år og budgettet frem. 2026E og 2027B er ikke indberettede tal, men sammentællinger af kvartalerne, så årene kan sammenlignes direkte. Fold kvartalerne ud for at se, hvad de består af."
+      title={t('Regnskab')}
+      sub={t('Officielle årsrapporter fra CVR sammenstillet med virksomhedens egne tal for indeværende år og budgettet frem. 2026E og 2027B er ikke indberettede tal, men sammentællinger af kvartalerne, så årene kan sammenlignes direkte. Fold kvartalerne ud for at se, hvad de består af.')}
       badge={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <button
             onClick={() => setShowQuarters(v => !v)}
             aria-expanded={showQuarters}
-            title={showQuarters ? 'Skjul kvartalerne bag 2026E og 2027B' : 'Vis kvartalerne bag 2026E og 2027B'}
+            title={showQuarters ? t('Skjul kvartalerne bag 2026E og 2027B') : t('Vis kvartalerne bag 2026E og 2027B')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               height: 30, padding: '0 11px',
@@ -1089,10 +1084,10 @@ function AnnualReportSection({ go }) {
               transform: showQuarters ? 'rotate(90deg)' : 'none',
               transition: 'transform 0.15s',
             }}>▶</span>
-            {showQuarters ? 'Skjul kvartaler' : 'Vis kvartaler'}
+            {showQuarters ? t('Skjul kvartaler') : t('Vis kvartaler')}
           </button>
           <button className="btn btn-sm btn-ghost" onClick={requestFromCustomer}>
-            Anmod om årsrapport 2026
+            {t('Anmod om årsrapport 2026')}
           </button>
         </div>
       }
@@ -1113,7 +1108,7 @@ function AnnualReportSection({ go }) {
                 <th className="fin-c1" rowSpan={2} style={{ verticalAlign: 'bottom', width: showQuarters ? undefined : 330 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--c-text-3)' }}>
-                      Regnskabspost
+                      {t('Regnskabspost')}
                     </span>
                     <div style={{
                       display: 'inline-flex', alignItems: 'center', padding: 2,
@@ -1138,7 +1133,7 @@ function AnnualReportSection({ go }) {
                               boxShadow: active ? '0 1px 2px rgba(15,17,20,0.06)' : 'none',
                             }}
                           >
-                            {u.l}
+                            {t(u.l)}
                           </button>
                         );
                       })}
@@ -1146,16 +1141,16 @@ function AnnualReportSection({ go }) {
                   </div>
                 </th>
                 <th className="fin-band" colSpan={FIN_ANNUAL_YEARS.length + 2}>
-                  <span className="fin-band-dot" style={{ background: 'var(--c-text-4)' }}/>Regnskabsår
+                  <span className="fin-band-dot" style={{ background: 'var(--c-text-4)' }}/>{t('Regnskabsår')}
                 </th>
                 {showQuarters && (
                   <th className="fin-band fin-sep" colSpan={FIN_ACTUAL_Q.length}>
-                    <span className="fin-band-dot" style={{ background: 'var(--c-primary)' }}/>Realiseret kvartal · 2026
+                    <span className="fin-band-dot" style={{ background: 'var(--c-primary)' }}/>{t('Realiseret kvartal · 2026')}
                   </th>
                 )}
                 {showQuarters && (
                   <th className="fin-band fin-sep" colSpan={FIN_BUDGET_Q.length}>
-                    <span className="fin-band-dot" style={{ background: 'var(--c-warn)' }}/>Budget · Q4 2026 og 2027
+                    <span className="fin-band-dot" style={{ background: 'var(--c-warn)' }}/>{t('Budget · Q4 2026 og 2027')}
                   </th>
                 )}
               </tr>
@@ -1163,13 +1158,13 @@ function AnnualReportSection({ go }) {
                 {FIN_ANNUAL_YEARS.map(y => <th key={y} className="fin-hd">{y}</th>)}
                 <th className="fin-hd fin-est" style={{ minWidth: 88 }}>
                   <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-                    <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--c-text-4)' }}>Estimat</span>
+                    <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--c-text-4)' }}>{t('Estimat')}</span>
                     <span>2026E</span>
                   </span>
                 </th>
                 <th className="fin-hd fin-est" style={{ minWidth: 88 }}>
                   <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
-                    <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--c-text-4)' }}>Budget 9 mdr.</span>
+                    <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--c-text-4)' }}>{t('Budget 9 mdr.')}</span>
                     <span>2027B</span>
                   </span>
                 </th>
@@ -1192,7 +1187,7 @@ function AnnualReportSection({ go }) {
               {ANNUAL_REPORT.groups.map((g) => (
                 <React.Fragment key={g.label}>
                   <tr className="fin-grp">
-                    <td className="fin-c1">{g.label}</td>
+                    <td className="fin-c1">{t(g.label)}</td>
                     <td colSpan={colCount - 1}/>
                   </tr>
                   {g.rows.map((r) => (
@@ -1201,19 +1196,19 @@ function AnnualReportSection({ go }) {
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           {r.finding && (
                             <span
-                              title="Finding tilknyttet - se Credit memo"
-                              aria-label="Finding tilknyttet"
+                              title={t('Finding tilknyttet - se Credit memo')}
+                              aria-label={t('Finding tilknyttet')}
                               style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--c-warn)', flexShrink: 0 }}
                             />
                           )}
-                          <span>{r.label}</span>
+                          <span>{t(r.label)}</span>
                         </span>
                       </td>
                       {cols.map((col, ci) => {
                         const live = col.kind === 'b' && budgetCell(r, col.idx).live;
                         return numCell(col, ci, fmt(rawValue(r, col), r), {
                           bold: live,
-                          title: live ? 'Fra dit budget nedenfor' : '',
+                          title: live ? t('Fra dit budget nedenfor') : '',
                         });
                       })}
                     </tr>
@@ -1223,12 +1218,12 @@ function AnnualReportSection({ go }) {
 
               {/* Nøgletal - beregnet af kolonnens egne tal, ikke indtastet */}
               <tr className="fin-grp">
-                <td className="fin-c1">Nøgletal</td>
+                <td className="fin-c1">{t('Nøgletal')}</td>
                 <td colSpan={colCount - 1}/>
               </tr>
               {FIN_RATIOS.map(r => (
                 <tr key={r.label}>
-                  <td className="fin-c1" title={r.note || ''}>{r.label}</td>
+                  <td className="fin-c1" title={r.note ? t(r.note) : ''}>{t(r.label)}</td>
                   {cols.map((col, ci) => numCell(col, ci, fmt(r.calc(colMaps[ci], col.ann), r)))}
                 </tr>
               ))}
@@ -1243,7 +1238,7 @@ function AnnualReportSection({ go }) {
           background: 'var(--c-surface-2)',
           fontSize: 11, color: 'var(--c-text-3)', flexWrap: 'wrap', gap: 8,
         }}>
-          <span>Kilder: Årsrapport 2023 · Årsrapport 2024 · Årsrapport 2025 · Kvartalstal og budget fra kunden · CVR</span>
+          <span>{t('Kilder: Årsrapport 2023 · Årsrapport 2024 · Årsrapport 2025 · Kvartalstal og budget fra kunden · CVR')}</span>
           <a
             href="https://www.vestas.com/content/dam/vestas-com/global/en/investor/reports-and-presentations/financial/2025/fy-2025/Vestas%20Annual%20Report%202025.pdf.coredownload.inline.pdf"
             target="_blank"
@@ -1254,16 +1249,13 @@ function AnnualReportSection({ go }) {
               textDecoration: 'none',
             }}
           >
-            Åbn årsrapport
+            {t('Åbn årsrapport')}
           </a>
         </div>
       </div>
 
       <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--c-text-3)', lineHeight: 1.5 }}>
-        2026E: Q1-Q3 realiseret plus Q4 budget, balanceposter ultimo Q4 2026.
-        2027B: budget for Q1-Q3, altså kun 9 måneder, balanceposter ultimo Q3 2027.
-        Nøgletal er beregnet af tallene i samme kolonne; hvor perioden er kortere end et år, er EBITDA annualiseret i Gæld / EBITDA.
-        Realiserede kvartalstal og budget er virksomhedens egne indberetninger og er ikke revideret.
+        {t('2026E: Q1-Q3 realiseret plus Q4 budget, balanceposter ultimo Q4 2026. 2027B: budget for Q1-Q3, altså kun 9 måneder, balanceposter ultimo Q3 2027. Nøgletal er beregnet af tallene i samme kolonne; hvor perioden er kortere end et år, er EBITDA annualiseret i Gæld / EBITDA. Realiserede kvartalstal og budget er virksomhedens egne indberetninger og er ikke revideret.')}
       </div>
       </div>
     </FinSection>
@@ -1294,7 +1286,7 @@ function generateBudgetPeriods(gran) {
     for (let i = 0; i < 12; i++) {
       const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,'0')}`;
-      const label = `${MONTHS_DA[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+      const label = `${t(MONTHS_DA[d.getMonth()])} ${String(d.getFullYear()).slice(2)}`;
       periods.push({ key, label });
     }
   } else if (gran === 'quarter') {
@@ -1406,8 +1398,8 @@ const BudgetRow = React.memo(function BudgetRow({ row, periods, rowValues, compu
         fontWeight: isComputed ? 500 : 400,
         position: 'sticky', left: 0, background: isComputed ? 'var(--c-surface)' : '#fff', zIndex: 1,
       }}>
-        {row.label}
-        {isComputed && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--c-text-3)', fontWeight: 500 }}>(Beregning)</span>}
+        {t(row.label)}
+        {isComputed && <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--c-text-3)', fontWeight: 500 }}>{t('(Beregning)')}</span>}
       </td>
       {periods.map(p => {
         if (isComputed) {
@@ -1463,7 +1455,7 @@ const BudgetRow = React.memo(function BudgetRow({ row, periods, rowValues, compu
           <button
             type="button"
             onClick={() => onRecycle(row.label)}
-            title="Genbrug sidste års tal"
+            title={t('Genbrug sidste års tal')}
             style={{
               background: 'transparent', border: '1px solid transparent', borderRadius: 4,
               padding: 4, cursor: 'pointer', color: 'var(--c-text-3)',
@@ -1480,7 +1472,7 @@ const BudgetRow = React.memo(function BudgetRow({ row, periods, rowValues, compu
           <button
             type="button"
             onClick={() => onClearRow(row.label)}
-            title="Slet rækkens værdier"
+            title={t('Slet rækkens værdier')}
             style={{
               background: 'transparent', border: '1px solid transparent', borderRadius: 4,
               padding: 4, cursor: 'pointer', color: 'var(--c-text-3)',
@@ -1650,7 +1642,7 @@ function BudgetSection() {
   const [importMsg, setImportMsg] = React.useState(null);
 
   const handleExport = () => {
-    if (!window.XLSX) { alert('Excel-bibliotek ikke indlæst. Prøv at genindlæse siden.'); return; }
+    if (!window.XLSX) { alert(t('Excel-bibliotek ikke indlæst. Prøv at genindlæse siden.')); return; }
     const XLSX = window.XLSX;
     const bucket = values[gran] || {};
     const granLabel = gran === 'month' ? 'måned' : gran === 'quarter' ? 'kvartal' : 'år';
@@ -1719,7 +1711,7 @@ function BudgetSection() {
   };
 
   const handleImportClick = () => {
-    if (!window.XLSX) { alert('Excel-bibliotek ikke indlæst. Prøv at genindlæse siden.'); return; }
+    if (!window.XLSX) { alert(t('Excel-bibliotek ikke indlæst. Prøv at genindlæse siden.')); return; }
     fileInputRef.current?.click();
   };
 
@@ -1756,7 +1748,7 @@ function BudgetSection() {
 
         // Find header row (starts with "Gruppe")
         let headerIdx = aoa.findIndex(r => r && String(r[0] || '').toLowerCase().trim() === 'gruppe');
-        if (headerIdx === -1) { setImportMsg({ kind: 'err', text: 'Kunne ikke finde header-række "Gruppe". Brug en eksporteret fil som skabelon.' }); return; }
+        if (headerIdx === -1) { setImportMsg({ kind: 'err', text: t('Kunne ikke finde header-række "Gruppe". Brug en eksporteret fil som skabelon.') }); return; }
 
         const importedPeriods = generateBudgetPeriods(importedGran);
         const headerRow = aoa[headerIdx];
@@ -1806,9 +1798,9 @@ function BudgetSection() {
         setGran(importedGran);
         setUnit(importedUnit);
         setValues(prev => ({ ...prev, [importedGran]: newBucket }));
-        setImportMsg({ kind: 'ok', text: `Importeret: ${valuesCount} tal i ${matched} rækker (${importedGran === 'month' ? 'måned' : importedGran === 'quarter' ? 'kvartal' : 'år'}). Husk at gemme.` });
+        setImportMsg({ kind: 'ok', text: t('Importeret:') + ' ' + valuesCount + ' ' + t('tal i') + ' ' + matched + ' ' + t('rækker') + ' (' + (importedGran === 'month' ? t('måned') : importedGran === 'quarter' ? t('kvartal') : t('år')) + '). ' + t('Husk at gemme.') });
       } catch (err) {
-        setImportMsg({ kind: 'err', text: 'Kunne ikke læse filen: ' + (err.message || err) });
+        setImportMsg({ kind: 'err', text: t('Kunne ikke læse filen:') + ' ' + (err.message || err) });
       }
       // reset input so same file can be re-selected
       e.target.value = '';
@@ -1818,8 +1810,8 @@ function BudgetSection() {
 
   return (
     <FinSection
-      title="Budget"
-      sub="Indtast budgettal for fremtidige perioder. Tal vises sammen med årsregnskaber i memo og analyse."
+      title={t('Budget')}
+      sub={t('Indtast budgettal for fremtidige perioder. Tal vises sammen med årsregnskaber i memo og analyse.')}
     >
       <div className="card" style={{ overflow: 'hidden' }}>
         {/* Header / toggle */}
@@ -1835,9 +1827,9 @@ function BudgetSection() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <I.ChevronRight size={14} style={{ color: 'var(--c-text-3)', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 160ms' }}/>
             <div>
-              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>Indtast budget</div>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Indtast budget')}</div>
               <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2 }}>
-                {filledCount > 0 ? `${filledCount} tal indtastet · gemt automatisk` : 'Ingen budgettal endnu'}
+                {filledCount > 0 ? filledCount + ' ' + t('tal indtastet · gemt automatisk') : t('Ingen budgettal endnu')}
               </div>
             </div>
           </div>
@@ -1851,7 +1843,7 @@ function BudgetSection() {
               padding: '12px 16px', borderBottom: '1px solid var(--c-line)', background: 'var(--c-surface)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11.5, color: 'var(--c-text-2)', fontWeight: 500 }}>Periode</span>
+                <span style={{ fontSize: 11.5, color: 'var(--c-text-2)', fontWeight: 500 }}>{t('Periode')}</span>
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', padding: 2,
                   background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 7,
@@ -1874,7 +1866,7 @@ function BudgetSection() {
                           boxShadow: active ? '0 1px 2px rgba(15,17,20,0.06)' : 'none',
                         }}
                       >
-                        {g.l}
+                        {t(g.l)}
                       </button>
                     );
                   })}
@@ -1882,7 +1874,7 @@ function BudgetSection() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11.5, color: 'var(--c-text-2)', fontWeight: 500 }}>Enhed</span>
+                <span style={{ fontSize: 11.5, color: 'var(--c-text-2)', fontWeight: 500 }}>{t('Enhed')}</span>
                 <div style={{
                   display: 'inline-flex', alignItems: 'center', padding: 2,
                   background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 7,
@@ -1905,7 +1897,7 @@ function BudgetSection() {
                           boxShadow: active ? '0 1px 2px rgba(15,17,20,0.06)' : 'none',
                         }}
                       >
-                        {u.l}
+                        {t(u.l)}
                       </button>
                     );
                   })}
@@ -1922,19 +1914,19 @@ function BudgetSection() {
                 style={{ display: 'none' }}
               />
               <button onClick={handleImportClick} className="btn btn-sm btn-ghost" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <I.Download className="ic" style={{ transform: 'rotate(180deg)' }}/> Importér Excel
+                <I.Download className="ic" style={{ transform: 'rotate(180deg)' }}/> {t('Importér Excel')}
               </button>
               <button onClick={handleExport} className="btn btn-sm btn-ghost" style={{ fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                <I.Download className="ic"/> Eksportér Excel
+                <I.Download className="ic"/> {t('Eksportér Excel')}
               </button>
               <div ref={clearBtnRef} style={{ position: 'relative' }}>
                 <button
                   onClick={() => setClearConfirmOpen(v => !v)}
                   className="btn btn-sm btn-ghost"
                   style={{ fontSize: 11.5, color: 'var(--c-warn)' }}
-                  title="Slet alle budgettal på tværs af måned, kvartal og år"
+                  title={t('Slet alle budgettal på tværs af måned, kvartal og år')}
                 >
-                  Ryd alt
+                  {t('Ryd alt')}
                 </button>
                 {clearConfirmOpen && (
                   <div
@@ -1950,9 +1942,9 @@ function BudgetSection() {
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10 }}>
                       <I.AlertCircle size={14} style={{ color: 'var(--c-warn)', flexShrink: 0, marginTop: 1 }}/>
                       <div>
-                        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 3 }}>Slet alle budgettal?</div>
+                        <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 3 }}>{t('Slet alle budgettal?')}</div>
                         <div style={{ fontSize: 11.5, color: 'var(--c-text-2)', lineHeight: 1.45 }}>
-                          Dette rydder måneder, kvartaler og år. Kan ikke fortrydes.
+                          {t('Dette rydder måneder, kvartaler og år. Kan ikke fortrydes.')}
                         </div>
                       </div>
                     </div>
@@ -1962,14 +1954,14 @@ function BudgetSection() {
                         className="btn btn-sm btn-ghost"
                         style={{ fontSize: 11.5 }}
                       >
-                        Annullér
+                        {t('Annullér')}
                       </button>
                       <button
                         onClick={handleClearAll}
                         className="btn btn-sm"
                         style={{ fontSize: 11.5, background: 'var(--c-warn)', color: '#fff', border: '1px solid var(--c-warn)' }}
                       >
-                        Ja, ryd alt
+                        {t('Ja, ryd alt')}
                       </button>
                     </div>
                   </div>
@@ -1983,7 +1975,7 @@ function BudgetSection() {
                 <thead>
                   <tr>
                     <th style={{ textAlign: 'left', fontWeight: 600, color: 'var(--c-text-2)', position: 'sticky', left: 0, background: 'var(--c-surface)', zIndex: 1 }}>
-                      Regnskabspost
+                      {t('Regnskabspost')}
                     </th>
                     {periods.map(p => (
                       <th key={p.key} style={{ textAlign: 'right', fontWeight: 600, color: 'var(--c-text-2)', whiteSpace: 'nowrap', padding: '8px 10px', minWidth: 84 }}>
@@ -2008,7 +2000,7 @@ function BudgetSection() {
                             color: 'var(--c-text-2)',
                           }}
                         >
-                          {g.label}
+                          {t(g.label)}
                         </td>
                       </tr>
                       {g.rows.map((r) => (
@@ -2113,7 +2105,7 @@ function SimpleOwnershipTree() {
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{co.name}</div>
             <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 1 }}>
-              <span className="mono">CVR {String(co.cvr).replace(/\s+/g, '')}</span> · Ikke i koncern
+              <span className="mono">CVR {String(co.cvr).replace(/\s+/g, '')}</span> · {t('Ikke i koncern')}
             </div>
           </div>
         </div>
@@ -2156,7 +2148,7 @@ function TrustpilotSection() {
   return (
     <FinSection
       title="Trustpilot"
-      sub="Kundeanmeldelser fra Trustpilot. Soft signal - bør sammenholdes med faktisk kundefastholdelse og ordrebog."
+      sub={t('Kundeanmeldelser fra Trustpilot. Soft signal - bør sammenholdes med faktisk kundefastholdelse og ordrebog.')}
     >
       <div className="card" style={{ padding: '14px 18px' }}>
       <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -2169,7 +2161,7 @@ function TrustpilotSection() {
             {score.toFixed(1)}
           </div>
           <TrustpilotStars rating={score} size={18}/>
-          <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2 }}>{totalReviews} anmeldelser</div>
+          <div style={{ fontSize: 11, color: 'var(--c-text-3)', marginTop: 2 }}>{totalReviews} {t('anmeldelser')}</div>
         </div>
 
         {/* Distribution bars */}
@@ -2189,14 +2181,14 @@ function TrustpilotSection() {
 
       {/* Recent reviews */}
       <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 4 }}>Seneste anmeldelser</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 4 }}>{t('Seneste anmeldelser')}</div>
         {reviews.map((r, i) => (
           <div key={i} style={{ borderTop: '1px solid var(--c-line-2)', padding: '10px 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <TrustpilotStars rating={r.stars} size={12}/>
               <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>{r.author} · {r.date}</span>
             </div>
-            <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.5 }}>{r.text}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.5 }}>{t(r.text)}</div>
           </div>
         ))}
       </div>
@@ -2207,14 +2199,14 @@ function TrustpilotSection() {
         fontSize: 11, color: 'var(--c-text-3)',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
       }}>
-        <span>Kilde: Trustpilot.com/review/nordhavncomposites.dk · hentet 23. maj 2026</span>
+        <span>{t('Kilde:')} Trustpilot.com/review/nordhavncomposites.dk · {t('hentet')} 23. maj 2026</span>
         <a
           href="https://www.trustpilot.com/review/nordhavncomposites.dk"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: 'var(--c-primary)', fontSize: 11.5, fontWeight: 500, textDecoration: 'none' }}
         >
-          Åbn på Trustpilot →
+          {t('Åbn på Trustpilot')} →
         </a>
       </div>
       </div>

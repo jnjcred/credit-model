@@ -26,11 +26,11 @@ function DataRequests({ go }) {
   return (
     <>
       <Topbar
-        crumbs={["Dataanmodninger"]}
+        crumbs={[t('Dataanmodninger')]}
         right={
           <>
-            <button className="btn btn-sm btn-ghost"><I.Download className="ic"/> Eksport</button>
-            <button className="btn btn-sm btn-primary"><I.Plus className="ic"/> Ny anmodning</button>
+            <button className="btn btn-sm btn-ghost"><I.Download className="ic"/> {t('Eksport')}</button>
+            <button className="btn btn-sm btn-primary"><I.Plus className="ic"/> {t('Ny anmodning')}</button>
           </>
         }
       />
@@ -38,32 +38,32 @@ function DataRequests({ go }) {
         <div className="page page-wide" style={{ maxWidth: 1280 }}>
           <div className="page-head">
             <div>
-              <h1 className="page-title">Dataanmodninger</h1>
-              <div className="page-sub">7 aktive links · 1 indsendt · 2 sidder fast</div>
+              <h1 className="page-title">{t('Dataanmodninger')}</h1>
+              <div className="page-sub">{t('7 aktive links · 1 indsendt · 2 sidder fast')}</div>
             </div>
           </div>
 
           {/* KPI strip */}
           <div className="card" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: 18 }}>
             <div className="kpi">
-              <div className="kpi-lbl">Aktive nu</div>
+              <div className="kpi-lbl">{t('Aktive nu')}</div>
               <div className="kpi-val">{counts.active}</div>
-              <div className="kpi-delta flat">Modtager løbende</div>
+              <div className="kpi-delta flat">{t('Modtager løbende')}</div>
             </div>
             <div className="kpi">
-              <div className="kpi-lbl">Sidder fast</div>
+              <div className="kpi-lbl">{t('Sidder fast')}</div>
               <div className="kpi-val" style={{ color: 'var(--c-warn)' }}>{counts.stuck}</div>
-              <div className="kpi-delta down" style={{ color: 'var(--c-warn)' }}><I.AlertCircle size={11}/> Påmindelse anbefales</div>
+              <div className="kpi-delta down" style={{ color: 'var(--c-warn)' }}><I.AlertCircle size={11}/> {t('Påmindelse anbefales')}</div>
             </div>
             <div className="kpi">
-              <div className="kpi-lbl">Klar til gennemgang</div>
+              <div className="kpi-lbl">{t('Klar til gennemgang')}</div>
               <div className="kpi-val" style={{ color: 'var(--c-success)' }}>{counts.ready}</div>
-              <div className="kpi-delta up"><I.Check size={11}/> Komplet</div>
+              <div className="kpi-delta up"><I.Check size={11}/> {t('Komplet')}</div>
             </div>
             <div className="kpi">
-              <div className="kpi-lbl">Gns. svartid</div>
+              <div className="kpi-lbl">{t('Gns. svartid')}</div>
               <div className="kpi-val">3.2 d</div>
-              <div className="kpi-delta up"><I.TrendUp size={11}/> -1.4 d siden Q1</div>
+              <div className="kpi-delta up"><I.TrendUp size={11}/> {t('-1.4 d siden Q1')}</div>
             </div>
           </div>
 
@@ -75,16 +75,16 @@ function DataRequests({ go }) {
               { k: "ready", l: "Klar", n: counts.ready },
               { k: "draft", l: "Udkast", n: counts.draft },
               { k: "all", l: "Alle", n: counts.all },
-            ].map(t => (
-              <button key={t.k} onClick={() => setFilter(t.k)}
+            ].map(tab => (
+              <button key={tab.k} onClick={() => setFilter(tab.k)}
                 style={{
                   padding: '8px 14px', marginBottom: -1, border: 'none', background: 'transparent',
-                  borderBottom: filter === t.k ? '2px solid var(--c-ink)' : '2px solid transparent',
-                  color: filter === t.k ? 'var(--c-ink)' : 'var(--c-text-2)',
+                  borderBottom: filter === tab.k ? '2px solid var(--c-ink)' : '2px solid transparent',
+                  color: filter === tab.k ? 'var(--c-ink)' : 'var(--c-text-2)',
                   fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: 7,
                 }}>
-                {t.l} <span style={{ fontSize: 11, color: t.warn ? 'var(--c-warn)' : 'var(--c-text-3)', fontWeight: 600 }}>{t.n}</span>
+                {t(tab.l)} <span style={{ fontSize: 11, color: tab.warn ? 'var(--c-warn)' : 'var(--c-text-3)', fontWeight: 600 }}>{tab.n}</span>
               </button>
             ))}
           </div>
@@ -102,10 +102,10 @@ function DataRequests({ go }) {
           <div className="cta" style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 14 }}>
             <I.Send size={16} style={{ color: 'var(--c-text-3)' }}/>
             <div style={{ flex: 1, fontSize: 13 }}>
-              <b>2 kunder sidder fast</b> i indleveringen. Send en samlet venlig påmindelse?
+              <b>{t('2 kunder sidder fast')}</b> {t('i indleveringen. Send en samlet venlig påmindelse?')}
             </div>
-            <button className="btn btn-sm">Skriv besked</button>
-            <button className="btn btn-sm btn-primary">Send påmindelse til 2</button>
+            <button className="btn btn-sm">{t('Skriv besked')}</button>
+            <button className="btn btn-sm btn-primary">{t('Send påmindelse til 2')}</button>
           </div>
         </div>
       </div>
@@ -129,10 +129,10 @@ function DataRequestRow({ r, isFirst, selected, onSelect, go }) {
       <div style={{ minWidth: 0 }}>
         <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)', display: 'flex', alignItems: 'center', gap: 7 }}>
           {r.company}
-          {r.followup && <span className="tag" style={{ fontSize: 9.5, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>1 spørgsmål åbent</span>}
+          {r.followup && <span className="tag" style={{ fontSize: 9.5, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>{t('1 spørgsmål åbent')}</span>}
         </div>
         <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
-          {r.contact !== "-" ? <>{r.contact} · {r.role}</> : "Ingen modtager valgt"}
+          {r.contact !== "-" ? <>{r.contact} · {t(r.role)}</> : t('Ingen modtager valgt')}
         </div>
       </div>
       <div style={{ minWidth: 0 }}>
@@ -147,19 +147,19 @@ function DataRequestRow({ r, isFirst, selected, onSelect, go }) {
         <div style={{ marginTop: 4, fontSize: 11.5, color: r.status === 'stuck' ? 'var(--c-warn)' : 'var(--c-text-3)', display: 'flex', alignItems: 'center', gap: 5 }}>
           {r.status === 'stuck' && <I.AlertCircle size={10}/>}
           {r.status === 'ready' && <I.CheckCircle size={10} style={{ color: 'var(--c-success)' }}/>}
-          {r.lastAction}
+          {t(r.lastAction)}
         </div>
       </div>
       <div style={{ fontSize: 12.5 }}>
-        <div className="label-mini" style={{ fontSize: 10 }}>Deadline</div>
-        <div style={{ fontWeight: 500, marginTop: 2, color: r.deadline === "-" ? 'var(--c-text-4)' : 'var(--c-text)' }}>{r.deadline}</div>
-        <div className="muted" style={{ fontSize: 11 }}>{r.lastActivity}</div>
+        <div className="label-mini" style={{ fontSize: 10 }}>{t('Deadline')}</div>
+        <div style={{ fontWeight: 500, marginTop: 2, color: r.deadline === "-" ? 'var(--c-text-4)' : 'var(--c-text)' }}>{t(r.deadline)}</div>
+        <div className="muted" style={{ fontSize: 11 }}>{t(r.lastActivity)}</div>
       </div>
       <div>
-        {r.status === 'active' && <button onClick={(e) => { e.stopPropagation(); }} className="btn btn-sm" style={{ width: '100%', justifyContent: 'center' }}><I.Send className="ic"/> Påmind</button>}
-        {r.status === 'stuck' && <button onClick={(e) => { e.stopPropagation(); }} className="btn btn-sm btn-primary" style={{ width: '100%', justifyContent: 'center' }}><I.Send className="ic"/> Påmind</button>}
-        {r.status === 'ready' && <button onClick={(e) => { e.stopPropagation(); go && go("workspace:1"); }} className="btn btn-sm" style={{ width: '100%', justifyContent: 'center' }}>Åbn sag</button>}
-        {r.status === 'draft' && <button onClick={(e) => { e.stopPropagation(); }} className="btn btn-sm" style={{ width: '100%', justifyContent: 'center' }}>Færdig­gør</button>}
+        {r.status === 'active' && <button onClick={(e) => { e.stopPropagation(); }} className="btn btn-sm" style={{ width: '100%', justifyContent: 'center' }}><I.Send className="ic"/> {t('Påmind')}</button>}
+        {r.status === 'stuck' && <button onClick={(e) => { e.stopPropagation(); }} className="btn btn-sm btn-primary" style={{ width: '100%', justifyContent: 'center' }}><I.Send className="ic"/> {t('Påmind')}</button>}
+        {r.status === 'ready' && <button onClick={(e) => { e.stopPropagation(); go && go("workspace:1"); }} className="btn btn-sm" style={{ width: '100%', justifyContent: 'center' }}>{t('Åbn sag')}</button>}
+        {r.status === 'draft' && <button onClick={(e) => { e.stopPropagation(); }} className="btn btn-sm" style={{ width: '100%', justifyContent: 'center' }}>{t('Færdig­gør')}</button>}
       </div>
       <I.ChevronRight size={14} style={{ color: 'var(--c-text-3)', transform: selected ? 'rotate(90deg)' : 'none', transition: 'transform 150ms' }}/>
     </div>
@@ -172,7 +172,7 @@ function DataRequestDetail({ r, onClose, go }) {
       <div className="card-head">
         <div>
           <div className="card-title">{r.company}</div>
-          <div className="card-sub">Anmodning #{1000 + r.id}</div>
+          <div className="card-sub">{t('Anmodning')} #{1000 + r.id}</div>
         </div>
         <button className="icon-btn" onClick={onClose}><I.X size={14}/></button>
       </div>
@@ -181,13 +181,13 @@ function DataRequestDetail({ r, onClose, go }) {
         <div style={{ background: 'var(--c-surface-2)', borderRadius: 10, padding: 14, marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <div style={{ fontSize: 24, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.02em' }} className="mono num">{r.progress}%</div>
-            <div style={{ fontSize: 12, color: 'var(--c-text-2)' }}>{r.items.received} af {r.items.total} elementer</div>
+            <div style={{ fontSize: 12, color: 'var(--c-text-2)' }}>{r.items.received} {t('af')} {r.items.total} {t('elementer')}</div>
           </div>
           <div className="bar" style={{ marginTop: 8 }}><span style={{ width: r.progress + '%' }}/></div>
         </div>
 
         {/* Contact */}
-        <div className="label-mini" style={{ marginBottom: 6 }}>Modtager</div>
+        <div className="label-mini" style={{ marginBottom: 6 }}>{t('Modtager')}</div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14 }}>
           <div className="avatar" style={{ width: 32, height: 32, fontSize: 12 }}>{r.contact !== "-" ? r.contact.split(' ').map(w => w[0]).join('') : "-"}</div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -198,7 +198,7 @@ function DataRequestDetail({ r, onClose, go }) {
         </div>
 
         {/* Activity timeline */}
-        <div className="label-mini" style={{ marginBottom: 8 }}>Aktivitet</div>
+        <div className="label-mini" style={{ marginBottom: 8 }}>{t('Aktivitet')}</div>
         <div style={{ position: 'relative', paddingLeft: 12 }}>
           <div style={{ position: 'absolute', left: 3, top: 6, bottom: 6, width: 1, background: 'var(--c-line)' }}/>
           {[
@@ -209,8 +209,8 @@ function DataRequestDetail({ r, onClose, go }) {
             <div key={i} style={{ display: 'flex', gap: 12, paddingBottom: 12, position: 'relative' }}>
               <div style={{ position: 'absolute', left: -12, top: 4, width: 7, height: 7, borderRadius: '50%', background: a.dot, border: '2px solid #fff', boxShadow: '0 0 0 1px ' + a.dot }}/>
               <div style={{ paddingLeft: 10, flex: 1 }}>
-                <div style={{ fontSize: 12.5 }}>{a.t}</div>
-                <div className="muted" style={{ fontSize: 11 }}>{a.d}</div>
+                <div style={{ fontSize: 12.5 }}>{t(a.t)}</div>
+                <div className="muted" style={{ fontSize: 11 }}>{t(a.d)}</div>
               </div>
             </div>
           ))}
@@ -218,11 +218,11 @@ function DataRequestDetail({ r, onClose, go }) {
 
         {/* Quick actions */}
         <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--c-line-2)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <button className="btn btn-sm" style={{ justifyContent: 'flex-start' }}><I.Send className="ic"/> Send påmindelse</button>
-          <button className="btn btn-sm" style={{ justifyContent: 'flex-start' }}><I.Plus className="ic"/> Anmod om mere materiale</button>
-          <button className="btn btn-sm" style={{ justifyContent: 'flex-start' }}><I.Eye className="ic"/> Se hvad kunden ser</button>
-          <button className="btn btn-sm" onClick={() => go && go("workspace:1")} style={{ justifyContent: 'flex-start' }}><I.Briefcase className="ic"/> Åbn sag</button>
-          <button className="btn btn-sm btn-danger" style={{ justifyContent: 'flex-start' }}><I.X className="ic"/> Luk anmodning</button>
+          <button className="btn btn-sm" style={{ justifyContent: 'flex-start' }}><I.Send className="ic"/> {t('Send påmindelse')}</button>
+          <button className="btn btn-sm" style={{ justifyContent: 'flex-start' }}><I.Plus className="ic"/> {t('Anmod om mere materiale')}</button>
+          <button className="btn btn-sm" style={{ justifyContent: 'flex-start' }}><I.Eye className="ic"/> {t('Se hvad kunden ser')}</button>
+          <button className="btn btn-sm" onClick={() => go && go("workspace:1")} style={{ justifyContent: 'flex-start' }}><I.Briefcase className="ic"/> {t('Åbn sag')}</button>
+          <button className="btn btn-sm btn-danger" style={{ justifyContent: 'flex-start' }}><I.X className="ic"/> {t('Luk anmodning')}</button>
         </div>
       </div>
     </div>

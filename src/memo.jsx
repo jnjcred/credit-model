@@ -200,6 +200,14 @@ function _memoSaveSelection() {
   }
 }
 
+/* ── Language mode ────────────────────────────────────────────────────────────
+   Switching language reloads the page, so a module-level branch is safe. When
+   the app runs in English the seeded template content below is swapped for the
+   English variant (SEC_EN), and localStorage keys are namespaced per language
+   so English mode seeds fresh English content without touching Danish work. */
+const MEMO_EN = (typeof window !== 'undefined' && window.CW_LANG === 'en');
+const LANG_SUFFIX = MEMO_EN ? ':en' : '';
+
 /* ── Section default HTML content — følger EIFO "Kreditindstilling"-template 1:1 ─
    Konvention:
    - <em class="tpl-hint"> + <ul class="tpl-hints">  = template-vejledning verbatim
@@ -920,6 +928,713 @@ Anders Christensen (51,8%)     Anders Holding ApS (48,2%)
   `,
 };
 
+/* ── English template variant ─────────────────────────────────────────────────
+   Faithful translation of the Danish template above. Figures, company names,
+   document names and citation attributes (data-doc / data-page / data-line /
+   data-col) are kept byte-identical so citations still resolve against
+   window.CASE_DOCS. Selected at module level when window.CW_LANG === 'en'. */
+const SEC_EN = {
+  background: `
+    <h3 class="tpl-subhead">Background</h3>
+    <ul class="tpl-hints">
+      <li>Brief introduction (two lines) covering the company's principal activities and business model and, where relevant, its "reason for existence"</li>
+      <li>Brief history: mention any important events/milestones within the last 5 years</li>
+      <li>The bank's motive for inviting EIFO into the financing</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p><strong>Activities:</strong> Nordhavn Composite A/S manufactures fibre-reinforced composite components, primarily for wind turbine blades. The company specialises in short production runs with rapid changeover and supplies OEM customers such as Vestas and <span class="memo-cite" data-doc="GE_Vernova_rammekontrakt.pdf" data-page="s. 1">GE Vernova</span>.</p>
+      <p><strong>History (last 5 years):</strong></p>
+      <ul>
+        <li>2022: First delivery to Vestas Blades after 18 months of qualification</li>
+        <li>2024: Production scale-up in Vendsyssel (+45% capacity)</li>
+        <li>Q4 2025: Entered into a <span class="memo-cite" data-doc="GE_Vernova_rammekontrakt.pdf" data-page="s. 1">framework agreement with GE Vernova</span> for the Block-Island offshore wind project</li>
+      </ul>
+      <p><strong>The bank's motive:</strong> Nordjyske Bank wishes to share the risk on the export exposure to USD invoicing (Block-Island, payment Q4 2026). The bank has an existing term loan (DKK 1,8M, 4,2%) with the company and considers EIFO co-financing necessary in order to provide the requested working capital facility.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Loan purpose</h3>
+    <ul class="tpl-hints">
+      <li>Reason for the loan application</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Nordhavn Composite A/S is applying for <strong><span class="memo-cite" data-doc="Budget_2026-28_v3.xlsx" data-page="linje 197">DKK 4,5M</span></strong> to finance the Block-Island order from GE Vernova with delivery in Q3 2026. The amount is allocated to material purchases (carbon fibre, resin ~ <span class="tpl-blank">DKK 2,8M</span>), work in progress (~ <span class="tpl-blank">DKK 2,4M</span>) and working capital until the customer's payment in Q4 2026 (~ <span class="tpl-blank">DKK 1,8M</span>).</p>
+    </div>
+  `,
+
+  financing: `
+    <table>
+      <thead><tr><th>Financing plan</th><th style="text-align:right">DKK m</th><th style="text-align:right">%</th><th>Capital requirement</th><th style="text-align:right">DKK m</th></tr></thead>
+      <tbody>
+        <tr><td>EIFO export guarantee (80% cover)</td><td style="text-align:right;font-family:monospace">3,6</td><td style="text-align:right;font-family:monospace">51%</td><td>Material purchases (carbon fibre/resin)</td><td style="text-align:right;font-family:monospace">2,8</td></tr>
+        <tr><td>Nordjyske Bank, working capital facility</td><td style="text-align:right;font-family:monospace">2,2</td><td style="text-align:right;font-family:monospace">31%</td><td>Work in progress</td><td style="text-align:right;font-family:monospace">2,4</td></tr>
+        <tr><td>Own financing (operating liquidity)</td><td style="text-align:right;font-family:monospace">1,2</td><td style="text-align:right;font-family:monospace">17%</td><td>Working capital until Q4 payment</td><td style="text-align:right;font-family:monospace">1,8</td></tr>
+        <tr><td><span class="tpl-blank">[add row]</span></td><td style="text-align:right;font-family:monospace"><span class="tpl-blank">0,0</span></td><td style="text-align:right;font-family:monospace"><span class="tpl-blank">%</span></td><td><span class="tpl-blank">[capital requirement]</span></td><td style="text-align:right;font-family:monospace"><span class="tpl-blank">0,0</span></td></tr>
+        <tr><td><strong>Total</strong></td><td style="text-align:right;font-family:monospace;font-weight:600">7,0</td><td style="text-align:right;font-family:monospace;font-weight:600">100 %</td><td><strong>Total</strong></td><td style="text-align:right;font-family:monospace;font-weight:600">7,0</td></tr>
+      </tbody>
+    </table>
+    <ul class="tpl-hints">
+      <li>Assessment of whether the risk sharing is sufficiently balanced, considering EIFO's share of the financing, whether EIFO guarantees or contributes equity to the co-financing, collateral, repayment profile and whether EIFO is subordinated to other debt.</li>
+      <li>Comments on the repayment profile, including arguments for an initial grace period.</li>
+      <li>Any other comments on the financing structure.</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p><strong>Risk sharing:</strong> The EIFO guarantee covers 80% of the export obligation towards GE Vernova; the bank carries 20% and runs the working capital facility at its own risk. EIFO is not subordinated to the bank's primary exposure — ranks pari passu in charges and receivables pledge.</p>
+      <p><strong>Repayment profile:</strong> The export guarantee follows the contract's delivery schedule and expires automatically upon the customer's final payment (Q4 2026). The working capital facility is revolving with annual review. An initial grace period is <span class="tpl-blank">not relevant</span>, as the facility is short-term (≤ 12 months).</p>
+      <p><strong>Other comments:</strong> <span class="tpl-blank">[any supplementary comments]</span></p>
+    </div>
+  `,
+
+  rating: `
+    <table>
+      <tbody>
+        <tr><td style="width:42%">Objective (calculated) credit rating</td><td><strong>BB+</strong> <span style="color:var(--c-text-3); font-size:11px">(score 6,2/10)</span></td></tr>
+        <tr><td>Recommended credit rating</td><td><strong>BB</strong> <span style="color:var(--c-text-3); font-size:11px">(override − 1 notch)</span></td></tr>
+        <tr><td>Override(s) applied</td><td>Customer concentration – downgrade 1 notch</td></tr>
+        <tr><td>Rationale for overrides</td><td>Top-3 customers account for <span class="memo-cite" data-doc="Periodetal_Q1-Q3_2026.xlsx" data-page="ark Kunder">64% of revenue</span> with GE Vernova alone at ~38%. The objective model does not sufficiently capture the risk of losing a single primary customer, and a manual one-notch downgrade has therefore been applied.</td></tr>
+      </tbody>
+    </table>
+  `,
+
+  legal: `
+    <p>Select</p>
+    <ul class="tpl-hints">
+      <li>[Only used for lending]</li>
+      <li>[Insert the assessment from Legal SME / International Regulation &amp; Relations]</li>
+      <li>Legal SME has not been involved in connection with this credit recommendation, as it has been assessed that the proposal contains no particular legal issues.</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Legal SME has reviewed the <span class="memo-cite" data-doc="GE_Vernova_rammekontrakt.pdf" data-page="s. 1">GE Vernova framework contract</span> and confirms customary international trade terms (INCOTERMS DDP, payment terms 60 days). No exit clauses or cross-default provisions are considered problematic.</p>
+      <p>The export guarantee documentation follows EIFO's standard and has been reviewed in cooperation with Nordjyske Bank's legal department. A subordination declaration for the <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">shareholder loan of DKK 0,5M</span> is missing and is a condition for approval.</p>
+    </div>
+  `,
+
+  risk: `
+    <table>
+      <thead><tr><th style="width:38%">Key risk areas</th><th>Mitigation</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Risk area 1 — Customer concentration</strong><br/><span class="memo-cite" data-doc="Periodetal_Q1-Q3_2026.xlsx" data-page="ark Kunder">Top-3 customers = 64% of revenue</span>, GE Vernova alone ~38%.</td>
+          <td><em>Elaborate on the risk area / Analyse mitigating factors:</em><br/>The export guarantee is specific to the GE Vernova order, which addresses the primary exposure for the present facility. A pipeline towards Siemens Gamesa and ENERCON is established but not yet in the order book.<br/><strong>This is mitigated by</strong> a rating override (-1 notch) and quarterly reporting on top-5 customers.<br/><em>Assessment: Not fully mitigated — maintained as an override.</em></td>
+        </tr>
+        <tr>
+          <td><strong>Risk area 2 — Raw material prices</strong><br/><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">Carbon fibre +22% YoY</span>, price hedging only 60%.</td>
+          <td>The GE Vernova contract contains a price adjustment clause for carbon fibre fluctuations > ±10%. The remaining 40% of consumption is covered by forward purchases.<br/><em>Assessment: Mitigated to an acceptable level.</em></td>
+        </tr>
+        <tr>
+          <td><strong>Risk area 3 — Currency exposure</strong><br/><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">41% of revenue in USD/EUR</span> – no formal hedging policy.</td>
+          <td>The GE order is hedged with a forward contract for 90% of contract value via Nordjyske Bank. A formal hedging policy will be prepared as a condition of approval.<br/><em>Assessment: Mitigated for the present order.</em></td>
+        </tr>
+        <tr>
+          <td><strong>Risk area 4 — Delivery risk</strong><br/><span class="memo-cite" data-doc="GE_Vernova_rammekontrakt.pdf" data-page="s. 1">Block-Island delivery Q3 2026</span> critical for liquidity.</td>
+          <td>Production plan confirmed by the operations manager, capacity reserved. Backup capacity at sister company Nordhavn Production ApS secures delivery capability in case of breakdown.<br/><em>Assessment: Acceptably mitigated.</em></td>
+        </tr>
+        <tr>
+          <td><span class="tpl-blank">Risk area 5 — [add]</span></td>
+          <td><span class="tpl-blank">[mitigation]</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="tpl-note">Add or delete rows as needed.</p>
+  `,
+
+  conclusion: `
+    <p><strong>Conclusion – Overall risk assessment: <span class="tpl-risk mid">Medium/High</span></strong></p>
+
+    <p><strong>Recommended for approval on the basis of:</strong></p>
+    <ul class="tpl-hints">
+      <li>Assessment of the company's economic viability, including whether there is debt service capacity with a satisfactory margin?</li>
+      <li>How does the financing support EIFO's strategy?</li>
+      <li>Are there documented management competencies that make it probable that the activity can be carried out and is profitable?</li>
+      <li>Are the necessary and relevant special conditions included? [only applicable to EIFO guarantees]</li>
+      <li>Conclusion on ESG, appendix <span class="tpl-blank">2</span></li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <ul>
+        <li><strong>Economic viability:</strong> Revenue is growing (<span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2025">41,1M in 2025</span>), but earnings capacity is thin: the EBITDA margin is <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="EBITDA-margin %" data-col="2025">5,8%</span> and unchanged from 2024. Debt/EBITDA of <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Gæld / EBITDA" data-col="2025">3,3×</span> is high for a company of this size and leaves limited headroom to absorb a delay on the order.</li>
+        <li><strong>EIFO strategy:</strong> Directly aligned with EIFO's export focus and green transition strategy — the product supplies components for renewable energy.</li>
+        <li><strong>Management competencies:</strong> Documented industry experience (CEO 15 years at Vestas Blades, CTO materials researcher). Established finance function with a state-authorised auditor.</li>
+        <li><strong>Special conditions:</strong> Hedging policy, quarterly customer reporting and subordination declaration included as conditions of approval (see Appendix 1).</li>
+        <li><strong>ESG:</strong> Low risk, cf. Appendix 2 — the company contributes positively to EIFO's ESG strategy.</li>
+      </ul>
+    </div>
+
+    <p><strong>And despite:</strong></p>
+    <ul class="tpl-hints">
+      <li>Material risks that cannot be mitigated to an acceptable level</li>
+      <li>Failure to meet material factors that EIFO weights</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <ul>
+        <li>High customer concentration (top-3 = 64%) which cannot be fully mitigated — addressed via rating override and reporting requirements.</li>
+        <li>Unresolved budget variance on opening equity (difference DKK 2,0M) which should be explained before final approval.</li>
+        <li>Missing subordination declaration on the <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">shareholder loan of DKK 0,5M</span> — set as a condition precedent for approval.</li>
+      </ul>
+    </div>
+  `,
+
+  ownership: `
+    <h3 class="tpl-subhead">Ownership structure</h3>
+    <em class="tpl-hint">Analyse the most significant factors, including [where relevant]:</em>
+    <ul class="tpl-hints">
+      <li>Who owns the companies and with what ownership share? Is there a clear ownership structure?</li>
+      <li>Is the company owned by a foundation/association, or is the ownership significantly fragmented?</li>
+      <li>Bankruptcy history of the owners. If so, focus on the owners' role and conduct and which creditors suffered material losses. What lessons were learned, and how are they incorporated into the company's business model, processes and governance.</li>
+      <li>The owners' and guarantors' financial circumstances and ability to make further capital injections and/or honour guarantee obligations, as well as capital-raising strategy.</li>
+      <li>Material activity in sister/subsidiary companies where it deviates from the borrower.</li>
+      <li>Plans for generational succession, including any successors.</li>
+    </ul>
+    <p class="tpl-note">For complex group structures, a group chart/cap table can be attached as an appendix.</p>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>The company is owned by <span class="memo-cite" data-doc="Ejerbog_2026.pdf" data-page="s. 1">Anders Christensen (51,8% directly) and Anders Holding ApS (48,2%)</span>. Clear ownership structure with no foundation/association or fragmented ownership. No bankruptcy history among the owners.</p>
+      <p>Anders Holding ApS has granted a <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="note 14">shareholder loan of DKK 0,5M (CIBOR+2%, maturity 2028)</span>. A subordination declaration is not yet in place. A personal guarantee from A. Christensen of <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S4">DKK 0,5M</span> has been signed.</p>
+      <p>Subsidiary activity: Nordhavn Production ApS (100%, production) and Nordhavn US Inc. (100%, sales/service). Both in normal operation. No current plans for generational succession – owners are <span class="tpl-blank">[age]</span>.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Management</h3>
+    <em class="tpl-hint">Analyse the executive management/key employees with respect to:</em>
+    <ul class="tpl-hints">
+      <li>Function in the company plus education, management and industry experience and competencies, including whether competencies match the company's needs</li>
+      <li>Any incentive schemes</li>
+      <li>Risk appetite. Is management very cautious, risk-seeking, or do they take a balanced risk?</li>
+      <li>Finance function, including competencies and quality of reporting</li>
+      <li>References, bankruptcy history</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <ul>
+        <li><strong>CEO/co-founder:</strong> Anders Christensen, MSc in Engineering (DTU 2008), 15 years of industry experience (formerly production manager at Vestas Blades).</li>
+        <li><strong>CTO/co-founder:</strong> Maria Lindbjerg, materials researcher (AAU 2010).</li>
+        <li><strong>CFO (hired 2023):</strong> Henrik Sølvbjerg, MSc in Business Economics and Auditing, formerly head of finance at Stark.</li>
+        <li><strong>Incentive schemes:</strong> <span class="tpl-blank">[none / bonus scheme / warrants]</span></li>
+        <li><strong>Risk appetite:</strong> Balanced — documented ability to decline unprofitable orders.</li>
+        <li><strong>Finance function:</strong> Established with monthly reporting. No bankruptcy history.</li>
+      </ul>
+    </div>
+
+    <h3 class="tpl-subhead">Board of directors</h3>
+    <em class="tpl-hint">Analyse the most significant factors regarding the board/advisory board, e.g.:</em>
+    <ul class="tpl-hints">
+      <li>Who sits on the board, with a brief history of business experience?</li>
+      <li>Particular competencies the member contributes</li>
+      <li>Relationship to the owners, including whether the member represents an owner/investor?</li>
+      <li>Is the board professional and does it cover the company's needs?</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>The board consists of Anders Christensen (chairman, owner), Maria Lindbjerg (co-founder) and Lars Holm (external member, former CFO of LM Wind Power, industry expertise).</p>
+      <p>The board is considered professional but could benefit from additional competencies within internationalisation. <span class="tpl-blank">[optional elaboration on board work and meeting cadence]</span></p>
+    </div>
+
+    <h3 class="tpl-subhead">Advisors/network</h3>
+    <p class="tpl-note">Only stated if these are material and there is no professional board.</p>
+    <em class="tpl-hint">Advisors/network close to the company plus a brief description of competencies and the real value of the sparring.</em>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Auditor: BDO (state-authorised). Legal advice: Bech-Bruun. Both advisors are actively involved in strategic decisions.</p>
+    </div>
+
+    <p><strong>Overall conclusion on ownership, management, board and advisors – Risk assessment: <span class="tpl-risk lav">Low</span></strong></p>
+    <em class="tpl-hint">Brief conclusion on management strength, including whether the owners actively use the board and advisors, and a conclusion on whether it is adequately composed to future-proof the company.</em>
+    <p>Established management with relevant experience and professional governance. Active use of board and advisors. The board's internationalisation competencies should be strengthened over time.</p>
+  `,
+
+  product: `
+    <h3 class="tpl-subhead">Products – Risk assessment: <span class="tpl-risk lav">Low</span></h3>
+    <em class="tpl-hint">Analyse the product risk, e.g.:</em>
+    <ul class="tpl-hints">
+      <li>Which products/product segments does the company operate with?</li>
+      <li>How is the company's product diversification assessed / does the company spread across products and/or markets?</li>
+      <li>Where are the products positioned in the value chain?</li>
+      <li>Are the products based on low or high technology?</li>
+      <li>Is production to stock or to order?</li>
+      <li>Which group company owns any patent and licence rights, and are they covered by EIFO's charge?</li>
+    </ul>
+    <p class="tpl-note">[delete items that are not relevant]</p>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>The company manufactures fibre-reinforced composite components, primarily for wind turbine blades (90% of revenue) and secondarily for marine/industrial applications (10%). High-technology product with substantial knowledge embedded in process optimisation. Order-based production — no production to stock. Patent and licence rights are owned by the parent company and are covered by EIFO's floating charge.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Business model – Risk assessment: <span class="tpl-risk lav">Low</span></h3>
+    <em class="tpl-hint">Analyse the company's current business model – including value proposition.</em>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Contract manufacturing (B2B) for OEM customers in the wind turbine industry. Value proposition: the ability to deliver short production runs with rapid changeover — a niche segment where large captive manufacturers are typically not profitable. Margins are above the component industry average due to the specialisation focus.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Strategy – Risk assessment: <span class="tpl-risk mid">Medium</span></h3>
+    <em class="tpl-hint">Analyse the company's forward-looking strategy, including:</em>
+    <ul class="tpl-hints">
+      <li>Market strategy, including geographic concentration and dependence on single markets</li>
+      <li>Product and development strategy</li>
+      <li>Distribution strategy</li>
+    </ul>
+    <em class="tpl-hint">Focus on new initiatives relative to the current set-up, and the reason for the changed strategy.</em>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <ul>
+        <li><strong>Market strategy:</strong> Expansion from primarily Vestas/GE Vernova towards Siemens Gamesa and European ENERCON. Pipeline established but not yet in the order book. Geographic concentration on EU/US.</li>
+        <li><strong>Product and development strategy:</strong> Larger blades (50m+) and associated components — requires capital investment in a new production hall (planned 2027–2028, not part of the present application).</li>
+        <li><strong>Distribution strategy:</strong> Direct sales to OEMs, no distributor tier. To be maintained.</li>
+      </ul>
+      <p>The changed strategy is primarily driven by the market shift towards offshore wind and the associated larger components.</p>
+    </div>
+  `,
+
+  market: `
+    <p class="tpl-note">[For all items in this section: if the risk is assessed as "Low", only a few lines of justification are given. Be mindful of consistency with the qualitative answers in the rating]</p>
+
+    <h3 class="tpl-subhead">Market – Risk assessment: <span class="tpl-risk lav">Low</span></h3>
+    <em class="tpl-hint">Brief analysis of the risk in the markets the company operates in, e.g.:</em>
+    <ul class="tpl-hints">
+      <li>Market development and trends, cyclicality and substitution risk</li>
+      <li>Market concentration</li>
+      <li>Market drivers</li>
+      <li>Barriers to entry</li>
+      <li>Digital trends in the market</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>The global market for wind turbine composites is expected to grow <span class="memo-cite" data-doc="WindEurope_Market_2026.pdf" data-page="s. 14">6,8% p.a. in 2025–2030</span>, driven by offshore build-out and repowering. Moderately cyclical (depends on OEM order intake) but structurally growing. Limited substitution risk, as composites are technologically difficult to replace. High barriers to entry (OEM qualification processes take 12–24 months).</p>
+    </div>
+
+    <h3 class="tpl-subhead">Competition – Risk assessment: <span class="tpl-risk mid">Medium</span></h3>
+    <em class="tpl-hint">Brief analysis of competitors and how the company's value proposition differentiates it from them, including:</em>
+    <ul class="tpl-hints">
+      <li>Main competitors</li>
+      <li>Competitive parameters and differentiation versus competitors / competitive advantages</li>
+      <li>Any technology differences</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>The market is dominated by captive manufacturers (Vestas Blades, Siemens Gamesa). Independent suppliers: LM Wind Power, TPI Composites. Nordhavn competes in a niche segment with shorter production runs where large players are typically not profitable.</p>
+      <table>
+        <thead><tr><th>Player</th><th>Focus</th><th style="text-align:right">Est. revenue (DKK M)</th></tr></thead>
+        <tbody>
+          <tr><td>LM Wind Power</td><td>Standard wind turbine blades, global</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="WindEurope_Market_2026.pdf" data-page="s. 22">~2.000</span></td></tr>
+          <tr><td>TPI Composites</td><td>Contract manufacturing, large runs</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="WindEurope_Market_2026.pdf" data-page="s. 23">~400</span></td></tr>
+          <tr><td><strong>Nordhavn Composite</strong></td><td>Special components, short runs</td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2025">41,1</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 class="tpl-subhead">Customers – Risk assessment: <span class="tpl-risk hoj">High</span></h3>
+    <em class="tpl-hint">Brief analysis of customers, including:</em>
+    <ul class="tpl-hints">
+      <li>Who are the company's most significant customers/the 3 largest customers or customers accounting for more than 20% of revenue?</li>
+      <li>Is there a good spread of customers, or is there dependence on individual customers, and is the trend towards greater or lesser dependence?</li>
+      <li>What influence do customers have over the company, including who sets price and terms, is customer loyalty high/low, is it easy and cheap or costly for customers to substitute the company's products?</li>
+      <li>Are there any particular contractual matters?</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Top-3 customers = <span class="memo-cite" data-doc="Periodetal_Q1-Q3_2026.xlsx" data-page="ark Kunder">64% of revenue</span>: GE Vernova (~38%), Vestas (~16%), ENERCON (~10%). Trend: slightly increasing concentration due to growth at GE.</p>
+      <p>Customers have a strong negotiating position and set prices in consultation. High switching costs for customers due to qualification processes → high customer loyalty despite poor diversification. Long contracts (12–36 months) reduce short-term risk.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Suppliers – Risk assessment: <span class="tpl-risk mid">Medium</span></h3>
+    <em class="tpl-hint">Brief analysis of suppliers, including:</em>
+    <ul class="tpl-hints">
+      <li>Who are the company's most significant suppliers?</li>
+      <li>Is there dependence on individual suppliers, critical components, country risk etc.? If so, what is the company's action plan for securing deliveries from an alternative supplier?</li>
+      <li>Is it possible to switch supplier (notice periods, switching costs and named alternative suppliers)?</li>
+      <li>What is the relative bargaining power between the company and the supplier on price and other terms?</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Most significant suppliers: Toray Industries (carbon fibre, Japan), Olin (epoxy resin, US/EU), Owens Corning (glass fibre, EU). Dependence on Toray is being reduced through qualification of SGL Carbon as backup — process initiated. Lead times 8–12 weeks for carbon fibre. Bargaining power is assessed as low towards Toray (~75% of carbon fibre consumption), better on the others.</p>
+    </div>
+  `,
+
+  financial: `
+    <h3 class="tpl-subhead">Accounting formalities</h3>
+    <em class="tpl-hint">Form of audit: accounts audited or extended review? Auditor type, e.g. state-authorised or registered auditor. Are there qualifications / audit remarks? Who prepared the interim accounts, budget material, sensitivity analysis and any group consolidation?</em>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 2">Annual report 2025 audited by BDO (state-authorised) without qualifications or remarks</span>. The Q1 2026 interim accounts, budget 2026–28 and sensitivity analysis were prepared by the company's CFO with review by BDO. Group consolidation: <span class="tpl-blank">not relevant (subsidiaries are consolidated directly into the parent company)</span>.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Income statement</h3>
+    <p><strong>History, annual accounts 12-2025</strong></p>
+    <ul class="tpl-hints">
+      <li>Trend and explanations of material developments in historical figures.</li>
+      <li>The annual accounts are compared with the budget for the year and material budget variances are explained.</li>
+      <li>Extraordinary items?</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <table>
+        <thead><tr><th>DKK m</th><th style="text-align:right">2023</th><th style="text-align:right">2024</th><th style="text-align:right">2025</th></tr></thead>
+        <tbody>
+          <tr><td>Revenue</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2023">28,0</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2024">32,8</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6" data-line="Nettoomsætning" data-col="2025">41,1</span></td></tr>
+          <tr><td>Gross profit</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 6" data-line="Bruttofortjeneste" data-col="2023">12,8</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 6" data-line="Bruttofortjeneste" data-col="2024">15,2</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 6" data-line="Bruttofortjeneste" data-col="2025">18,5</span></td></tr>
+          <tr><td>EBITDA</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 7" data-line="EBITDA" data-col="2023">1,3</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 7" data-line="EBITDA" data-col="2024">1,9</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 7" data-line="EBITDA" data-col="2025">2,4</span></td></tr>
+          <tr><td>Equity</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 8" data-line="Egenkapital" data-col="2023">3,5</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 8" data-line="Egenkapital" data-col="2024">4,8</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 8" data-line="Egenkapital" data-col="2025">6,2</span></td></tr>
+        </tbody>
+      </table>
+      <p>Trend: revenue has grown 47% in two years, but earnings are not keeping pace. The gross margin has fallen from 45,7% to 45,0%, and the EBITDA margin is flat at 5,8% in both 2024 and 2025. Growth is driven by the contract base with GE Vernova and Vestas, not by improved earnings capacity. No extraordinary items in the period.</p>
+    </div>
+
+    <p><strong>Budget 12-2026</strong></p>
+    <ul class="tpl-hints">
+      <li>State the most significant budget assumptions</li>
+      <li>Analyse the realism of significant jumps in revenue, gross margin and EBITDA margin etc., e.g. order book and pipeline.</li>
+      <li>Has a realistic bridge been demonstrated between historical operating performance and expected future operating performance?</li>
+      <li>Development in capacity costs?</li>
+      <li>Do depreciation charges match the asset's useful life?</li>
+      <li>Any comparison with industry figures</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Budget 2026: revenue <strong>DKK 44,4M</strong> (+8% YoY), EBITDA margin 6,1%. Driver: the GE Vernova framework agreement. Bridge: order book and confirmed pipeline cover approx. <span class="tpl-blank">85%</span> of the revenue budget. Capacity costs increase ~12% (planned hires). Depreciation matches asset lifetimes (5 to 10 years for machinery). Comparison with industry figures: the EBITDA margin of 6,1% is <strong>below</strong> the industry median of approx. 10%, leaving a limited buffer in case of price pressure or delays.</p>
+    </div>
+
+    <p><strong>Interim accounts Q1 2026 compared with budget</strong></p>
+    <ul class="tpl-hints">
+      <li>Explain material variances. Is it realistic that the annual budget will be met? If not, what result is estimated for the year?</li>
+      <li>Have depreciation charges been recognised?</li>
+      <li>Have accruals been made?</li>
+      <li>Requirement for the remainder of the financial year to meet the budget ("Need-to-Meet")</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Q1 2026: realised revenue <span class="memo-cite" data-doc="Periodetal_Q1-Q3_2026.xlsx" data-page="ark Resultat" data-line="Nettoomsætning" data-col="Q1 2026">DKK 10,6M</span> = 24% of the full-year budget. Depreciation and accruals correctly recognised. Seasonality supports the annual target (strong Q3 and Q4 due to delivery schedules). Need-to-Meet: avg. DKK 11,3M per quarter for the rest of the year, realistic given the pipeline.</p>
+      <p><strong>Budget variance — requires clarification:</strong> Budgeted opening equity <span class="memo-cite" data-doc="Budget_2026-28_v3.xlsx" data-page="linje 197">DKK 4,2M</span> vs. annual report closing 2025 <span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 2">DKK 6,2M</span> = <strong>−2,0M ⚠</strong>. Should be explained before final approval.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Balance sheet</h3>
+    <p><strong>Latest annual accounts</strong></p>
+    <ul class="tpl-hints">
+      <li>Is the valuation of the assets realistic?</li>
+      <li>Material intangible assets, buildings, inventories, work in progress and receivables</li>
+      <li>Recognition method, depreciation method</li>
+      <li>How is work in progress recognised, gross/net, incl. proportional profit?</li>
+      <li>Is there a good spread and credit quality in trade receivables?</li>
+      <li>Debt structure: Are material fixed assets financed with long-term debt? Current ratio?</li>
+      <li>Material intercompany balances</li>
+      <li>Material contingent liabilities?</li>
+      <li>Is debt gearing (net interest-bearing debt/EBITDA) satisfactory relative to the industry?</li>
+      <li>Solvency ratio with and without subordinated loans (if subordinated capital is negative, it must be addressed)?</li>
+      <li>Group solvency where relevant.</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Assets are considered realistically valued. Work in progress is recognised <span class="tpl-blank">[gross/net incl. proportional profit]</span>. Receivables concentrated on top-3 (~64%) — credit quality high (investment grade counterparties). Long-term fixed assets financed with a 7-year term loan. Solvency 44,3% (excluding subordinated capital), debt gearing 3,3× measured as total debt to EBITDA.</p>
+    </div>
+
+    <p><strong>Budget (balance sheet)</strong></p>
+    <ul class="tpl-hints">
+      <li>Explain and analyse the material changes relative to the latest annual accounts</li>
+      <li>Is the debt gearing (net interest-bearing debt/EBITDA) satisfactory?</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Budget 2026 expects debt gearing of 2,0× after establishment of the present facility. Material change: increase in inventories/work in progress of approx. <span class="tpl-blank">DKK 1,5M</span> due to the Block-Island order.</p>
+    </div>
+
+    <p class="tpl-note">For acquisitions: Purchase multiples? — <em>Not relevant for this case.</em></p>
+
+    <h3 class="tpl-subhead">Cash flow and debt service capacity</h3>
+    <em class="tpl-hint">The cash flow analysis should primarily be based on budgets. Realism should be seen in light of historical liquidity generation.</em>
+    <ul class="tpl-hints">
+      <li>Is there satisfactory liquidity generation from operations?</li>
+      <li>Is the development in working capital realistic?</li>
+      <li>Do investments match the longer-term need?</li>
+      <li>Liquidity status, including whether drawings on working capital facilities are expected to stay within the limits granted by the bank?</li>
+      <li>Is there satisfactory liquidity for debt repayments? Compared with normalised repayment obligations after expiry of any grace period. Short-term non-amortising debt (working capital facility and/or other) is measured against current assets (LTV)</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>Operating cash flow positive and increasing: 2023: DKK 1,1M → 2024: 1,6M → 2025: 2,1M. Working capital development realistic (DSO ~62 days, DPO ~45 days). Investments in 2026 limited to maintenance (DKK 0,4M). Drawings on working capital facilities expected within granted limits. Debt service: coverage of <span class="tpl-blank">3,2×</span> on normalised repayment obligations.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Sensitivity analysis</h3>
+    <em class="tpl-hint">Prepare one or more relevant sensitivity analyses, e.g.:</em>
+    <ul class="tpl-hints">
+      <li>Low case, e.g. with lower growth rates, lower earnings margins and/or termination of contracts</li>
+      <li>Liquidity break-even revenue for debt service capacity when the initial grace period expires</li>
+      <li>Sensitivity to interest rate and currency fluctuations (material unhedged interest and currency risks must be included in the risk assessment in section 5)</li>
+      <li>Early stage: Can debt service capacity be achieved if development is put on hold? (fall-back scenario)</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <ul>
+        <li><strong>Low case</strong> (revenue -15%, EBITDA margin -2pp): EBITDA falls to approx. DKK 1,5M against 2,4M in 2025. Debt service then becomes tight, and the facility can only be serviced if the grace period is extended. <span class="tpl-blank">[calculation to be documented]</span></li>
+        <li><strong>Liquidity break-even revenue</strong>: approx. DKK 38,9M against realised 41,1M in 2025. That leaves only approx. 5% headroom to break-even.</li>
+        <li><strong>Currency sensitivity:</strong> USD -10% gives an EBITDA impact of approx. -0,3M after hedging — manageable.</li>
+        <li><strong>Interest rate sensitivity:</strong> +200bp on CIBOR3 = +DKK 44k/year in interest — immaterial.</li>
+      </ul>
+    </div>
+
+    <h3 class="tpl-subhead">Conclusion - Risk assessment: <span class="tpl-risk mid">Medium</span></h3>
+    <ul class="tpl-hints">
+      <li>Realism of budgets? Is the budgeted earnings level satisfactory?</li>
+      <li>Are the assets considered realistically valued, and is there a risk of extraordinarily large price falls in the event of bankruptcy?</li>
+      <li>Is the debt service capacity satisfactory?</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>The realism of the budgets is considered acceptable, conditional on an explanation of the opening equity variance. Assets are considered realistically valued — moderate liquidation-value risk on special machinery. Debt service capacity is satisfactory.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Key figures table</h3>
+    <p class="tpl-note">[Insert "Table" with accounting and budget figures (income statement, balance sheet and cash flow) from the Excel sheet or extracted from the company's material.]</p>
+    <table>
+      <thead><tr><th>Key figures</th><th style="text-align:right">2023</th><th style="text-align:right">2024</th><th style="text-align:right">2025</th></tr></thead>
+      <tbody>
+        <tr><td>Gross margin</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="Bruttomargin %" data-col="2023">45,7%</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="Bruttomargin %" data-col="2024">46,3%</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Bruttomargin %" data-col="2025">45,0%</span></td></tr>
+        <tr><td>EBITDA margin</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="EBITDA-margin %" data-col="2023">4,6%</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="EBITDA-margin %" data-col="2024">5,8%</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="EBITDA-margin %" data-col="2025">5,8%</span></td></tr>
+        <tr><td>Solvency ratio</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="Soliditetsgrad %" data-col="2023">37,2%</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="Soliditetsgrad %" data-col="2024">42,9%</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Soliditetsgrad %" data-col="2025">44,3%</span></td></tr>
+        <tr><td>Debt / EBITDA</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="Gæld / EBITDA" data-col="2023">4,5×</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="Gæld / EBITDA" data-col="2024">3,4×</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Gæld / EBITDA" data-col="2025">3,3×</span></td></tr>
+        <tr><td>Current ratio</td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2023.pdf" data-page="s. 9" data-line="Likviditetsgrad" data-col="2023">2,2</span></td><td style="text-align:right;font-family:monospace"><span class="memo-cite" data-doc="Aarsrapport_2024.pdf" data-page="s. 9" data-line="Likviditetsgrad" data-col="2024">2,5</span></td><td style="text-align:right;font-family:monospace;font-weight:600"><span class="memo-cite" data-doc="Aarsrapport_2025.pdf" data-page="s. 9" data-line="Likviditetsgrad" data-col="2025">2,5</span></td></tr>
+      </tbody>
+    </table>
+  `,
+
+  endorsement: `
+    <table class="tpl-bevtable">
+      <thead><tr><th colspan="3">Recommendation sign-off</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="label">Date:</td>
+          <td><span class="tpl-blank">dd-mm-2026</span></td>
+          <td style="width:30%"><strong>Recommendation level:</strong> <span class="tpl-blank">Relationship manager</span> · <strong>Initials:</strong> <span class="tpl-blank">ML</span></td>
+        </tr>
+        <tr>
+          <td class="label" style="vertical-align:top">Comments:</td>
+          <td colspan="2"><span class="tpl-blank">[Recommender's comments]</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <table class="tpl-bevtable">
+      <thead><tr><th colspan="3">Approval sign-off</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="label">Date:</td>
+          <td><span class="tpl-blank">dd-mm-2026</span></td>
+          <td style="width:30%"><strong>Approval authority:</strong> <span class="tpl-blank">Credit committee</span> · <strong>Initials:</strong> <span class="tpl-blank">—</span></td>
+        </tr>
+        <tr>
+          <td class="label" style="vertical-align:top">Comments / minutes from credit committee / BBU / the Board:</td>
+          <td colspan="2"><span class="tpl-blank">[Minutes from approval meeting]</span></td>
+        </tr>
+      </tbody>
+    </table>
+  `,
+
+  appendix1: `
+    <p class="tpl-note">[For all sections: content that is not relevant is deleted]</p>
+
+    <h3 class="tpl-subhead">Exposure</h3>
+    <table>
+      <thead><tr><th>Existing + requested exposure</th><th style="text-align:right">DKK m</th><th>Term</th><th>First repayment / drawdown period</th><th>First interest</th><th>Loan profile</th></tr></thead>
+      <tbody>
+        <tr><td>Growth loan, existing</td><td style="text-align:right;font-family:monospace">0,0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>EIFO guarantee, existing loan/facility, cover xx %</td><td style="text-align:right;font-family:monospace">0,0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Growth loan, new</td><td style="text-align:right;font-family:monospace">0,0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td><strong>EIFO export guarantee, new — 80% cover</strong></td><td style="text-align:right;font-family:monospace">3,6</td><td>12 months</td><td>Q2 2026</td><td>Q2 2026</td><td>One-off guarantee</td></tr>
+        <tr><td><strong>Total EIFO</strong></td><td style="text-align:right;font-family:monospace;font-weight:600">3,6</td><td></td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+    <p class="tpl-note">EIFO has made a direct investment/ownership stake with a book value of DKK xx,x million. <em>[delete if not relevant]</em></p>
+
+    <p><strong>Guarantee holder / Co-financing bank:</strong> Nordjyske Bank, contact: <span class="tpl-blank">Lars Pedersen, lars.pedersen@nordjyskebank.dk</span></p>
+    <p><strong>Loss mandates:</strong> None <span class="tpl-blank">[or state mandate]</span></p>
+    <ul>
+      <li>Checklist for the chosen loss mandate has been completed <span class="tpl-blank">[yes/no]</span></li>
+      <li><span class="tpl-blank">Max. two lines of justification for choosing "no loss mandate" if the criteria for a mandate are met</span></li>
+    </ul>
+
+    <h3 class="tpl-subhead">Margin / premium</h3>
+    <ul>
+      <li>Floating CIBOR 3 rate plus a margin of <strong>2,75 % p.a.</strong> (working capital facility, Nordjyske Bank)</li>
+      <li>Premium (EIFO guarantee): <strong>1,40 % p.a.</strong> of the guarantee amount</li>
+      <li><span class="tpl-blank">Max. two lines of justification for deviation from the calculated margin/premium</span></li>
+    </ul>
+
+    <h3 class="tpl-subhead">Arrangement / establishment fee</h3>
+    <p>Standard: 0,75 % of principal + DKK 15.000 per facility</p>
+
+    <h3 class="tpl-subhead">Commitment fee / Break fee</h3>
+    <ul>
+      <li>Standard: <span class="tpl-blank">[X,0 % p.a.]</span> of the undrawn portion of the loan calculated from <span class="tpl-blank">[acceptance of the loan offer / signing of the loan agreement / disbursement date]</span></li>
+      <li>Break fee: DKK <span class="tpl-blank">x</span> million if a loan offer on finally agreed and recommended terms is not taken up</li>
+    </ul>
+
+    <h3 class="tpl-subhead">Exit fee</h3>
+    <p><span class="tpl-blank">None</span> <em>or</em> Standard with entry value DKK <span class="tpl-blank">x</span> million</p>
+
+    <h3 class="tpl-subhead">Collateral [loans and guarantees]</h3>
+    <p><strong>Primary charge — existing collateral:</strong></p>
+    <ul>
+      <li>DKK <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S1">2,8 million floating charge (machinery)</span> — registered</li>
+      <li>DKK <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S2">1,8 million mortgage, Havnegade 47</span> — registered</li>
+    </ul>
+    <p><strong>New / increased collateral:</strong></p>
+    <ul>
+      <li>DKK <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S3">1,2 million receivables pledge (Vestas, GE)</span> — registered</li>
+      <li>DKK <span class="memo-cite" data-doc="Sikkerhedsdokumenter.pdf" data-page="S4">0,5 million personal joint and several guarantee from Anders Christensen, civil reg. no. <span class="tpl-blank">xxxxxx-xxxx</span></span>. The guarantee respects the bank's guarantee.</li>
+      <li>Subordination from Anders Holding ApS, CVR no. <span class="tpl-blank">xx</span>, regarding shareholder loan DKK 0,5 million — <strong>⚠ signature missing</strong></li>
+      <li>DKK <span class="tpl-blank">x,x</span> million nom. shares in Anders Holding ApS, CVR no. <span class="tpl-blank">xx</span>, <span class="tpl-blank">xx</span> % of ownership</li>
+    </ul>
+
+    <h3 class="tpl-subhead">Covenants and declarations [loans and guarantees]</h3>
+    <ul>
+      <li><strong>Dividend restriction:</strong> No distributions without EIFO approval during the guarantee period.</li>
+      <li><strong>Solvency:</strong> ≥ 35 % reported semi-annually.</li>
+      <li>Condition for fulfilment of VK 1-3 [green covenants]: <span class="tpl-blank">[N/A – not green financing]</span></li>
+    </ul>
+
+    <h3 class="tpl-subhead">Reporting [loans and guarantees]</h3>
+    <ul>
+      <li>Audited annual accounts within 5 months after the financial year</li>
+      <li>Quarterly report (max 45 days after quarter end)</li>
+      <li>Group consolidation prepared by the auditor? <span class="tpl-blank">[Yes/No]</span></li>
+    </ul>
+
+    <h3 class="tpl-subhead">Special conditions [EIFO guarantees]</h3>
+    <p>The guarantee premium rate is set at <strong>1,40 %</strong> p.a. The guarantee holder has stated that the interest margin on the credit facility is <strong>2,75 %</strong> p.a. If the guarantee holder increases the interest margin, EIFO must be informed and the premium to EIFO increased by the same percentage.</p>
+    <p><strong>Deviations from and/or additional requirements relative to the General Terms:</strong> <span class="tpl-blank">[Wording must follow the wording in the Special Conditions Catalogue — insert conditions here]</span></p>
+
+    <p><strong>Before issue of the policy, the following must be fulfilled and documented:</strong></p>
+    <ul>
+      <li>Signed subordination declaration from Anders Holding ApS</li>
+      <li>Forward contract USD hedging 90 % of contract value</li>
+      <li>Registered floating charge + receivables pledge</li>
+    </ul>
+
+    <h3 class="tpl-subhead">Disbursement conditions [loans and guarantees]</h3>
+    <ul>
+      <li><strong>Tranche 1:</strong> DKK 2,0 million disbursed no later than <span class="tpl-blank">15.06.2026</span>. Documentation: registered collateral + signed subordination declaration.</li>
+      <li><strong>Tranche 2:</strong> DKK 2,5 million disbursed no later than <span class="tpl-blank">15.08.2026</span>. Documentation: confirmed order dispatch (GE Vernova milestone 1) + documentation that the borrower has positive equity at the tranche.</li>
+    </ul>
+
+    <h3 class="tpl-subhead">Bank exposure</h3>
+    <table>
+      <thead><tr><th>Nordjyske Bank</th><th style="text-align:right">DKK m</th><th>Term</th><th>Interest</th></tr></thead>
+      <tbody>
+        <tr><td>Term loan, existing</td><td style="text-align:right;font-family:monospace">1,8</td><td>7 years</td><td>4,2 %</td></tr>
+        <tr><td>Term loan, new</td><td style="text-align:right;font-family:monospace">0,0</td><td>—</td><td>—</td></tr>
+        <tr><td>Working capital facility, new</td><td style="text-align:right;font-family:monospace">2,2</td><td>12 months</td><td>CIBOR3 + 2,75 %</td></tr>
+        <tr><td><strong>Total</strong></td><td style="text-align:right;font-family:monospace;font-weight:600">4,0</td><td></td><td></td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="tpl-subhead">Bank collateral</h3>
+    <p><strong>Existing:</strong></p>
+    <ul>
+      <li>Mortgage on Havnegade 47 (1st priority)</li>
+      <li>Floating charge, 1st priority</li>
+    </ul>
+    <p><strong>New / increased:</strong></p>
+    <ul>
+      <li>Receivables pledge (2nd priority after EIFO)</li>
+    </ul>
+
+    <h3 class="tpl-subhead">Intercreditor agreement</h3>
+    <p>Standard with overdraft right of DKK <span class="tpl-blank">1,0</span> million for up to three months without involving EIFO.</p>
+  `,
+
+  appendix2: `
+    <p class="tpl-note">[For all sections: content that is not relevant is deleted]</p>
+
+    <h3 class="tpl-subhead">[For EIFO products &lt; DKK 50 million not concerning financing on EIFO's watch list]</h3>
+    <p>ESG is handled via a standard declaration and contains only an obligation to comply with the minimum safeguards.</p>
+
+    <p class="tpl-note">[ESG risks are assessed based on the guiding questions below]</p>
+
+    <h3 class="tpl-subhead">The company's work with ESG [focusing on risk management]</h3>
+    <ul class="tpl-hints">
+      <li>Has the company established an ESG management system that effectively and systematically handles the company's risk management within environmental and social matters?</li>
+      <li>Does the company have written policies and/or procedures for handling ESG risks?</li>
+      <li>Has the company made its expectations and minimum requirements for responsible business conduct clear to suppliers, e.g. contracts, Code of Conduct or similar?</li>
+      <li>Has the company mapped known risks that the company or its supply chain may be connected to?</li>
+      <li>Has the company, based on the risk assessment, initiated concrete initiatives to handle risks?</li>
+      <li>Does the company have a grievance mechanism (whistleblower scheme) available to its stakeholders for reporting objectionable conditions in the value chain?</li>
+      <li>Does the company use audit programmes, e.g. ISO 9001, ISO 14001, ISO 45001 or similar?</li>
+    </ul>
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <ul>
+        <li><strong>Management system:</strong> ISO 9001-certified quality management, ISO 14001 (environment) underway — certification expected Q4 2026.</li>
+        <li><strong>Policies:</strong> Written policies for environment, working environment and supplier conduct. Code of Conduct publicly available.</li>
+        <li><strong>Supplier requirements:</strong> Code of Conduct communicated to all primary suppliers. Toray (carbon fibre) is ISO 14001/45001 certified.</li>
+        <li><strong>Risk mapping:</strong> Completed 2025. Main risks: energy consumption, chemicals handling (resin), working environment (fibre handling).</li>
+        <li><strong>Initiatives:</strong> Energy efficiency of curing ovens (2024), upgrade of ventilation/filters (2025).</li>
+        <li><strong>Whistleblower:</strong> Grievance mechanism established 2024 via Got Ethics.</li>
+        <li><strong>Audit programmes:</strong> ISO 9001 (active), ISO 14001 (underway), ISO 45001 (under consideration).</li>
+      </ul>
+    </div>
+
+    <h3 class="tpl-subhead">[For EIFO products &gt; DKK 50 million or on EIFO's watch list]</h3>
+    <p class="tpl-note">— Not relevant for this case (facility below DKK 50 million). Section may be deleted.</p>
+    <p><strong>ESG risks:</strong> <em class="tpl-hint">ESG's assessment states the following conclusion: [insert 1) Overall conclusion, 2) Illustration in the form of a spider chart showing the current and desired ESG performance of the company's management system, 3) Illustration of ESG's assessment of the business's ESG risk profile]</em></p>
+
+    <h3 class="tpl-subhead">Conclusion – Risk assessment: <span class="tpl-risk lav">Low</span></h3>
+    <p>The ESG handling is considered satisfactory for the size of the facility and the industry. The company's focus on renewable energy (wind turbine components) positively supports EIFO's strategic ESG focus.</p>
+  `,
+
+  appendix3: `
+    <p class="tpl-note">[delete if not relevant]</p>
+    <p class="tpl-note">[If no chart exists, it can be created via the Excel file "Koncernstruktur Template" available in Templafy]</p>
+
+    <div class="tpl-draft">
+      <span class="tpl-draft-label" contenteditable="false">Draft</span>
+      <p>The company's group structure is simple:</p>
+      <pre style="font-family: var(--mono); font-size: 11.5px; line-height: 1.5; background: var(--c-surface-2); padding: 10px 14px; border-radius: 6px; margin: 6px 0;">
+Anders Christensen (51,8%)     Anders Holding ApS (48,2%)
+                  \\           /
+                   \\         /
+              Nordhavn Composite A/S
+              CVR 38 42 71 56 (borrower)
+                   /         \\
+                  /           \\
+ Nordhavn Production ApS    Nordhavn US Inc.
+ CVR 40 12 88 04 (100%)     Delaware (100%)
+ (production DK)            (sales/service US)
+      </pre>
+      <table>
+        <thead><tr><th>Company</th><th>CVR</th><th>Ownership</th><th>Activity</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Nordhavn Composite A/S</strong> (parent / borrower)</td><td style="font-family:monospace">38 42 71 56</td><td>—</td><td>Holding + production DK</td></tr>
+          <tr><td>Nordhavn Production ApS</td><td style="font-family:monospace">40 12 88 04</td><td>100 %</td><td>Production (subsidiary DK)</td></tr>
+          <tr><td>Nordhavn US Inc.</td><td style="font-family:monospace">— (Delaware)</td><td>100 %</td><td>Sales and service office (US)</td></tr>
+        </tbody>
+      </table>
+      <p>No other affiliated companies or intercompany balances of material size.</p>
+    </div>
+
+    <h3 class="tpl-subhead">Appendix list (case file)</h3>
+    <table>
+      <thead><tr><th style="width:28px">#</th><th>Document</th><th>Type</th><th>Date</th></tr></thead>
+      <tbody>
+        <tr><td style="font-family:monospace;color:#8a9099">1</td><td>Aarsrapport_2025.pdf</td><td>Annual report</td><td style="color:#8a9099">28 Apr 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">2</td><td>Aarsrapport_2024.pdf</td><td>Annual report</td><td style="color:#8a9099">15 Apr 2025</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">3</td><td>Budget_2026-28_v3.xlsx</td><td>Budget</td><td style="color:#8a9099">24 May 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">4</td><td>Periodetal_Q1-2026.xlsx</td><td>Interim figures</td><td style="color:#8a9099">12 Apr 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">5</td><td>Pantebrev_maskiner.pdf</td><td>Collateral</td><td style="color:#8a9099">3 Feb 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">6</td><td>Tinglysning_Havnegade.pdf</td><td>Collateral</td><td style="color:#8a9099">14 Jan 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">7</td><td>Personlig_kaution_AC.pdf</td><td>Guarantee</td><td style="color:#8a9099">10 Mar 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">8</td><td>Selskabskaution_AH.pdf</td><td>Guarantee</td><td style="color:#8a9099">10 Mar 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">9</td><td>Ejerbog_2026.pdf</td><td>Corporate</td><td style="color:#8a9099">1 Jan 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">10</td><td>GE_Vernova_kontrakt.pdf</td><td>Contract</td><td style="color:#8a9099">14 Feb 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">11</td><td>Debitorpant_aftale.pdf</td><td>Collateral</td><td style="color:#8a9099">3 Feb 2026</td></tr>
+        <tr><td style="font-family:monospace;color:#8a9099">12</td><td>CVR_udtraek_2026-05-30.pdf</td><td>Public record</td><td style="color:#8a9099">30 May 2026</td></tr>
+      </tbody>
+    </table>
+  `,
+};
+
+if (MEMO_EN) Object.assign(SEC, SEC_EN);
+
 /* ── Sources per section (EIFO template-sektioner) ───────────────────────── */
 /* Navne og sidehenvisninger her skal matche window.CASE_DOCS ordret. Listen
    styrer både kildepanelet og hvilke dokumenter AI'en får som grundlag for
@@ -988,42 +1703,42 @@ function MemoToolbar({ focusedKey, onReset, onOpenCitePicker, citeOpen }) {
       padding: '7px 14px', borderBottom: '1px solid var(--c-line-2)',
       background: 'var(--c-surface)',
     }}>
-      <Btn ch={<b>F</b>} title="Fed (⌘B)" active={fmt.bold} onClick={() => cmd('bold')}/>
-      <Btn ch={<i style={{ fontStyle: 'italic' }}>K</i>} title="Kursiv (⌘I)" active={fmt.italic} onClick={() => cmd('italic')}/>
+      <Btn ch={<b>F</b>} title={t('Fed (⌘B)')} active={fmt.bold} onClick={() => cmd('bold')}/>
+      <Btn ch={<i style={{ fontStyle: 'italic' }}>K</i>} title={t('Kursiv (⌘I)')} active={fmt.italic} onClick={() => cmd('italic')}/>
       <div className="memo-tb-sep"/>
-      <Btn ch="¶" title="Normal afsnit" active={fmt.block === 'p' || fmt.block === 'div' || fmt.block === ''} onClick={() => cmd('formatBlock', 'p')}/>
-      <Btn ch="H2" title="Overskrift" active={fmt.block === 'h2'} onClick={() => cmd('formatBlock', fmt.block === 'h2' ? 'p' : 'h2')} wide/>
-      <Btn ch="H3" title="Underoverskrift" active={fmt.block === 'h3'} onClick={() => cmd('formatBlock', fmt.block === 'h3' ? 'p' : 'h3')} wide/>
+      <Btn ch="¶" title={t('Normal afsnit')} active={fmt.block === 'p' || fmt.block === 'div' || fmt.block === ''} onClick={() => cmd('formatBlock', 'p')}/>
+      <Btn ch="H2" title={t('Overskrift')} active={fmt.block === 'h2'} onClick={() => cmd('formatBlock', fmt.block === 'h2' ? 'p' : 'h2')} wide/>
+      <Btn ch="H3" title={t('Underoverskrift')} active={fmt.block === 'h3'} onClick={() => cmd('formatBlock', fmt.block === 'h3' ? 'p' : 'h3')} wide/>
       <div className="memo-tb-sep"/>
-      <Btn ch="❝" title="Callout / citat" active={fmt.block === 'blockquote'} onClick={() => cmd('formatBlock', fmt.block === 'blockquote' ? 'p' : 'blockquote')}/>
+      <Btn ch="❝" title={t('Callout / citat')} active={fmt.block === 'blockquote'} onClick={() => cmd('formatBlock', fmt.block === 'blockquote' ? 'p' : 'blockquote')}/>
       <div className="memo-tb-sep"/>
-      <Btn ch="•" title="Punktliste" onClick={() => cmd('insertUnorderedList')}/>
-      <Btn ch="1." title="Nummerliste" onClick={() => cmd('insertOrderedList')} wide/>
-      <Btn ch="⊞" title="Indsæt tabel (2 rækker × 3 kolonner)" onClick={insertTable}/>
+      <Btn ch="•" title={t('Punktliste')} onClick={() => cmd('insertUnorderedList')}/>
+      <Btn ch="1." title={t('Nummerliste')} onClick={() => cmd('insertOrderedList')} wide/>
+      <Btn ch="⊞" title={t('Indsæt tabel (2 rækker × 3 kolonner)')} onClick={insertTable}/>
       <div className="memo-tb-sep"/>
-      <Btn ch="↩" title="Fortryd (⌘Z)" onClick={() => cmd('undo')}/>
-      <Btn ch="↪" title="Annullér fortryd (⌘Y)" onClick={() => cmd('redo')}/>
+      <Btn ch="↩" title={t('Fortryd (⌘Z)')} onClick={() => cmd('undo')}/>
+      <Btn ch="↪" title={t('Annullér fortryd (⌘Y)')} onClick={() => cmd('redo')}/>
       <div className="memo-tb-sep"/>
       <button
         className={'memo-tb' + (citeOpen ? ' on' : '')}
-        title="Indsæt kildereference fra dokumenter i sagen"
+        title={t('Indsæt kildereference fra dokumenter i sagen')}
         style={{ fontSize: 11, minWidth: 52 }}
         onClick={e => {
           _memoSaveSelection();
           const rect = e.currentTarget.getBoundingClientRect();
           onOpenCitePicker({ top: rect.bottom + 6, left: rect.left });
         }}
-      >@ Kilde</button>
+      >{t('@ Kilde')}</button>
       {focusedKey && (
         <>
           <div className="memo-tb-sep"/>
-          <span style={{ fontSize: 10.5, color: 'var(--c-warn)', background: 'rgba(176,111,23,0.08)', border: '1px solid rgba(176,111,23,0.2)', borderRadius: 4, padding: '2px 7px', marginLeft: 2 }}>Redigeret</span>
+          <span style={{ fontSize: 10.5, color: 'var(--c-warn)', background: 'rgba(176,111,23,0.08)', border: '1px solid rgba(176,111,23,0.2)', borderRadius: 4, padding: '2px 7px', marginLeft: 2 }}>{t('Redigeret')}</span>
           <button
             className="memo-tb"
             style={{ fontSize: 11, color: 'var(--c-text-2)' }}
-            title="Nulstil dette afsnit til AI-tekst"
+            title={t('Nulstil dette afsnit til AI-tekst')}
             onMouseDown={e => { e.preventDefault(); onReset(focusedKey); }}
-          >Nulstil afsnit</button>
+          >{t('Nulstil afsnit')}</button>
         </>
       )}
     </div>
@@ -1075,9 +1790,9 @@ function MemoCommentGroup({ section, persona, isActive, composerOpen, onComposer
     <div className={'memo-cmt-group' + (isActive ? ' active' : '')}>
       <div className="memo-cmt-group-head">
         <span className="num">{section.num}</span>
-        <span className="ttl" onClick={() => scrollToSection(sKey)} title="Spring til sektion">{section.label}</span>
+        <span className="ttl" onClick={() => scrollToSection(sKey)} title={t('Spring til sektion')}>{t(section.label)}</span>
         {!composerOpen && (
-          <button type="button" className="memo-cmt-add" onClick={() => onComposerToggle(sKey)}>+ Tilføj</button>
+          <button type="button" className="memo-cmt-add" onClick={() => onComposerToggle(sKey)}>{t('+ Tilføj')}</button>
         )}
       </div>
 
@@ -1089,9 +1804,9 @@ function MemoCommentGroup({ section, persona, isActive, composerOpen, onComposer
             <div className="memo-cmt-body">
               <div className="memo-cmt-meta">
                 <b>{c.author}</b>
-                <span className="memo-cmt-dept" style={{ background: d.bg, color: d.fg }}>{d.label}</span>
+                <span className="memo-cmt-dept" style={{ background: d.bg, color: d.fg }}>{t(d.label)}</span>
                 <span style={{ flex: 1 }}/>
-                <button className="memo-cmt-del" title="Slet kommentar" onClick={() => remove(c.id)}>Slet</button>
+                <button className="memo-cmt-del" title={t('Slet kommentar')} onClick={() => remove(c.id)}>{t('Slet')}</button>
               </div>
               <div className="memo-cmt-time">{c.date}</div>
               <div className="memo-cmt-text" style={{ marginTop: 4 }}>{c.text}</div>
@@ -1106,7 +1821,7 @@ function MemoCommentGroup({ section, persona, isActive, composerOpen, onComposer
             autoFocus
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Skriv en kommentar til kollegaer fra andre afdelinger…"
+            placeholder={t('Skriv en kommentar til kollegaer fra andre afdelinger…')}
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); submit(); }
               if (e.key === 'Escape') { onComposerToggle(null); setText(''); }
@@ -1118,13 +1833,13 @@ function MemoCommentGroup({ section, persona, isActive, composerOpen, onComposer
               type="button"
               className="btn btn-sm btn-ghost"
               onClick={() => { onComposerToggle(null); setText(''); }}
-            >Annullér</button>
+            >{t('Annullér')}</button>
             <button
               type="button"
               className="btn btn-sm btn-primary"
               disabled={!text.trim()}
               onClick={submit}
-            >Send</button>
+            >{t('Send')}</button>
           </div>
         </div>
       )}
@@ -1140,19 +1855,19 @@ function MemoCommentsRail({ sections, sectionOffsets, scrollTop, persona, onPers
     <div className="card" style={{ alignSelf: 'flex-start', position: 'sticky', top: 16, overflow: 'hidden' }}>
       <div className="card-head">
         <div>
-          <div className="card-title">Kommentarer</div>
-          <div className="card-sub">{totalCount} på tværs af memoet</div>
+          <div className="card-title">{t('Kommentarer')}</div>
+          <div className="card-sub">{totalCount} {t('på tværs af memoet')}</div>
         </div>
       </div>
       <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--c-line-2)', display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--c-text-3)' }}>
-        <span>Skriver som</span>
+        <span>{t('Skriver som')}</span>
         <select
           value={persona}
           onChange={(e) => onPersonaChange(e.target.value)}
           style={{ flex: 1, height: 26, padding: '0 6px', border: '1px solid var(--c-line)', borderRadius: 5, fontSize: 11.5, background: '#fff', color: 'var(--c-ink)', fontFamily: 'inherit' }}
         >
           {MEMO_DEPTS.map(d => (
-            <option key={d.id} value={d.id}>{d.author} · {d.label}</option>
+            <option key={d.id} value={d.id}>{d.author} · {t(d.label)}</option>
           ))}
         </select>
       </div>
@@ -1193,7 +1908,7 @@ function MemoCommentsRail({ sections, sectionOffsets, scrollTop, persona, onPers
         })}
         {totalCount === 0 && composerForKey == null && (
           <div style={{ padding: '24px 14px', fontSize: 12, color: 'var(--c-text-3)', textAlign: 'center', lineHeight: 1.6 }}>
-            Ingen kommentarer endnu. Hover over en sektion og klik på <span style={{ display: 'inline-grid', placeItems: 'center', width: 18, height: 18, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', fontSize: 11, fontWeight: 700, verticalAlign: 'middle' }}>+</span> for at starte en tråd.
+            {t('Ingen kommentarer endnu. Hover over en sektion og klik på')} <span style={{ display: 'inline-grid', placeItems: 'center', width: 18, height: 18, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', fontSize: 11, fontWeight: 700, verticalAlign: 'middle' }}>+</span> {t('for at starte en tråd.')}
           </div>
         )}
       </div>
@@ -1305,11 +2020,11 @@ const SNAP_KEY = 'memo4:snap:';
 const MAX_SNAPS = 20;
 
 function loadSnaps(sKey) {
-  try { return JSON.parse(localStorage.getItem(SNAP_KEY + sKey) || '[]'); } catch (e) { return []; }
+  try { return JSON.parse(localStorage.getItem(SNAP_KEY + sKey + LANG_SUFFIX) || '[]'); } catch (e) { return []; }
 }
 
 function saveSnaps(sKey, list) {
-  try { localStorage.setItem(SNAP_KEY + sKey, JSON.stringify(list.slice(-MAX_SNAPS))); } catch (e) {}
+  try { localStorage.setItem(SNAP_KEY + sKey + LANG_SUFFIX, JSON.stringify(list.slice(-MAX_SNAPS))); } catch (e) {}
 }
 
 function pushSnap(sKey, html, action) {
@@ -1330,18 +2045,18 @@ function popSnap(sKey) {
 }
 
 function snapLabel(action) {
-  return {
+  return t({
     write: 'skrev afsnittet forfra',
     rewrite: 'omskrev afsnittet',
     selection: 'omskrev en markering',
     chat: 'indsatte tekst fra chatten',
     reset: 'nulstillede til skabelonen',
-  }[action] || 'ændrede afsnittet';
+  }[action] || 'ændrede afsnittet');
 }
 
 /* ── MemoSection ──────────────────────────────────────────────────────────── */
 function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigger, onAddComment, commentCount, registerApi, aiOpen, onToggleAi, aiSelection, onCloseAi }) {
-  const storageKey = 'memo4:' + sKey;
+  const storageKey = 'memo4:' + sKey + LANG_SUFFIX;
   const defaultHtml = SEC[sKey] || '';
   const ref = React.useRef(null);
   const [modified, setModified] = React.useState(() => localStorage.getItem(storageKey) !== null);
@@ -1533,23 +2248,23 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
       <button
         type="button"
         className="memo-sec-add"
-        title="Tilføj kommentar til denne sektion"
+        title={t('Tilføj kommentar til denne sektion')}
         onClick={(e) => { e.stopPropagation(); onAddComment && onAddComment(sKey); }}
       >+</button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
         <span className="mono" style={{ fontSize: 11, color: 'var(--c-text-4)', width: 20, flexShrink: 0 }}>{num}</span>
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.01em', flex: 1 }}>{title}</h3>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.01em', flex: 1 }}>{t(title)}</h3>
         <button
           type="button"
           className={'memo-sec-ai' + (aiOpen ? ' on' : '')}
-          title="Lad AI skrive eller omskrive netop dette afsnit"
+          title={t('Lad AI skrive eller omskrive netop dette afsnit')}
           onClick={() => onToggleAi && onToggleAi(sKey)}
         >AI</button>
         {snaps > 0 && (
           <button
             type="button"
             onClick={undoAi}
-            title={'Fortryd: ' + snapLabel((loadSnaps(sKey).slice(-1)[0] || {}).action) + '. ' + snaps + ' trin gemt.'}
+            title={t('Fortryd') + ': ' + snapLabel((loadSnaps(sKey).slice(-1)[0] || {}).action) + '. ' + snaps + ' ' + t('trin gemt.')}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               height: 22, padding: '0 8px', borderRadius: 6, cursor: 'pointer',
@@ -1557,12 +2272,12 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
               color: 'var(--c-text-2)', fontFamily: 'inherit', fontSize: 11, fontWeight: 500,
             }}
           >
-            <I.Undo size={11}/> Fortryd
+            <I.Undo size={11}/> {t('Fortryd')}
           </button>
         )}
         {commentCount > 0 && (
           <span
-            title={`${commentCount} kommentar${commentCount === 1 ? '' : 'er'}`}
+            title={commentCount + ' ' + (commentCount === 1 ? t('kommentar') : t('kommentarer'))}
             style={{
               fontSize: 10.5, fontWeight: 600, color: 'var(--c-primary)',
               background: 'var(--c-primary-bg)', border: '1px solid var(--c-primary-border)',
@@ -1576,7 +2291,7 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
         className="memo-body"
         contentEditable={!isPlaceholder}
         suppressContentEditableWarning
-        data-placeholder={isPlaceholder ? 'Skrives manuelt af kreditmedarbejder…' : undefined}
+        data-placeholder={isPlaceholder ? t('Skrives manuelt af kreditmedarbejder…') : undefined}
         onInput={handleInput}
         onPaste={handlePaste}
         onKeyDown={handleKeyDown}
@@ -1599,15 +2314,15 @@ function MemoSection({ id, sKey, num, title, status, onFocusSection, resetTrigge
 
       {tableCell && (
         <div className="memo-tbl-bar">
-          <span className="memo-tbl-lbl">Tabel</span>
-          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertRow, 'above')} title="Indsæt række over">Række over</button>
-          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertRow, 'below')} title="Indsæt række under">Række under</button>
-          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableDeleteRow)} title="Slet den række markøren står i">Slet række</button>
+          <span className="memo-tbl-lbl">{t('Tabel')}</span>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertRow, 'above')} title={t('Indsæt række over')}>{t('Række over')}</button>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertRow, 'below')} title={t('Indsæt række under')}>{t('Række under')}</button>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableDeleteRow)} title={t('Slet den række markøren står i')}>{t('Slet række')}</button>
           <span className="memo-tbl-sep"/>
-          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertCol, 'left')} title="Indsæt kolonne til venstre">Kolonne venstre</button>
-          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertCol, 'right')} title="Indsæt kolonne til højre">Kolonne højre</button>
-          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableDeleteCol)} title="Slet den kolonne markøren står i">Slet kolonne</button>
-          <span className="memo-tbl-hint">Tab skifter celle</span>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertCol, 'left')} title={t('Indsæt kolonne til venstre')}>{t('Kolonne venstre')}</button>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableInsertCol, 'right')} title={t('Indsæt kolonne til højre')}>{t('Kolonne højre')}</button>
+          <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => tableOp(tableDeleteCol)} title={t('Slet den kolonne markøren står i')}>{t('Slet kolonne')}</button>
+          <span className="memo-tbl-hint">{t('Tab skifter celle')}</span>
         </div>
       )}
 
@@ -1709,8 +2424,8 @@ function exportReadiness(sections) {
   let blanks = 0;
   let empty = [];
   sections.forEach(s => {
-    const saved = localStorage.getItem('memo4:' + s.k);
-    if (saved === null) empty.push(s.num + '. ' + s.label);
+    const saved = localStorage.getItem('memo4:' + s.k + LANG_SUFFIX);
+    if (saved === null) empty.push(s.num + '. ' + t(s.label));
     const d = document.createElement('div');
     d.innerHTML = saved || SEC[s.k] || '';
     blanks += d.querySelectorAll('.tpl-blank').length;
@@ -1735,10 +2450,9 @@ function ExportDialog({ sections, onClose }) {
         style={{ width: 'min(520px, 100%)', background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}
       >
         <div style={{ padding: '20px 24px 0' }}>
-          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>Eksportér til Word</div>
+          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Eksportér til Word')}</div>
           <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 5, lineHeight: 1.55 }}>
-            Skabelonens vejledningstekst og Udkast-mærker fjernes automatisk. Kildehenvisninger
-            skrives ud som dokumentnavn og side, så modtageren kan slå efter.
+            {t('Skabelonens vejledningstekst og Udkast-mærker fjernes automatisk. Kildehenvisninger skrives ud som dokumentnavn og side, så modtageren kan slå efter.')}
           </div>
         </div>
 
@@ -1749,22 +2463,21 @@ function ExportDialog({ sections, onClose }) {
               background: 'var(--c-warn-bg)', border: '1px solid #f4dfb7',
               fontSize: 12.5, color: 'var(--c-warn)', lineHeight: 1.55,
             }}>
-              <div style={{ fontWeight: 600, marginBottom: 3 }}>Dokumentet er ikke færdigt</div>
+              <div style={{ fontWeight: 600, marginBottom: 3 }}>{t('Dokumentet er ikke færdigt')}</div>
               {ready.empty.length > 0 && (
-                <div>{ready.empty.length} afsnit er ikke skrevet: {ready.empty.slice(0, 3).join(', ')}{ready.empty.length > 3 ? ' og ' + (ready.empty.length - 3) + ' mere' : ''}.</div>
+                <div>{ready.empty.length} {t('afsnit er ikke skrevet:')} {ready.empty.slice(0, 3).join(', ')}{ready.empty.length > 3 ? ' ' + t('og') + ' ' + (ready.empty.length - 3) + ' ' + t('mere') : ''}.</div>
               )}
-              {ready.blanks > 0 && <div>{ready.blanks} felter mangler at blive udfyldt.</div>}
-              <div style={{ marginTop: 4 }}>De markeres tydeligt i filen, så de ikke kan overses.</div>
+              {ready.blanks > 0 && <div>{ready.blanks} {t('felter mangler at blive udfyldt.')}</div>}
+              <div style={{ marginTop: 4 }}>{t('De markeres tydeligt i filen, så de ikke kan overses.')}</div>
             </div>
           )}
 
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, cursor: 'pointer' }}>
             <input type="checkbox" checked={withComments} onChange={e => setWithComments(e.target.checked)} style={{ marginTop: 2 }}/>
             <span>
-              <span style={{ fontSize: 13, color: 'var(--c-ink)' }}>Tag de interne kommentarer med</span>
+              <span style={{ fontSize: 13, color: 'var(--c-ink)' }}>{t('Tag de interne kommentarer med')}</span>
               <span style={{ display: 'block', fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2, lineHeight: 1.5 }}>
-                {commentCount} kommentar{commentCount === 1 ? '' : 'er'} fra Kredit, Legal og Erhverv.
-                Skal normalt blive i huset. Før fulgte de altid med.
+                {commentCount} {commentCount === 1 ? t('kommentar') : t('kommentarer')} {t('fra Kredit, Legal og Erhverv. Skal normalt blive i huset. Før fulgte de altid med.')}
               </span>
             </span>
           </label>
@@ -1772,9 +2485,9 @@ function ExportDialog({ sections, onClose }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '18px 24px 20px' }}>
           <div style={{ flex: 1 }}/>
-          <button className="btn btn-sm" onClick={onClose}>Annullér</button>
+          <button className="btn btn-sm" onClick={onClose}>{t('Annullér')}</button>
           <button className="btn btn-sm btn-primary" onClick={() => { exportMemoToWord(sections, { comments: withComments }); onClose(); }}>
-            Hent filen
+            {t('Hent filen')}
           </button>
         </div>
       </div>
@@ -1819,8 +2532,8 @@ function exportMemoToWord(sections, opts) {
   parts.push(`<p class="meta">Dispensation fra acceptkriterie: Ingen · Eksporteret ${new Date().toLocaleDateString('da-DK')}</p>`);
 
   sections.forEach(s => {
-    const saved = localStorage.getItem('memo4:' + s.k);
-    const heading = /^B\d/.test(s.num) ? esc(s.label) : `${esc(s.num)}) ${esc(s.label)}`;
+    const saved = localStorage.getItem('memo4:' + s.k + LANG_SUFFIX);
+    const heading = /^B\d/.test(s.num) ? esc(t(s.label)) : `${esc(s.num)}) ${esc(t(s.label))}`;
     parts.push(`<h2>${heading}</h2>`);
     if (saved === null) {
       // Aldrig rørt. Før blev skabelonen med al dens vejledning eksporteret
@@ -1880,18 +2593,17 @@ function GenerateMemoDialog({ sections, modified, onCancel, onStart }) {
       <div onMouseDown={e => e.stopPropagation()}
         style={{ width: 'min(520px, 100%)', background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', boxShadow: 'var(--shadow-lg)', display: 'flex', flexDirection: 'column', maxHeight: '82vh' }}>
         <div style={{ padding: '20px 24px 12px' }}>
-          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>Generér kreditindstillingen</div>
+          <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Generér kreditindstillingen')}</div>
           <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 5, lineHeight: 1.55 }}>
-            Hvert afsnit skrives ud fra sagens dokumenter, de realiserede periodetal og årsregnskaberne.
-            Teksten kommer med kildehenvisninger, så du kan se hvor hvert tal stammer fra.
+            {t('Hvert afsnit skrives ud fra sagens dokumenter, de realiserede periodetal og årsregnskaberne. Teksten kommer med kildehenvisninger, så du kan se hvor hvert tal stammer fra.')}
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 24px 8px' }}>
-          <span style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>{chosen.length} af {sections.length} valgt</span>
+          <span style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>{chosen.length} {t('af')} {sections.length} {t('valgt')}</span>
           <div style={{ flex: 1 }}/>
-          <button className="btn btn-sm btn-ghost" onClick={() => setAll(true)}>Vælg alle</button>
-          <button className="btn btn-sm btn-ghost" onClick={() => setAll(false)}>Fravælg alle</button>
+          <button className="btn btn-sm btn-ghost" onClick={() => setAll(true)}>{t('Vælg alle')}</button>
+          <button className="btn btn-sm btn-ghost" onClick={() => setAll(false)}>{t('Fravælg alle')}</button>
         </div>
 
         <div style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid var(--c-line-2)', borderBottom: '1px solid var(--c-line-2)' }}>
@@ -1900,9 +2612,9 @@ function GenerateMemoDialog({ sections, modified, onCancel, onStart }) {
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 24px', cursor: 'pointer', fontSize: 12.5, borderBottom: '1px solid var(--c-line-2)' }}>
               <input type="checkbox" checked={!!picked[s.k]} onChange={() => toggle(s.k)}/>
               <span className="mono" style={{ fontSize: 10.5, color: 'var(--c-text-4)', width: 22 }}>{s.num}</span>
-              <span style={{ flex: 1, color: 'var(--c-ink)' }}>{s.label}</span>
+              <span style={{ flex: 1, color: 'var(--c-ink)' }}>{t(s.label)}</span>
               {modified[s.k] && (
-                <span style={{ fontSize: 10.5, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', borderRadius: 4, padding: '1px 6px' }}>redigeret</span>
+                <span style={{ fontSize: 10.5, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', borderRadius: 4, padding: '1px 6px' }}>{t('redigeret')}</span>
               )}
             </label>
           ))}
@@ -1911,15 +2623,14 @@ function GenerateMemoDialog({ sections, modified, onCancel, onStart }) {
         <div style={{ padding: '14px 24px 18px' }}>
           {overwritten.length > 0 && (
             <div style={{ fontSize: 12, color: 'var(--c-warn)', background: 'var(--c-warn-bg)', border: '1px solid #f4dfb7', borderRadius: 8, padding: '8px 11px', marginBottom: 12, lineHeight: 1.5 }}>
-              {overwritten.length} af de valgte afsnit er redigeret manuelt. De bliver overskrevet.
-              Du kan fravælge dem ovenfor.
+              {overwritten.length} {t('af de valgte afsnit er redigeret manuelt. De bliver overskrevet. Du kan fravælge dem ovenfor.')}
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button className="btn btn-sm" onClick={onCancel}>Annullér</button>
+            <button className="btn btn-sm" onClick={onCancel}>{t('Annullér')}</button>
             <button className="btn btn-sm btn-primary" disabled={!chosen.length}
               onClick={() => onStart(chosen.map(s => s.k))}>
-              Skriv {chosen.length} afsnit
+              {t('Skriv')} {chosen.length} {t('afsnit')}
             </button>
           </div>
         </div>
@@ -1935,7 +2646,7 @@ function GenerateMemoDialog({ sections, modified, onCancel, onStart }) {
 function AuditPanel({ audit, onClose, onGoto, sections }) {
   const ok = audit.count === 0;
   const findSection = (label) => {
-    const s = (sections || []).find(x => (x.num + '. ' + x.label) === label);
+    const s = (sections || []).find(x => (x.num + '. ' + t(x.label)) === label);
     return s ? s.k : null;
   };
 
@@ -1953,7 +2664,7 @@ function AuditPanel({ audit, onClose, onGoto, sections }) {
         </span>
         {key && (
           <button className="btn btn-sm btn-ghost" style={{ flexShrink: 0 }} onClick={() => onGoto(key)}>
-            Gå til
+            {t('Gå til')}
           </button>
         )}
       </li>
@@ -1969,29 +2680,29 @@ function AuditPanel({ audit, onClose, onGoto, sections }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span style={{ fontSize: 13, fontWeight: 500, color: ok ? 'var(--c-success)' : 'var(--c-warn)' }}>
           {ok
-            ? 'Kontrol gennemført. Alle kildehenvisninger findes, og alle afstemte tal stemmer med regnskabstabellen.'
-            : audit.count + (audit.count === 1 ? ' forhold kræver din stillingtagen' : ' forhold kræver din stillingtagen')}
+            ? t('Kontrol gennemført. Alle kildehenvisninger findes, og alle afstemte tal stemmer med regnskabstabellen.')
+            : audit.count + ' ' + t('forhold kræver din stillingtagen')}
         </span>
         <div style={{ flex: 1 }}/>
-        <button className="btn btn-sm btn-ghost" onClick={onClose}>Luk</button>
+        <button className="btn btn-sm btn-ghost" onClick={onClose}>{t('Luk')}</button>
       </div>
 
       {!ok && (
         <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0 }}>
           {audit.mismatch.map((m, i) => (
             <Row key={'m' + i} tone="bad" section={m.section}
-              head={'Tallet ' + m.got.toLocaleString('da-DK') + ' stemmer ikke med regnskabet, der siger ' + m.expect.toLocaleString('da-DK', { maximumFractionDigits: 1 })}
-              body={m.line + ' · ' + m.col + ' · i ' + (m.section || 'memoet') + ' · "' + m.text + '"'}/>
+              head={t('Tallet') + ' ' + m.got.toLocaleString('da-DK') + ' ' + t('stemmer ikke med regnskabet, der siger') + ' ' + m.expect.toLocaleString('da-DK', { maximumFractionDigits: 1 })}
+              body={m.line + ' · ' + m.col + ' · ' + t('i') + ' ' + (m.section || t('memoet')) + ' · "' + m.text + '"'}/>
           ))}
           {audit.deadDoc.map((d, i) => (
             <Row key={'d' + i} tone="bad" section={d.section}
-              head={'Henviser til ' + d.doc + ', som ikke findes i sagen'}
-              body={(d.section || 'memoet') + ' · "' + d.text + '"'}/>
+              head={t('Henviser til') + ' ' + d.doc + t(', som ikke findes i sagen')}
+              body={(d.section || t('memoet')) + ' · "' + d.text + '"'}/>
           ))}
           {audit.deadPage.map((p, i) => (
             <Row key={'p' + i} tone="warn" section={p.section}
-              head={'Henviser til "' + p.page + '" i ' + p.doc + ', som ikke findes'}
-              body={'Dokumentet har: ' + (p.valid || []).join(', ')}/>
+              head={t('Henviser til') + ' "' + p.page + '" ' + t('i') + ' ' + p.doc + t(', som ikke findes')}
+              body={t('Dokumentet har:') + ' ' + (p.valid || []).join(', ')}/>
           ))}
         </ul>
       )}
@@ -2056,9 +2767,9 @@ function SourceViewer({ doc, page, quote, onClose }) {
             <I.FileText className="ic" style={{ color: 'var(--c-text-3)' }}/>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>{doc.name}</div>
-              <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2 }}>{doc.type}{doc.meta ? ' · ' + doc.meta.split('·')[0].trim() : ''}</div>
+              <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2 }}>{t(doc.type)}{doc.meta ? ' · ' + doc.meta.split('·')[0].trim() : ''}</div>
             </div>
-            <button className="btn btn-sm btn-ghost" onClick={onClose}>Luk</button>
+            <button className="btn btn-sm btn-ghost" onClick={onClose}>{t('Luk')}</button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, flexWrap: 'wrap' }}>
@@ -2084,9 +2795,9 @@ function SourceViewer({ doc, page, quote, onClose }) {
             borderBottom: '1px solid ' + (found ? 'rgba(16,138,80,0.2)' : '#f4dfb7'),
             fontSize: 11.5, color: found ? 'var(--c-success)' : 'var(--c-warn)',
           }}>
-            {found
-              ? 'Memoet henviser for: "' + quote + '". Fremhævet nedenfor.'
-              : 'Memoet henviser for: "' + quote + '". Den tekst kunne ikke findes ordret på denne side, gennemgå den selv.'}
+            {t('Memoet henviser for:') + ' "' + quote + '". ' + (found
+              ? t('Fremhævet nedenfor.')
+              : t('Den tekst kunne ikke findes ordret på denne side, gennemgå den selv.'))}
           </div>
         )}
 
@@ -2152,7 +2863,7 @@ function WSMemo() {
   const [modifiedSections, setModifiedSections] = React.useState(() => {
     const keys = ['background','financing','rating','legal','risk','conclusion','ownership','product','market','financial','endorsement','appendix1','appendix2','appendix3'];
     const m = {};
-    keys.forEach(k => { if (localStorage.getItem('memo4:' + k) !== null) m[k] = true; });
+    keys.forEach(k => { if (localStorage.getItem('memo4:' + k + LANG_SUFFIX) !== null) m[k] = true; });
     return m;
   });
 
@@ -2322,7 +3033,7 @@ function WSMemo() {
     return sections.map(s => {
       const api = sectionApis.current[s.k];
       const body = api ? api.getText().trim() : '';
-      return '## ' + s.num + '. ' + s.label + '\n' + (body || '(ikke skrevet endnu)');
+      return '## ' + s.num + '. ' + t(s.label) + '\n' + (body || (MEMO_EN ? '(not written yet)' : '(ikke skrevet endnu)'));
     }).join('\n\n');
   }
 
@@ -2337,7 +3048,7 @@ function WSMemo() {
     if (audit) { setAudit(null); return; }
     const parts = sections.map(s => {
       const api = sectionApis.current[s.k];
-      return { key: s.k, title: s.num + '. ' + s.label, html: api ? api.getHtml() : '' };
+      return { key: s.k, title: s.num + '. ' + t(s.label), html: api ? api.getHtml() : '' };
     });
     setAudit(auditMemo(parts));
   }
@@ -2535,7 +3246,7 @@ function WSMemo() {
         {/* ── Nav ── */}
         <div className="card" style={{ alignSelf: 'flex-start', position: 'sticky', top: 16 }}>
           <div className="card-head">
-            <div className="card-title">Sektioner</div>
+            <div className="card-title">{t('Sektioner')}</div>
             <span className="tag" style={{ fontSize: 10 }}>68%</span>
           </div>
           <div style={{ padding: '6px 0 10px' }}>
@@ -2550,10 +3261,10 @@ function WSMemo() {
                   transition: 'all 0.1s',
                 }}>
                 <SectionDot status={s.status}/>
-                <span style={{ flex: 1 }}>{s.label}</span>
+                <span style={{ flex: 1 }}>{t(s.label)}</span>
                 {commentCounts[s.k] > 0 && (
                   <span
-                    title={`${commentCounts[s.k]} kommentar${commentCounts[s.k] === 1 ? '' : 'er'}`}
+                    title={commentCounts[s.k] + ' ' + (commentCounts[s.k] === 1 ? t('kommentar') : t('kommentarer'))}
                     style={{
                       fontSize: 10, fontWeight: 600, color: 'var(--c-primary)',
                       background: 'var(--c-primary-bg)', border: '1px solid var(--c-primary-border)',
@@ -2574,53 +3285,53 @@ function WSMemo() {
           {/* Top bar */}
           <div className="card-head" style={{ flexShrink: 0, borderBottom: '1px solid var(--c-line-2)' }}>
             <div style={{ minWidth: 0 }}>
-              <div className="card-title">Credit memo · udkast</div>
-              <div className="card-sub" style={{ whiteSpace: 'nowrap' }}>Klik i teksten for at redigere</div>
+              <div className="card-title">{t('Credit memo · udkast')}</div>
+              <div className="card-sub" style={{ whiteSpace: 'nowrap' }}>{t('Klik i teksten for at redigere')}</div>
             </div>
             <div className="hstack" style={{ gap: 6, flexShrink: 0 }}>
               <button
                 className="btn btn-sm"
                 onClick={() => setAiSettingsOpen(true)}
                 title={aiStatus.ready
-                  ? 'Forbundet til ' + aiStatus.provider.label + ' (' + aiStatus.model + '). Klik for at skifte.'
-                  : 'Forbind din egen Claude- eller ChatGPT-konto'}
+                  ? t('Forbundet til') + ' ' + aiStatus.provider.label + ' (' + aiStatus.model + '). ' + t('Klik for at skifte.')
+                  : t('Forbind din egen Claude- eller ChatGPT-konto')}
                 style={aiStatus.ready ? undefined : { borderColor: 'var(--c-primary)', color: 'var(--c-primary)' }}
               >
                 <span style={{
                   width: 6, height: 6, borderRadius: '50%', marginRight: 6, display: 'inline-block',
                   background: aiStatus.ready ? 'var(--c-success)' : 'var(--c-text-4)',
                 }}/>
-                {aiStatus.ready ? aiStatus.provider.label : 'Forbind AI'}
+                {aiStatus.ready ? aiStatus.provider.label : t('Forbind AI')}
               </button>
               <button
                 className="btn btn-sm"
                 disabled={!aiStatus.ready || (gen && gen.running)}
                 onClick={() => setGenOpen(true)}
-                title="Lad AI skrive memoet ud fra dokumenterne, periodetallene og årsregnskaberne"
-              >Generér memo</button>
+                title={t('Lad AI skrive memoet ud fra dokumenterne, periodetallene og årsregnskaberne')}
+              >{t('Generér memo')}</button>
               <button
                 className="btn btn-sm"
                 onClick={runAudit}
-                title="Tjek hele memoet for kildehenvisninger der ikke findes, og tal der ikke stemmer med regnskabstabellen"
+                title={t('Tjek hele memoet for kildehenvisninger der ikke findes, og tal der ikke stemmer med regnskabstabellen')}
                 style={audit && audit.count ? { borderColor: 'var(--c-warn)', color: 'var(--c-warn)' } : undefined}
               >
                 {audit
-                  ? (audit.count ? audit.count + ' fund' : 'Kontrol ok')
-                  : 'Kontrollér'}
+                  ? (audit.count ? audit.count + ' ' + t('fund') : t('Kontrol ok'))
+                  : t('Kontrollér')}
               </button>
               <button
                 className="btn btn-sm"
                 onClick={() => setShowOrigin(v => !v)}
                 aria-pressed={showOrigin}
-                title="Vis hvilke afsnit maskinen har skrevet, og hvilke du selv står bag"
+                title={t('Vis hvilke afsnit maskinen har skrevet, og hvilke du selv står bag')}
                 style={showOrigin ? { borderColor: 'var(--c-ink)', background: 'var(--c-ink)', color: '#fff' } : undefined}
               >
-                {showOrigin ? 'Skjul ophav' : 'Vis ophav'}
+                {showOrigin ? t('Skjul ophav') : t('Vis ophav')}
               </button>
-              <button className="btn btn-sm btn-ghost" title="Download som PDF"><I.Download className="ic"/> PDF</button>
+              <button className="btn btn-sm btn-ghost" title={t('Download som PDF')}><I.Download className="ic"/> PDF</button>
               <button
                 className="btn btn-sm btn-primary"
-                title="Hent kreditindstillingen som Word-fil"
+                title={t('Hent kreditindstillingen som Word-fil')}
                 onClick={() => setExportOpen(true)}
               >
                 <I.Download className="ic"/> Word
@@ -2648,16 +3359,16 @@ function WSMemo() {
                 <span style={{ color: '#b03030', flex: 1 }}>{gen.error}</span>
               ) : gen.running ? (
                 <>
-                  <span style={{ minWidth: 210 }}>Skriver {gen.index + 1} af {gen.keys.length}: {gen.label}</span>
+                  <span style={{ minWidth: 210 }}>{t('Skriver')} {gen.index + 1} {t('af')} {gen.keys.length}: {t(gen.label)}</span>
                   <span className="ai-progress-bar"><span style={{ width: Math.round((gen.index / gen.keys.length) * 100) + '%' }}/></span>
-                  <button className="btn btn-sm" onClick={stopGeneration}>Stop</button>
+                  <button className="btn btn-sm" onClick={stopGeneration}>{t('Stop')}</button>
                 </>
               ) : (
                 <>
                   <span style={{ flex: 1 }}>
-                    {gen.written.length} af {gen.keys.length} afsnit skrevet. Gennemgå teksten og ret det der skal rettes.
+                    {gen.written.length} {t('af')} {gen.keys.length} {t('afsnit skrevet. Gennemgå teksten og ret det der skal rettes.')}
                   </span>
-                  <button className="btn btn-sm btn-ghost" onClick={() => setGen(null)}>Luk</button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => setGen(null)}>{t('Luk')}</button>
                 </>
               )}
             </div>
@@ -2674,19 +3385,19 @@ function WSMemo() {
             }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 3, height: 13, background: '#7c8cf8', borderRadius: 2 }}/>
-                {originStats.ai} afsnit skrevet af AI og ikke rørt siden
+                {originStats.ai} {t('afsnit skrevet af AI og ikke rørt siden')}
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 3, height: 13, background: '#b9c0cc', borderRadius: 2 }}/>
-                {originStats.edited} skrevet af AI og rettet af dig
+                {originStats.edited} {t('skrevet af AI og rettet af dig')}
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 3, height: 13, background: 'transparent', border: '1px solid var(--c-line-strong)', borderRadius: 2 }}/>
-                {originStats.own} skrevet af dig
+                {originStats.own} {t('skrevet af dig')}
               </span>
               <span style={{ flex: 1 }}/>
               <span style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>
-                Ophavet følger teksten og forsvinder ikke når du retter i den.
+                {t('Ophavet følger teksten og forsvinder ikke når du retter i den.')}
               </span>
             </div>
           )}
@@ -2709,44 +3420,44 @@ function WSMemo() {
           >
             {/* Doc header (non-editable) — følger EIFO Kreditindstilling-template */}
             <div style={{ borderBottom: '2px solid var(--c-ink)', paddingBottom: 18, marginBottom: 28 }}>
-              <div className="label-mini" style={{ marginBottom: 4 }}>Kreditindstilling</div>
+              <div className="label-mini" style={{ marginBottom: 4 }}>{t('Kreditindstilling')}</div>
               <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em' }}>Nordhavn Composite A/S</div>
               <div style={{ fontSize: 14, color: 'var(--c-ink)', marginTop: 10, lineHeight: 1.6 }}>
-                Indstilling af <span className="tpl-pill">nyt engagement</span> til <span className="tpl-pill">Kreditkomité</span>
+                {t('Indstilling af')} <span className="tpl-pill">{t('nyt engagement')}</span> {t('til')} <span className="tpl-pill">{t('Kreditkomité')}</span>
               </div>
               <div style={{ display: 'flex', gap: 24, marginTop: 8, fontSize: 12.5, color: 'var(--c-text-2)' }}>
-                <span>Kreditrisiko: <span className="tpl-pill warn">Middel/Høj</span></span>
-                <span>Kundetype: <span className="tpl-pill">Erhverv – SMV</span></span>
+                <span>{t('Kreditrisiko:')} <span className="tpl-pill warn">{t('Middel/Høj')}</span></span>
+                <span>{t('Kundetype:')} <span className="tpl-pill">{t('Erhverv – SMV')}</span></span>
               </div>
 
               {/* Virksomhed-tabel: 2-kolonne som i EIFO-template */}
-              <div style={{ marginTop: 16, fontSize: 11, fontWeight: 600, color: 'var(--c-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Virksomhed</div>
+              <div style={{ marginTop: 16, fontSize: 11, fontWeight: 600, color: 'var(--c-text-3)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{t('Virksomhed')}</div>
               <table style={{ width: '100%', marginTop: 6, fontSize: 12, borderCollapse: 'collapse', border: '1px solid var(--c-line)' }}>
                 <tbody>
                   <tr>
                     <td style={{ padding: '8px 12px', borderRight: '1px solid var(--c-line)', verticalAlign: 'top', width: '50%' }}>
-                      <div style={{ color: 'var(--c-text-3)', fontSize: 11, marginBottom: 2 }}>EIFO direkte investering / ejerandel</div>
-                      <div style={{ color: 'var(--c-text-4)', fontStyle: 'italic', fontSize: 11.5 }}>Ikke relevant for denne sag.</div>
+                      <div style={{ color: 'var(--c-text-3)', fontSize: 11, marginBottom: 2 }}>{t('EIFO direkte investering / ejerandel')}</div>
+                      <div style={{ color: 'var(--c-text-4)', fontStyle: 'italic', fontSize: 11.5 }}>{t('Ikke relevant for denne sag.')}</div>
                     </td>
                     <td style={{ padding: '8px 12px', verticalAlign: 'top' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', rowGap: 4, columnGap: 8 }}>
-                        <span style={{ color: 'var(--c-text-3)' }}>Dato:</span><span style={{ color: 'var(--c-ink)' }}>24. maj 2026</span>
+                        <span style={{ color: 'var(--c-text-3)' }}>{t('Dato:')}</span><span style={{ color: 'var(--c-ink)' }}>{t('24. maj 2026')}</span>
                         <span style={{ color: 'var(--c-text-3)' }}>CVR:</span><span style={{ color: 'var(--c-ink)', fontFamily: 'var(--mono)' }}>38 42 71 56</span>
-                        <span style={{ color: 'var(--c-text-3)' }}>Branche:</span><span style={{ color: 'var(--c-ink)' }}>Vindmøllekomponenter / komposit</span>
+                        <span style={{ color: 'var(--c-text-3)' }}>{t('Branche:')}</span><span style={{ color: 'var(--c-ink)' }}>{t('Vindmøllekomponenter / komposit')}</span>
                       </div>
                     </td>
                   </tr>
                   <tr style={{ borderTop: '1px solid var(--c-line)' }}>
                     <td style={{ padding: '8px 12px', borderRight: '1px solid var(--c-line)', verticalAlign: 'top' }}>
-                      <div style={{ color: 'var(--c-text-3)', fontSize: 11, marginBottom: 2 }}>Dispensation fra acceptkriterie</div>
-                      <div style={{ color: 'var(--c-ink)' }}>Ingen</div>
-                      <div style={{ color: 'var(--c-text-4)', fontStyle: 'italic', fontSize: 11, marginTop: 4 }}>(Maks. to linjer med kreditmæssig begrundelse ved evt. dispensation)</div>
+                      <div style={{ color: 'var(--c-text-3)', fontSize: 11, marginBottom: 2 }}>{t('Dispensation fra acceptkriterie')}</div>
+                      <div style={{ color: 'var(--c-ink)' }}>{t('Ingen')}</div>
+                      <div style={{ color: 'var(--c-text-4)', fontStyle: 'italic', fontSize: 11, marginTop: 4 }}>{t('(Maks. to linjer med kreditmæssig begrundelse ved evt. dispensation)')}</div>
                     </td>
                     <td style={{ padding: '8px 12px', verticalAlign: 'top' }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr', rowGap: 4, columnGap: 8 }}>
-                        <span style={{ color: 'var(--c-text-3)' }}>Sagsnr.:</span><span style={{ color: 'var(--c-ink)' }}>2026-0184</span>
-                        <span style={{ color: 'var(--c-text-3)' }}>Primær:</span><span style={{ color: 'var(--c-ink)' }}>Mette Larsen, Kredit</span>
-                        <span style={{ color: 'var(--c-text-3)' }}>Sekundær:</span><span style={{ color: 'var(--c-ink)' }}>Sofie Andersen, Erhverv</span>
+                        <span style={{ color: 'var(--c-text-3)' }}>{t('Sagsnr.:')}</span><span style={{ color: 'var(--c-ink)' }}>2026-0184</span>
+                        <span style={{ color: 'var(--c-text-3)' }}>{t('Primær:')}</span><span style={{ color: 'var(--c-ink)' }}>{t('Mette Larsen, Kredit')}</span>
+                        <span style={{ color: 'var(--c-text-3)' }}>{t('Sekundær:')}</span><span style={{ color: 'var(--c-ink)' }}>{t('Sofie Andersen, Erhverv')}</span>
                       </div>
                     </td>
                   </tr>
@@ -2780,8 +3491,8 @@ function WSMemo() {
         <div style={{ alignSelf: 'flex-start', position: 'sticky', top: 16 }}>
           <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
             {[
-              { k: 'comments', l: 'Kommentarer', n: Object.values(commentCounts).reduce((a, b) => a + b, 0) },
-              { k: 'ai', l: 'Spørg om sagen', n: 0 },
+              { k: 'comments', l: t('Kommentarer'), n: Object.values(commentCounts).reduce((a, b) => a + b, 0) },
+              { k: 'ai', l: t('Spørg om sagen'), n: 0 },
             ].map(t => {
               const on = railTab === t.k;
               return (
@@ -2836,7 +3547,7 @@ function WSMemo() {
           onMouseDown={(e) => { e.preventDefault(); openSelectionAi(); }}
         >
           <span className="ai-chip" style={{ background: 'rgba(255,255,255,0.2)' }}>AI</span>
-          Omskriv markeringen
+          {t('Omskriv markeringen')}
         </button>
       )}
 
@@ -2866,7 +3577,7 @@ function WSMemo() {
           }}
         >
           <div style={{ padding: '8px 14px 6px', fontSize: 10.5, color: 'var(--c-text-3)', fontWeight: 600, letterSpacing: '0.05em', borderBottom: '1px solid var(--c-line-2)' }}>
-            DOKUMENTER I SAGEN
+            {t('DOKUMENTER I SAGEN')}
           </div>
           {DATA.DOCS.map(doc => (
             <div
@@ -2876,7 +3587,7 @@ function WSMemo() {
               onMouseEnter={e => e.currentTarget.style.background = 'var(--c-surface-2)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              <span style={{ flexShrink: 0, fontSize: 10.5, color: 'var(--c-text-3)', background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 4, padding: '1px 5px' }}>{doc.type}</span>
+              <span style={{ flexShrink: 0, fontSize: 10.5, color: 'var(--c-text-3)', background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 4, padding: '1px 5px' }}>{t(doc.type)}</span>
               <span style={{ flex: 1, color: 'var(--c-ink)' }}>{doc.name}</span>
               {doc.year && <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>{doc.year}</span>}
             </div>
@@ -2900,8 +3611,8 @@ function WSMemo() {
           {(tooltip.manual || tooltip.edited) && (
             <div style={{ marginTop: 5, paddingTop: 5, borderTop: '1px solid rgba(255,255,255,0.15)', fontSize: 10, opacity: 0.75, display: 'flex', alignItems: 'center', gap: 4 }}>
               {tooltip.manual
-                ? <><span style={{ opacity: 0.6 }}>✎</span> Tilføjet manuelt</>
-                : <><span style={{ opacity: 0.6 }}>✎</span> Afsnit redigeret af bruger</>
+                ? <><span style={{ opacity: 0.6 }}>✎</span> {t('Tilføjet manuelt')}</>
+                : <><span style={{ opacity: 0.6 }}>✎</span> {t('Afsnit redigeret af bruger')}</>
               }
             </div>
           )}

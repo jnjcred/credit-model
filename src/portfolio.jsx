@@ -11,13 +11,13 @@ function statusPill(s) {
     "Rejected": ["danger", "Afvist"],
   };
   const [klass, label] = map[s] || ["outline", s];
-  return <span className={"pill " + klass}><span className="pill-dot"/>{label}</span>;
+  return <span className={"pill " + klass}><span className="pill-dot"/>{t(label)}</span>;
 }
 
 // Sub-stage label shown next to the status pill — tells the advisor *how far* we've gotten.
 function stageLabel(s) {
-  if (s === "Needs review") return "Indhentet offentligt data";
-  if (s === "Data received") return "Indhentet kundedata";
+  if (s === "Needs review") return t("Indhentet offentligt data");
+  if (s === "Data received") return t("Indhentet kundedata");
   return null;
 }
 
@@ -123,22 +123,22 @@ function Portfolio({ go, openNewCase }) {
 
   return (
     <>
-      <Topbar crumbs={["Mine opgaver"]} right={
+      <Topbar crumbs={[t("Mine opgaver")]} right={
         <>
-          <button className="btn btn-sm"><I.Download className="ic"/> Eksport</button>
-          <button className="btn btn-sm btn-primary" onClick={openNewCase}><I.Plus className="ic"/> Ny sag</button>
+          <button className="btn btn-sm"><I.Download className="ic"/> {t('Eksport')}</button>
+          <button className="btn btn-sm btn-primary" onClick={openNewCase}><I.Plus className="ic"/> {t('Ny sag')}</button>
         </>
       }/>
       <div className="scroll">
         <div className="page" style={{ maxWidth: 1100 }}>
           <div className="page-head">
             <div>
-              <h1 className="page-title">Mine opgaver</h1>
+              <h1 className="page-title">{t('Mine opgaver')}</h1>
               <div className="page-sub">
                 {(() => {
                   const n = myCases.filter(c => (CASE_TASKS[c.id] || []).length > 0).length;
-                  if (n === 0) return "Alle sager er ajour - godt arbejde 🎉";
-                  return <><b style={{ color: 'var(--c-ink)' }}>{n} sager</b> mangler action fra dig</>;
+                  if (n === 0) return t("Alle sager er ajour - godt arbejde 🎉");
+                  return <><b style={{ color: 'var(--c-ink)' }}>{n} {t('sager')}</b> {t('mangler action fra dig')}</>;
                 })()}
               </div>
             </div>
@@ -157,7 +157,7 @@ function Portfolio({ go, openNewCase }) {
                   fontSize: 13.5, fontWeight: 500, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', gap: 7,
                 }}>
-                {f.l}
+                {t(f.l)}
                 <span style={{ fontSize: 11, color: 'var(--c-text-3)', fontVariantNumeric: 'tabular-nums' }}>{f.n}</span>
               </button>
             ))}
@@ -175,8 +175,8 @@ function Portfolio({ go, openNewCase }) {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Søg på virksomhed eller CVR"
-                aria-label="Søg sager"
+                placeholder={t('Søg på virksomhed eller CVR')}
+                aria-label={t('Søg sager')}
                 style={{
                   width: '100%', height: 32, padding: '0 30px 0 30px',
                   border: '1px solid var(--c-line)', borderRadius: 6,
@@ -187,7 +187,7 @@ function Portfolio({ go, openNewCase }) {
               {search && (
                 <button
                   type="button"
-                  aria-label="Ryd søgning"
+                  aria-label={t('Ryd søgning')}
                   onClick={() => setSearch("")}
                   style={{
                     position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
@@ -209,13 +209,13 @@ function Portfolio({ go, openNewCase }) {
                   color: 'var(--c-primary)', fontSize: 12.5, fontWeight: 500, cursor: 'pointer',
                 }}
               >
-                Ryd søgning
+                {t('Ryd søgning')}
               </button>
             )}
 
             <div style={{ flex: 1 }}/>
             <div style={{ fontSize: 12, color: 'var(--c-text-3)', whiteSpace: 'nowrap' }}>
-              {displayCases.length} {displayCases.length === 1 ? 'sag' : 'sager'}
+              {displayCases.length} {displayCases.length === 1 ? t('sag') : t('sager')}
             </div>
           </div>
 
@@ -224,10 +224,10 @@ function Portfolio({ go, openNewCase }) {
             <div className="card empty">
               <I.Check className="ic"/>
               <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--c-ink)' }}>
-                {hasActiveFilter ? "Ingen sager matcher filtrene" : "Ingen opgaver her"}
+                {hasActiveFilter ? t("Ingen sager matcher filtrene") : t("Ingen opgaver her")}
               </div>
               <div style={{ fontSize: 12, marginTop: 4 }}>
-                {hasActiveFilter ? "Prøv at justere søgning eller filtre" : "Du kan skifte filter ovenfor for at se andre sager"}
+                {hasActiveFilter ? t("Prøv at justere søgning eller filtre") : t("Du kan skifte filter ovenfor for at se andre sager")}
               </div>
             </div>
           ) : groupedForAll ? (
@@ -253,7 +253,7 @@ function Portfolio({ go, openNewCase }) {
                         transition: 'transform .15s ease',
                       }}/>
                       <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.005em' }}>
-                        {grp.label}
+                        {t(grp.label)}
                       </span>
                       <span style={{
                         fontSize: 11, fontWeight: 500, color: 'var(--c-text-2)',
@@ -312,12 +312,12 @@ function CaseTaskCard({ c, tasks, go }) {
           <span style={{ flexShrink: 0 }}>{statusPill(c.status)}</span>
         </div>
         <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          <span className="mono">CVR {c.cvr}</span> · {c.type} · <span className="mono">{c.amount}</span> · {c.lastActivity}
+          <span className="mono">CVR {c.cvr}</span> · {t(c.type)} · <span className="mono">{c.amount}</span> · {t(c.lastActivity)}
         </div>
       </div>
       {isEmpty && (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--c-success)', fontSize: 12, fontWeight: 500, flexShrink: 0 }}>
-          <I.Check size={12}/> Færdig
+          <I.Check size={12}/> {t('Færdig')}
         </span>
       )}
       <I.ChevronRight size={14} style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
@@ -358,12 +358,12 @@ function CaseTaskRow({ task, isLast, go, caseId }) {
         {kindIcon[task.kind] || <I.Circle size={10}/>}
       </div>
       <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, color: done ? 'var(--c-text-3)' : 'var(--c-text)', textDecoration: done ? 'line-through' : 'none' }}>
-        <b style={{ fontWeight: 600 }}>{task.action}</b> {task.obj}
+        <b style={{ fontWeight: 600 }}>{t(task.action)}</b> {t(task.obj)}
       </div>
       <span style={{ fontSize: 11.5, color: task.due.includes("forsinket") ? 'var(--c-danger)' : task.due === "i dag" ? 'var(--c-warn)' : 'var(--c-text-3)', fontWeight: 500 }}>
-        {task.due}
+        {t(task.due)}
       </span>
-      <button className="btn btn-sm" onClick={() => go("workspace:" + caseId)}>Åbn</button>
+      <button className="btn btn-sm" onClick={() => go("workspace:" + caseId)}>{t('Åbn')}</button>
     </div>
   );
 }

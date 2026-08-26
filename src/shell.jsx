@@ -1,6 +1,39 @@
 // Shell - sidebar + topbar
 const { useState } = React;
 
+function LanguageSwitcher({ compact }) {
+  const langs = [['da', 'DA'], ['en', 'EN']];
+  return (
+    <div role="group" aria-label={t('Sprog')} style={{
+      display: 'flex', gap: 2, padding: 2, borderRadius: 7,
+      border: '1px solid var(--c-line)', background: 'var(--c-surface-2)',
+      width: compact ? 'auto' : '100%',
+    }}>
+      {langs.map(([code, label]) => {
+        const active = window.CW_LANG === code;
+        return (
+          <button
+            key={code}
+            onClick={() => window.setLang(code)}
+            aria-pressed={active}
+            style={{
+              flex: compact ? '0 0 auto' : 1, padding: '4px 8px', borderRadius: 5,
+              border: 0, cursor: active ? 'default' : 'pointer',
+              fontSize: 10.5, fontWeight: 600, letterSpacing: '0.04em',
+              fontFamily: 'inherit',
+              background: active ? '#fff' : 'transparent',
+              color: active ? 'var(--c-ink)' : 'var(--c-text-3)',
+              boxShadow: active ? 'var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.08))' : 'none',
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function Sidebar({ route, go, openNewCase }) {
   const isActive = (r) => route === r || (r === "cases" && route.startsWith("workspace")) || (r === "analyse" && route === "analyse");
   return (
@@ -9,20 +42,20 @@ function Sidebar({ route, go, openNewCase }) {
         <div className="brand-mark">cw</div>
         <div>
           <div className="brand-name">EIFO</div>
-          <div className="brand-org">Kreditafdeling</div>
+          <div className="brand-org">{t('Kreditafdeling')}</div>
         </div>
       </div>
 
       <button className="btn btn-primary" style={{ justifyContent: 'center', width: '100%', marginBottom: 6 }} onClick={openNewCase}>
-        <I.Plus size={14} /> Ny sag
+        <I.Plus size={14} /> {t('Ny sag')}
       </button>
 
       <div className="nav">
         <button className={"nav-item " + (isActive("cases") ? "active" : "")} onClick={() => go("cases")}>
-          <I.Briefcase className="ic"/> Mine opgaver <span className="count">8</span>
+          <I.Briefcase className="ic"/> {t('Mine opgaver')} <span className="count">8</span>
         </button>
         <button className={"nav-item " + (isActive("analyse") ? "active" : "")} onClick={() => go("analyse")}>
-          <I.Filter className="ic"/> Porteføljeanalyse
+          <I.Filter className="ic"/> {t('Porteføljeanalyse')}
         </button>
       </div>
 
@@ -39,19 +72,22 @@ function Sidebar({ route, go, openNewCase }) {
           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--c-primary)'; e.currentTarget.style.color = 'var(--c-primary)'; e.currentTarget.style.background = 'rgba(59,130,246,0.04)'; }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--c-line-strong)'; e.currentTarget.style.color = 'var(--c-text-3)'; e.currentTarget.style.background = 'transparent'; }}
         >
-          <I.User size={13}/> Indhentningsflow
+          <I.User size={13}/> {t('Indhentningsflow')}
         </button>
       </div>
 
       <div className="sidebar-foot">
+        <div style={{ padding: '0 4px', marginBottom: 6 }}>
+          <LanguageSwitcher/>
+        </div>
         <button className="nav-item" onClick={() => go("settings")}>
-          <I.Settings className="ic"/> Indstillinger
+          <I.Settings className="ic"/> {t('Indstillinger')}
         </button>
         <div className="user-chip">
           <div className="avatar">ML</div>
           <div className="meta">
             <b>Mette Larsen</b>
-            <span>Kreditmedarbejder</span>
+            <span>{t('Kreditmedarbejder')}</span>
           </div>
         </div>
       </div>
@@ -90,8 +126,8 @@ function Topbar({ crumbs, right }) {
         <div style={{ width: 1, height: 18, background: 'var(--c-line)', margin: '0 4px' }}/>
         {right}
         <div style={{ width: 1, height: 18, background: 'var(--c-line)', margin: '0 4px' }}/>
-        <button className="icon-btn" title="Notifikationer"><I.Bell size={15}/></button>
-        <button className="icon-btn" title="Hjælp"><I.Help size={15}/></button>
+        <button className="icon-btn" title={t('Notifikationer')}><I.Bell size={15}/></button>
+        <button className="icon-btn" title={t('Hjælp')}><I.Help size={15}/></button>
       </div>
     </div>
   );
@@ -146,8 +182,8 @@ function CaseSearch() {
           onChange={(e) => { setQ(e.target.value); setOpen(true); setHover(0); }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKey}
-          placeholder="Søg kunde - navn eller CVR"
-          aria-label="Søg kunde"
+          placeholder={t('Søg kunde - navn eller CVR')}
+          aria-label={t('Søg kunde')}
           style={{
             width: '100%', height: 30, padding: '0 28px 0 28px',
             border: '1px solid var(--c-line)', borderRadius: 6,
@@ -156,7 +192,7 @@ function CaseSearch() {
         />
         {q && (
           <button
-            type="button" aria-label="Ryd"
+            type="button" aria-label={t('Ryd')}
             onMouseDown={(e) => { e.preventDefault(); setQ(""); setOpen(true); inputRef.current && inputRef.current.focus(); }}
             style={{
               position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
@@ -177,12 +213,12 @@ function CaseSearch() {
         }}>
           {q.trim() === "" && (
             <div style={{ padding: '8px 12px', fontSize: 10.5, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--c-text-3)', borderBottom: '1px solid var(--c-line-2)' }}>
-              Seneste sager
+              {t('Seneste sager')}
             </div>
           )}
           {results.length === 0 ? (
             <div style={{ padding: '14px 14px', fontSize: 12.5, color: 'var(--c-text-3)' }}>
-              Ingen sager matcher "{q}"
+              {t('Ingen sager matcher')} "{q}"
             </div>
           ) : (
             results.map((c, i) => (
@@ -232,3 +268,4 @@ function CaseSearch() {
 window.Sidebar = Sidebar;
 window.Topbar = Topbar;
 window.CaseSearch = CaseSearch;
+window.LanguageSwitcher = LanguageSwitcher;
