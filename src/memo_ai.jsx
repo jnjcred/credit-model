@@ -11,20 +11,44 @@
 
 /* ── Sagsgrundlag ────────────────────────────────────────────────────────── */
 
-const CASE_FACTS = `Selskab: Nordhavn Composite A/S, CVR 38 42 71 56, Havnegade 42, 9900 Frederikshavn.
-Branche: fiberforstærkede kompositkomponenter til vindmøllevinger, OEM-underleverandør. 84 ansatte.
-Direktør og medstifter: Anders Christensen. CTO og medstifter: Maria Lindbjerg. Bestyrelsesformand: Erik Sandberg.
-Sagsnummer: 2026-0184. Sagsbehandler: Mette Larsen, Kredit. Sekundær: Sofie Andersen, Erhverv. Dato: 4. august 2026.
-
-Ansøgningen: DKK 4,5 mio. til finansiering af Block Island-ordren fra GE Vernova med leverance Q3 2026.
-Samlet finansieringsplan DKK 7,0 mio.: EIFO-eksportkaution 3,6 (51 %), Nordjyske Bank driftskredit 2,2 (31 %), egenfinansiering 1,2 (17 %).
-Kapitalbehov: materialeindkøb kulfiber og harpiks 2,8, igangværende arbejder 2,4, arbejdskapital frem til kundens betaling i Q4 2026 1,8.
-EIFO-kautionen dækker 80 % af eksportforpligtelsen og er sidestillet med banken i pant, ikke efterstillet.
-Ansøgende pengeinstitut: Nordjyske Bank, erhvervsrådgiver Lars Thomsen. Bankens eksisterende anlægslån DKK 1,8 mio. til 4,2 %.
-
-Kundekoncentration: GE Vernova ca. 38 % af omsætningen, Vestas ca. 18 %, Siemens Gamesa ca. 8 %. Top-3 udgør 64 %.
-Ejerkreds: Anders Holding ApS 50,7 %, Erhvervsfonden 23,6 %, Maria Lindbjerg 15,6 %, Industrifonden A/S 10,1 %. Medarbejderwarrants 5,0 % fremgår kun af ejerbogen.
-Kendte udestående: tilbagetrædelseserklæring for anpartshaverlån DKK 0,5 mio. mangler. Selskabskaution fra Nordhavn Holding ApS afventer underskrift. Pantebrev på maskiner henviser i §4 til "sædvanlige sikkerheder" uden specifikation.`;
+/* Sagsfakta til modellen bygges af det samme faktaark (window.CASE_FACTS) og
+   de samme stamdata (window.DATA), som skærmene viser. Så kan AI'en ikke få
+   et andet billede af sagen end rådgiveren. Tåler at felter mangler. */
+function memoAiCaseContext() {
+  const F = (window.CASE_FACTS && typeof window.CASE_FACTS === 'object') ? window.CASE_FACTS : {};
+  const D = window.DATA || {};
+  const CO = D.COMPANY || {};
+  const mio = (kr) => kr == null ? '-' : (kr / 1e6).toFixed(1).replace('.', ',') + ' mio.';
+  const pct = (x) => x == null ? '-' : (x <= 1 ? x * 100 : x).toFixed(0) + ' %';
+  const src = (s) => s && s.doc ? ' [' + s.doc + (s.ref ? ', ' + s.ref : '') + ']' : '';
+  const L = [];
+  L.push('Selskab: ' + (CO.name || 'Nordhavn Composite A/S') + ', CVR ' + (CO.cvr || '') + ', ' + [CO.address, CO.postal].filter(Boolean).join(', ') + '.');
+  if (CO.activity) L.push('Aktivitet: ' + CO.activity + '. ' + (CO.employees ? CO.employees + ' ansatte.' : ''));
+  if (Array.isArray(D.MANAGEMENT)) L.push('Direktion: ' + D.MANAGEMENT.map(m => m.name + ' (' + m.role + ')').join(', ') + '.');
+  if (Array.isArray(D.BOARD)) L.push('Bestyrelse: ' + D.BOARD.map(m => m.name + ' (' + m.role + ')').join(', ') + '.');
+  if (Array.isArray(D.OWNERS)) L.push('Ejerkreds: ' + D.OWNERS.map(o => o.name + ' ' + String(o.share).replace('.', ',') + ' %').join(', ') + '.');
+  L.push('Sagsnummer: ' + (CO.caseNr || '2026-0184') + '. Sagsbehandler: Mette Larsen, Kredit. Sekundær: Sofie Andersen, Erhverv.');
+  if (F.asOf) L.push('Sagens dato (pr.-dato for memoet): ' + F.asOf + '.');
+  const a = F.application || {};
+  if (a.product || a.amount) L.push('Ansøgningen: ' + [a.product, a.amount != null ? 'DKK ' + mio(a.amount) : null].filter(Boolean).join(', ') + (a.purpose ? '. Formål: ' + a.purpose : '') + src(a.source));
+  const f = F.facility || {};
+  if (f.instrument || f.facilityAmount) {
+    L.push('Facilitet: ' + [f.instrument, f.facilityType, f.bank].filter(Boolean).join(', ') + '. Bankens facilitet DKK ' + mio(f.facilityAmount) +
+      ', EIFO-andel ' + pct(f.eifoShare) + ' = DKK ' + mio(f.eifoAmount) + '. Løbetid ' + (f.tenorMonths || '-') + ' mdr. (' + (f.start || '-') + ' til ' + (f.end || '-') + ').' +
+      (f.ranking ? ' Prioritet: ' + f.ranking + '.' : '') + (f.pricing ? ' Rente: ' + f.pricing + '.' : '') + (f.premium ? ' Præmie: ' + f.premium + '.' : '') + src(f.source));
+  }
+  const list = (title, arr, fmt) => { if (Array.isArray(arr) && arr.length) L.push(title + ':\n' + arr.filter(Boolean).map(x => '- ' + fmt(x)).join('\n')); };
+  list('Betingelser før udbetaling', F.conditions, c => (c.id ? c.id + ' ' : '') + c.text + ' (' + (c.status || '') + (c.note ? ', ' + c.note : '') + ')' + src(c.source));
+  list('Covenants', F.covenants, c => (c.id ? c.id + ' ' : '') + c.text + src(c.source));
+  list('Vigtige datoer', F.keyDates, k => k.date + ': ' + k.text + ' (' + (k.status || '') + ')' + src(k.source));
+  list('Røde flag', F.redFlags, r => r.text + ' (' + (r.severity || '') + ')' + src(r.source));
+  list('Nøgletal', F.keyFigures, k => (k.label || k.key) + ': ' + Object.keys(k.values || {}).map(y => y + ' ' + k.values[y]).join(', ') +
+    (k.ytd ? '; ' + k.ytd.period + ' ' + k.ytd.value : '') + (k.budget ? '; ' + k.budget.period + ' ' + k.budget.value : '') + ' ' + (k.unit || '') + src(k.source));
+  list('Kendte uoverensstemmelser i kildematerialet', F.conflicts, c => c.text + (c.handling ? ' Håndtering: ' + c.handling : ''));
+  const rec = F.recommendation;
+  if (rec && rec.text) L.push('Indstilling (udkast): ' + rec.text);
+  return L.join('\n').replace(/mio\.\./g, 'mio.').replace(/a\.\./g, 'a.');
+}
 
 /** Regnskabstabellen serialiseret, så modellen ser præcis de tal siden viser. */
 function financialsAsText() {
@@ -33,20 +57,33 @@ function financialsAsText() {
   const years = window.FIN_ANNUAL_YEARS || [];
   const actualQ = window.FIN_ACTUAL_Q || [];
   const budgetQ = window.FIN_BUDGET_Q || [];
+  const sep = window.FIN_BUDGET_SEP || null;
   const num = (v) => v == null || isNaN(v) ? '-' : v.toFixed(2).replace('.', ',');
+  // 2026E: januar-august realiseret plus budget for september og Q4, som på
+  // fanen Virksomheden (finEstimate2026). Ellers samme regel her.
+  const est = (r) => {
+    if (typeof window.finEstimate2026 === 'function') return window.finEstimate2026(r);
+    if (r.stock) return r.bq ? r.bq[0] : null;
+    if (!r.q || !r.bq) return null;
+    return r.q.reduce((s, v) => s + (v || 0), 0) + (r.bs != null ? r.bs : 0) + r.bq[0];
+  };
 
   const cols = []
-    .concat(years.map((y, i) => ({ head: y, get: r => r.values ? r.values[i] : null })))
-    .concat([{ head: '2026E', get: r => r.stock ? (r.bq ? r.bq[0] : null) : (r.q && r.bq ? r.q[0] + r.q[1] + r.q[2] + r.bq[0] : null) }])
-    .concat(actualQ.map((p, i) => ({ head: p.label + ' ' + p.year, get: r => r.q ? r.q[i] : null })))
-    .concat(budgetQ.map((p, i) => ({ head: p.label + ' ' + p.year + 'B', get: r => r.bq ? r.bq[i] : null })));
+    .concat(years.map((y, i) => ({ head: y, ann: 1, get: r => r.values ? r.values[i] : null })))
+    .concat([{ head: '2026E', ann: 1, get: est }])
+    .concat(actualQ.map((p, i) => ({ head: p.label + ' ' + p.year, ann: 12 / (p.months || 3), get: r => r.q ? r.q[i] : null })))
+    .concat(sep ? [{ head: sep.label + ' ' + sep.year + 'B', ann: 12, get: r => r.stock ? null : (r.bs != null ? r.bs : null) }] : [])
+    .concat(budgetQ.map((p, i) => ({ head: p.label + ' ' + p.year + 'B', ann: 4, get: r => r.bq ? r.bq[i] : null })));
 
-  const lines = ['Alle tal i DKK mio. 2026E = Q1-Q3 realiseret plus Q4 budget. B = budget.',
-    'Post'.padEnd(32) + cols.map(c => c.head.padStart(10)).join('')];
+  const lastActual = actualQ.length ? actualQ[actualQ.length - 1] : null;
+  const lines = ['Alle tal i DKK mio. Realiseret til og med august 2026 (Periodetal_jan-aug_2026.xlsx)' +
+    (lastActual && lastActual.partial ? '; "' + lastActual.label + '" er kun to måneder' : '') +
+    '. 2026E = januar-august realiseret plus budget for september og Q4. B = budget.',
+    'Post'.padEnd(32) + cols.map(c => c.head.padStart(13)).join('')];
   AR.groups.forEach(g => {
     lines.push('[' + g.label + ']');
     g.rows.forEach(r => {
-      lines.push(r.label.padEnd(32) + cols.map(c => num(c.get(r)).padStart(10)).join(''));
+      lines.push(r.label.padEnd(32) + cols.map(c => num(c.get(r)).padStart(13)).join(''));
     });
   });
 
@@ -59,10 +96,9 @@ function financialsAsText() {
       const cells = cols.map(c => {
         const m = {};
         rawRows.forEach(r => { m[r.label] = c.get(r); });
-        const ann = /Q[1-4]/.test(c.head) ? 4 : 1;
-        const v = rt.calc(m, ann);
-        if (v == null || isNaN(v)) return '-'.padStart(10);
-        return (rt.percent ? v.toFixed(1).replace('.', ',') + '%' : v.toFixed(1).replace('.', ',')).padStart(10);
+        const v = rt.calc(m, c.ann || 1);
+        if (v == null || isNaN(v)) return '-'.padStart(13);
+        return (rt.percent ? v.toFixed(1).replace('.', ',') + '%' : v.toFixed(1).replace('.', ',')).padStart(13);
       });
       lines.push(rt.label.padEnd(32) + cells.join(''));
     });
@@ -121,7 +157,7 @@ function docsForSection(sKey) {
  * betales fuldt én gang. Den anden er de dokumenter afsnittet skal bruge.
  */
 function sharedGround() {
-  const parts = ['=== SAGSFAKTA ===\n' + CASE_FACTS];
+  const parts = ['=== SAGSFAKTA ===\n' + memoAiCaseContext()];
   const fin = financialsAsText();
   if (fin) parts.push('=== REGNSKABSTAL FRA FINANSIELT OVERBLIK ===\n' + fin);
   const idx = docIndexAsText();
@@ -352,7 +388,7 @@ function cleanHtml(raw) {
       const keep =
         // Ophavsmærket skal overleve enhver rensning, ellers går sporet tabt
         n === 'data-ai' || n === 'data-ai-at' ||
-        // data-line og data-col er det talafstemningen slår op på
+        // data-line og data-col binder et tal til en regnskabslinje; de bevares
         (el.tagName === 'SPAN' && (n === 'class' || n === 'data-doc' || n === 'data-page' || n === 'data-line' || n === 'data-col' || n === 'contenteditable')) ||
         ((el.tagName === 'H3' || el.tagName === 'H4' || el.tagName === 'UL' || el.tagName === 'DIV') && n === 'class') ||
         ((el.tagName === 'TD' || el.tagName === 'TH') && (n === 'style' || n === 'colspan' || n === 'rowspan'));
@@ -390,118 +426,6 @@ function countCitations(html) {
   return tmp.querySelectorAll('.memo-cite').length;
 }
 
-/* ── Kontrol af hele memoet ──────────────────────────────────────────────────
-   To fejltyper kan ikke opdages ved gennemlæsning, fordi de ser rigtige ud:
-   en kildehenvisning til et dokument eller en side der ikke findes, og et tal
-   der er hentet fra den forkerte regnskabslinje. Begge dele kan afgøres
-   maskinelt, fordi både dokumenterne og regnskabstabellen ligger i appen.
-   ──────────────────────────────────────────────────────────────────────────── */
-
-/** Sammenlign to sidehenvisninger uden at snuble over mellemrum og punktummer. */
-function sameRef(a, b) {
-  const n = s => (s || '').toLowerCase().replace(/[\s.]/g, '');
-  return n(a) === n(b);
-}
-
-/** Slår et tal op i regnskabstabellen ud fra rækkens navn og kolonnen. */
-function financialValue(line, col) {
-  const AR = window.ANNUAL_REPORT;
-  if (!AR || !line) return null;
-  let row = null;
-  AR.groups.forEach(g => g.rows.forEach(r => { if (r.label === line) row = r; }));
-  const ratio = (window.FIN_RATIOS || []).find(r => r.label === line);
-  if (!row && !ratio) return null;
-
-  const years = window.FIN_ANNUAL_YEARS || [];
-  const actualQ = window.FIN_ACTUAL_Q || [];
-  const budgetQ = window.FIN_BUDGET_Q || [];
-
-  // Byg kolonneopslag magen til tabellens egne kolonner
-  const cols = {};
-  years.forEach((y, i) => { cols[y] = r => (r.values ? r.values[i] : null); });
-  cols['2026E'] = r => r.stock ? (r.bq ? r.bq[0] : null)
-    : (r.q && r.bq ? r.q[0] + r.q[1] + r.q[2] + r.bq[0] : null);
-  actualQ.forEach((p, i) => { cols[p.label + ' ' + p.year] = r => (r.q ? r.q[i] : null); });
-  budgetQ.forEach((p, i) => { cols[p.label + ' ' + p.year + 'B'] = r => (r.bq ? r.bq[i] : null); });
-
-  const get = cols[col];
-  if (!get) return null;
-  if (row) return get(row);
-
-  // Nøgletal beregnes af kolonnens egne rå tal, præcis som i tabellen
-  const m = {};
-  AR.groups.forEach(g => g.rows.forEach(r => { m[r.label] = get(r); }));
-  const ann = /Q[1-4]/.test(col) ? 4 : 1;
-  const v = ratio.calc(m, ann);
-  return v == null || isNaN(v) ? null : v;
-}
-
-/** Læser et dansk formateret tal ud af en tekst: "41,1 mio." og "5,8%" og "3,3×". */
-function parseDanish(text) {
-  const m = (text || '').replace(/−/g, '-').match(/-?\d{1,3}(?:\.\d{3})*(?:,\d+)?/);
-  if (!m) return null;
-  const v = parseFloat(m[0].replace(/\./g, '').replace(',', '.'));
-  return isNaN(v) ? null : v;
-}
-
-/**
- * Gennemgår et HTML-fragment og finder kildehenvisninger der ikke holder,
- * samt tal der ikke stemmer med regnskabstabellen.
- * Returnerer { deadDoc:[], deadPage:[], mismatch:[] }
- */
-function auditHtml(html, sectionLabel) {
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html || '';
-  const docs = caseDocs();
-  const byName = {};
-  docs.forEach(d => { byName[d.name] = (d.pages || []).map(p => p.ref); });
-
-  const out = { deadDoc: [], deadPage: [], mismatch: [] };
-
-  tmp.querySelectorAll('.memo-cite').forEach(el => {
-    const doc = el.getAttribute('data-doc');
-    const page = el.getAttribute('data-page');
-    const text = (el.textContent || '').trim();
-    const where = { section: sectionLabel || '', text: text.slice(0, 60), doc: doc, page: page };
-
-    if (doc && !byName[doc]) {
-      out.deadDoc.push(where);
-    } else if (doc && page && !byName[doc].some(r => sameRef(r, page))) {
-      out.deadPage.push({ ...where, valid: byName[doc] });
-    }
-
-    // Tal der påstår at komme fra en bestemt regnskabslinje
-    const line = el.getAttribute('data-line');
-    const col = el.getAttribute('data-col');
-    if (line && col) {
-      const expect = financialValue(line, col);
-      const got = parseDanish(text);
-      if (expect != null && got != null) {
-        // Procenter og forholdstal står i deres egen enhed, beløb i mio.
-        const diff = Math.abs(expect - got);
-        if (diff > 0.05) {
-          out.mismatch.push({ ...where, line: line, col: col, expect: expect, got: got });
-        }
-      }
-    }
-  });
-
-  return out;
-}
-
-/** Samler kontrollen for hele memoet. sections: [{key,title,html}] */
-function auditMemo(sections) {
-  const total = { deadDoc: [], deadPage: [], mismatch: [] };
-  (sections || []).forEach(s => {
-    const r = auditHtml(s.html, s.title);
-    total.deadDoc = total.deadDoc.concat(r.deadDoc);
-    total.deadPage = total.deadPage.concat(r.deadPage);
-    total.mismatch = total.mismatch.concat(r.mismatch);
-  });
-  total.count = total.deadDoc.length + total.deadPage.length + total.mismatch.length;
-  return total;
-}
-
 /* ── Fælles hook: forbindelsesstatus ─────────────────────────────────────── */
 
 function useAiStatus() {
@@ -529,6 +453,10 @@ function AiSettingsDialog({ open, onClose }) {
   const [msg, setMsg] = React.useState(null);
   const [reveal, setReveal] = React.useState(false);
   const [local, setLocal] = React.useState(() => window.AI.localStatus());
+  // Rigtig dialog: fokus ind, Tab holdes inde, Esc lukker, fokus tilbage.
+  // Før blev fokus på knappen bag dialogen og endte i memoets Tab-fælde.
+  const boxRef = React.useRef(null);
+  CW.useDialog(boxRef, open, onClose);
 
   React.useEffect(() => {
     if (!open) return;
@@ -583,8 +511,10 @@ function AiSettingsDialog({ open, onClose }) {
   }
 
   const masked = key && !reveal ? key.slice(0, 7) + '•'.repeat(Math.max(0, Math.min(24, key.length - 11))) + key.slice(-4) : key;
+  // Copilot (Azure) har intet fælles endpoint, så bankens egen adresse er påkrævet
+  const needsEndpoint = !!P.needsEndpoint;
   // Lokal motor kræver ingen nøgle, men den valgte kommandolinje skal være klar
-  const canUse = isLocal ? !!(local && local[model] && local[model].available) : !!key;
+  const canUse = isLocal ? !!(local && local[model] && local[model].available) : !!key && (!needsEndpoint || !!baseUrl);
 
   return (
     <div
@@ -592,8 +522,12 @@ function AiSettingsDialog({ open, onClose }) {
       style={{ position: 'fixed', inset: 0, background: 'rgba(15,17,20,0.45)', zIndex: 10000, display: 'grid', placeItems: 'center', padding: 20 }}
     >
       <div
+        ref={boxRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('Forbind din AI-konto')}
         onMouseDown={e => e.stopPropagation()}
-        style={{ width: 'min(560px, 100%)', background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden' }}
+        style={{ width: 'min(560px, 100%)', maxHeight: 'calc(100vh - 40px)', overflowY: 'auto', background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', boxShadow: 'var(--shadow-lg)' }}
       >
         <div style={{ padding: '20px 24px 0' }}>
           <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Forbind din AI-konto')}</div>
@@ -606,27 +540,22 @@ function AiSettingsDialog({ open, onClose }) {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 4, padding: '16px 24px 0' }}>
-          {['local', 'anthropic', 'openai'].map(p => {
-            const on = tab === p;
-            const has = p === 'local'
-              ? !!(local && ((local.claude && local.claude.available) || (local.codex && local.codex.available)))
-              : !!cfg.keys[p];
-            return (
-              <button key={p} onClick={() => setTab(p)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 7,
-                  height: 34, padding: '0 14px', borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit',
-                  border: '1px solid ' + (on ? 'var(--c-ink)' : 'var(--c-line)'),
-                  background: on ? 'var(--c-ink)' : '#fff',
-                  color: on ? '#fff' : 'var(--c-text-2)',
-                  fontSize: 13, fontWeight: 500,
-                }}>
-                {t(window.AI.PROVIDERS[p].label)}
-                {has && <span style={{ width: 6, height: 6, borderRadius: '50%', background: on ? '#7ee2b8' : 'var(--c-success)' }}/>}
-              </button>
-            );
-          })}
+        {/* Samme neutrale segmenterede kontrol som resten af appen (.cw-seg) */}
+        <div style={{ padding: '16px 24px 0' }}>
+          <div className="cw-seg" role="group" aria-label={t('Udbyder')} style={{ flexWrap: 'wrap' }}>
+            {['local', 'anthropic', 'openai', 'copilot'].map(p => {
+              const has = p === 'local'
+                ? !!(local && ((local.claude && local.claude.available) || (local.codex && local.codex.available)))
+                : !!cfg.keys[p] && (!window.AI.PROVIDERS[p].needsEndpoint || !!(cfg.baseUrls && cfg.baseUrls[p]));
+              return (
+                <button key={p} type="button" aria-pressed={tab === p} onClick={() => setTab(p)}
+                  title={has ? t('klar') : undefined} style={{ height: 28, fontSize: 12.5 }}>
+                  {t(window.AI.PROVIDERS[p].label)}
+                  {has && <span aria-hidden="true" style={{ display: 'inline-block', width: 5, height: 5, borderRadius: '50%', background: 'var(--c-text-3)', marginLeft: 6, verticalAlign: 2 }}/>}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {isLocal ? (
@@ -656,11 +585,7 @@ function AiSettingsDialog({ open, onClose }) {
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <span style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>{en.label}</span>
-                      <span style={{
-                        fontSize: 10.5, padding: '1px 6px', borderRadius: 4,
-                        background: st.available ? 'rgba(16,138,80,0.1)' : 'var(--c-surface-2)',
-                        color: st.available ? 'var(--c-success)' : 'var(--c-text-3)',
-                      }}>{st.available ? t('klar') : t('ikke klar')}</span>
+                      <span style={{ fontSize: 12, color: 'var(--c-text-3)' }}>· {st.available ? t('klar') : t('ikke klar')}</span>
                     </span>
                     <span style={{ display: 'block', fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 3, lineHeight: 1.45 }}>
                       {t(en.hint)}. {t(st.detail)}
@@ -677,6 +602,22 @@ function AiSettingsDialog({ open, onClose }) {
         </div>
         ) : (
         <div style={{ padding: '18px 24px 4px' }}>
+          {needsEndpoint && (
+            <>
+              <div className="field-label">{t('Adresse på jeres Azure-ressource')}</div>
+              <input
+                className="input"
+                style={{ width: '100%', fontFamily: 'var(--mono)', fontSize: 12 }}
+                placeholder={P.endpointHint}
+                value={baseUrl}
+                spellCheck={false}
+                onChange={e => setBaseUrl(e.target.value)}
+              />
+              <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 6, marginBottom: 16, lineHeight: 1.5 }}>
+                {t('Microsoft 365 Copilot har ikke et API man kan forbinde til direkte. Brug i stedet den Azure OpenAI-ressource jeres Copilot kører på. Adressen står under Keys and Endpoint i Azure-portalen.')}
+              </div>
+            </>
+          )}
           <div className="field-label">{t('API-nøgle fra')} {P.vendor}</div>
           <div style={{ display: 'flex', gap: 6 }}>
             <input
@@ -696,7 +637,7 @@ function AiSettingsDialog({ open, onClose }) {
             {t('Hent en nøgle på')} <a href={P.consoleUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--c-primary)' }}>{P.consoleUrl.replace('https://', '')}</a>
           </div>
 
-          <div className="field-label" style={{ marginTop: 16 }}>{t('Model')}</div>
+          <div className="field-label" style={{ marginTop: 16 }}>{needsEndpoint ? t('Udrulning (deployment)') : t('Model')}</div>
           <div style={{ display: 'flex', gap: 6 }}>
             {models.length ? (
               <select className="input" style={{ flex: 1, fontSize: 13 }} value={model} onChange={e => setModel(e.target.value)}>
@@ -705,15 +646,19 @@ function AiSettingsDialog({ open, onClose }) {
             ) : (
               <input className="input" style={{ flex: 1, fontFamily: 'var(--mono)', fontSize: 12 }} value={model} onChange={e => setModel(e.target.value)} spellCheck={false}/>
             )}
-            <button className="btn btn-sm" disabled={!key || busy === 'models'} onClick={fetchModels}>
-              {busy === 'models' ? t('Henter…') : t('Hent modeller')}
-            </button>
+            {!needsEndpoint && (
+              <button className="btn btn-sm" disabled={!key || busy === 'models'} onClick={fetchModels}>
+                {busy === 'models' ? t('Henter…') : t('Hent modeller')}
+              </button>
+            )}
           </div>
           <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', marginTop: 6 }}>
-            {t('Hent modeller viser dem din konto faktisk har adgang til, så du ikke skal gætte et modelnavn.')}
+            {needsEndpoint
+              ? t('Navnet I gav modellen, da den blev udrullet i Azure AI Foundry. Det er ikke nødvendigvis det samme som modellens navn.')
+              : t('Hent modeller viser dem din konto faktisk har adgang til, så du ikke skal gætte et modelnavn.')}
           </div>
 
-          <details style={{ marginTop: 14 }}>
+          {!needsEndpoint && <details style={{ marginTop: 14 }}>
             <summary style={{ fontSize: 11.5, color: 'var(--c-text-3)', cursor: 'pointer' }}>{t('Avanceret')}</summary>
             <div style={{ marginTop: 8 }}>
               <div className="field-label">{t('Endpoint')}</div>
@@ -729,7 +674,7 @@ function AiSettingsDialog({ open, onClose }) {
                 {t('Lad feltet stå tomt for at gå direkte til')} {P.vendor}. {t('Udfyld det kun hvis kaldene skal gennem en proxy i huset eller et testmiljø.')}
               </div>
             </div>
-          </details>
+          </details>}
         </div>
         )}
 
@@ -870,7 +815,7 @@ function AiWarnings({ html }) {
  * Panelet der åbner under et afsnit. Rådgiveren vælger en handling, ser
  * resultatet streame ind, og bestemmer selv om det skal erstatte afsnittet.
  */
-function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, onClose, selection }) {
+function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, onClose, selection, onConnect }) {
   const status = useAiStatus();
   const runner = useAiRun();
   const [instruction, setInstruction] = React.useState('');
@@ -906,12 +851,11 @@ function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, on
 
   return (
     <div className="ai-panel" onMouseDown={e => e.stopPropagation()}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span className="ai-chip">AI</span>
-        <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-ink)' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>
           {selection ? t('Omskriv markeret tekst') : t(title)}
         </span>
-        <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>
+        <span style={{ fontSize: 12, color: 'var(--c-text-3)' }}>
           {status.ready ? t(status.provider.label) + ' · ' + status.model : t('ikke forbundet')}
         </span>
         <div style={{ flex: 1 }}/>
@@ -927,8 +871,13 @@ function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, on
       )}
 
       {!status.ready ? (
-        <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.6 }}>
-          {t('Forbind din Claude- eller ChatGPT-konto først. Knappen sidder øverst i memoets værktøjslinje.')}
+        // Forbindelsen kan laves herfra. Før blev man sendt op i værktøjslinjen
+        // for at finde knappen.
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ flex: 1, minWidth: 200, fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.6 }}>
+            {t('Forbind din Claude-, ChatGPT- eller Copilot-konto, så kan AI skrive eller omskrive afsnittet ud fra sagens dokumenter.')}
+          </span>
+          {onConnect && <button type="button" className="btn btn-sm" onClick={onConnect}>{t('Forbind AI')}</button>}
         </div>
       ) : (
         <>
@@ -1082,7 +1031,7 @@ const CHAT_STARTERS = [
   'Hvad mangler vi at indhente fra kunden?',
 ];
 
-function AiChatPanel({ open, onClose, getMemoText, sections, onInsert }) {
+function AiChatPanel({ open, getMemoText, sections, onInsert }) {
   const status = useAiStatus();
   const runner = useAiRun();
   const [history, setHistory] = React.useState([]);
@@ -1121,18 +1070,17 @@ function AiChatPanel({ open, onClose, getMemoText, sections, onInsert }) {
 
   return (
     <div className="ai-chat">
+      {/* Fanen over panelet hedder allerede "Spørg om sagen", og fanerne skifter
+          tilbage til kommentarerne. Her står kun forbindelsen og Ryd. */}
       <div className="ai-chat-head">
-        <span className="ai-chip">AI</span>
-        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>{t('Spørg om sagen')}</span>
-        <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>
+        <span style={{ fontSize: 12, color: 'var(--c-text-3)' }}>
           {status.ready ? t(status.provider.label) : t('ikke forbundet')}
         </span>
         <div style={{ flex: 1 }}/>
         {history.length > 0 && (
-          <button className="btn btn-sm btn-ghost" style={{ padding: '0 8px', color: 'var(--c-text-3)' }}
+          <button type="button" className="btn-ghost-sm"
             onClick={() => { setHistory([]); runner.reset(); }}>{t('Ryd')}</button>
         )}
-        <button className="btn btn-sm btn-ghost" style={{ padding: '0 8px' }} onClick={onClose}>{t('Luk')}</button>
       </div>
 
       <div ref={bodyRef} className="ai-chat-body">
@@ -1203,7 +1151,7 @@ function AiChatPanel({ open, onClose, getMemoText, sections, onInsert }) {
 }
 
 window.MemoAI = {
-  CASE_FACTS,
+  caseContext: memoAiCaseContext,
   financialsAsText,
   caseDocs,
   docsForSection,

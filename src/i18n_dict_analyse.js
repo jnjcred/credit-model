@@ -20,13 +20,13 @@ Object.assign(window.I18N.en, {
   'Alle brancher': 'All industries',
   'Nulstil alle valg': 'Reset all selections',
   'Avanceret søgning': 'Advanced search',
-  'Ingen aktive kriterier. Klik "Tilføj kriterie" for at filtrere manuelt.': 'No active criteria. Click "Add criterion" to filter manually.',
-  'Tilføj kriterie': 'Add criterion',
+  'Ingen aktive kriterier. Tilføj et kriterium for at filtrere manuelt.': 'No active criteria. Add a criterion to filter manually.',
+  'Tilføj kriterium': 'Add criterion',
   'Aktive kriterier': 'Active criteria',
   'Fjern skabelon': 'Remove template',
-  'Kriterie': 'Criterion',
+  'Kriterium': 'Criterion',
   'Ændring': 'Change',
-  'Minimum beløb': 'Minimum amount',
+  'Minimumsbeløb': 'Minimum amount',
   'valgfri': 'optional',
   'Fjern': 'Remove',
   'kr.': 'DKK',
@@ -72,6 +72,11 @@ Object.assign(window.I18N.en, {
   'Bygge og anlæg': 'Construction',
   'Fødevarer og drikke': 'Food and beverages',
   'Handel og service': 'Retail and services',
+  'Beløb i kr., seneste 12 måneder.': 'Amounts in DKK, last 12 months.',
+  'Egne kriterier': 'Custom criteria',
+  'Ingen kunder matcher de valgte kriterier. Prøv at justere tærskelværdierne.': 'No customers match the selected criteria. Try adjusting the thresholds.',
+  'Nulstil': 'Reset',
+  'Skift mellem og og eller': 'Switch between and and or',
 });
 Object.assign(window.I18N.sv, {
   'Porteføljeanalyse': 'Portföljanalys',
@@ -95,13 +100,13 @@ Object.assign(window.I18N.sv, {
   'Alle brancher': 'Alla branscher',
   'Nulstil alle valg': 'Återställ alla val',
   'Avanceret søgning': 'Avancerad sökning',
-  'Ingen aktive kriterier. Klik "Tilføj kriterie" for at filtrere manuelt.': 'Inga aktiva kriterier. Klicka på "Lägg till kriterium" för att filtrera manuellt.',
-  'Tilføj kriterie': 'Lägg till kriterium',
+  'Ingen aktive kriterier. Tilføj et kriterium for at filtrere manuelt.': 'Inga aktiva kriterier. Lägg till ett kriterium för att filtrera manuellt.',
+  'Tilføj kriterium': 'Lägg till kriterium',
   'Aktive kriterier': 'Aktiva kriterier',
   'Fjern skabelon': 'Ta bort mall',
-  'Kriterie': 'Kriterium',
+  'Kriterium': 'Kriterium',
   'Ændring': 'Förändring',
-  'Minimum beløb': 'Minsta belopp',
+  'Minimumsbeløb': 'Minsta belopp',
   'valgfri': 'valfritt',
   'Fjern': 'Ta bort',
   'kr.': 'kr.',
@@ -147,4 +152,43 @@ Object.assign(window.I18N.sv, {
   'Bygge og anlæg': 'Bygg och anläggning',
   'Fødevarer og drikke': 'Livsmedel och dryck',
   'Handel og service': 'Handel och service',
+});
+
+// Porteføljeanalyse: kolonner og rækkeklik
+Object.assign(window.I18N.en, {
+  "Andel af omsætningen fra den største enkeltkunde, seneste regnskabsår (%)": "Share of revenue from the largest single customer, latest financial year (%)",
+  "Beløb i kr., seneste 12 måneder. Vækst er i forhold til de foregående 12 måneder.": "Amounts in DKK, last 12 months. Growth is compared with the previous 12 months.",
+  "Bogført egenkapital, seneste regnskab (kr.)": "Book equity, latest accounts (DKK)",
+  "EBITDA seneste 12 mdr. (kr.)": "EBITDA last 12 months (DKK)",
+  "EBITDA-vækst": "EBITDA growth",
+  "Kun Nordhavn Composite er udfyldt i demoen": "Only Nordhavn Composite is filled in for the demo",
+  "Kunder i porteføljen": "Customers in the portfolio",
+  "Oms. vækst": "Rev. growth",
+  "Omsætning seneste 12 mdr. (kr.). For Nordhavn: nettoomsætning 2025 fra årsrapporten.": "Revenue last 12 months (DKK). For Nordhavn: net revenue 2025 from the annual report.",
+  "Virksomhedens navn og CVR": "Company name and CVR",
+  "åbn sagen": "open the case",
+  "Kunde": "Customer",
+});
+
+// Runde 3 (data og team)
+Object.assign(window.I18N.en, {
+  "Fjern kriterium": "Remove criterion",
+  "Ingen sag": "No case",
+  "Kundens åbne sag. Klik på kunden for at åbne den.": "The customer's open case. Click the customer to open it.",
+  "Rådgiveren, der ejer sagen": "The adviser who owns the case",
+  "ingen åben sag": "no open case",
+  "ingen åben sag. Opret en med Ny sag.": "no open case. Create one with New case.",
+  "åbn sag": "open case",
+  "Negativ EBITDA": "Negative EBITDA",
+  "EBITDA under nul de seneste 12 måneder": "EBITDA below zero over the last 12 months",
+});
+// Rettebølge 4 (data)
+Object.assign(window.I18N.en, {
+  "ingen åben sag, opret en ny sag": "no open case, create a new case",
+  "Klik for at oprette en sag til kunden": "Click to create a case for the customer",
+});
+// Blind runde (data)
+Object.assign(window.I18N.en, {
+  "Regnskab 2025": "Accounts 2025",
+  "Nordhavn Composite: regnskabstal for 2025 fra årsrapporten. Sagen har nyere tal for januar-august 2026, fx GE Vernova med 38 % af omsætningen.": "Nordhavn Composite: 2025 figures from the annual report. The case has more recent figures for January-August 2026, e.g. GE Vernova with 38% of revenue.",
 });

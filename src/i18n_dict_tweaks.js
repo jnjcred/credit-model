@@ -17,6 +17,10 @@ Object.assign(window.I18N.en, {
   'Close tweaks': 'Close tweaks',
   'Deck': 'Deck',
   'Thumbnail rail': 'Thumbnail rail',
+  'Anmodningen til {name} med {items} og svarfrist {date} er gemt på sagen. Der er ikke sendt noget til kunden.': 'The request to {name} with {items} and response deadline {date} is saved on the case. Nothing has been sent to the customer.',
+  'Anmodningen med {items} og svarfrist {date} er gemt på sagen. Der er ikke sendt noget til kunden.': 'The request with {items} and response deadline {date} is saved on the case. Nothing has been sent to the customer.',
+  '{n} punkter': '{n} items',
+  'Adgangen til regnskabssystemet er lukket, fordi sagen er afgjort': 'Access to the accounting system has been closed because the case has been decided',
 });
 
 Object.assign(window.I18N.sv, {
@@ -38,4 +42,44 @@ Object.assign(window.I18N.sv, {
   'Close tweaks': 'Stäng tweaks',
   'Deck': 'Deck',
   'Thumbnail rail': 'Miniatyrrad',
+});
+
+// Tweaks: nulstil demo og ruter
+Object.assign(window.I18N.en, {
+  "Demo": "Demo",
+  "Nulstil demo": "Reset demo",
+  "Klik igen for at nulstille": "Click again to reset",
+  "Rydder alt demoen har gemt (sagens fase, uploads, memo) og genindlæser": "Clears everything the demo has saved (case stage, uploads, memo) and reloads",
+  "Sagens overblik": "Case overview",
+  "Mine opgaver": "My tasks",
+  "Porteføljeanalyse": "Portfolio analysis",
+  "Dataanmodninger": "Data requests",
+});
+
+// Ny sag-guiden (rettebølge 4): porteføljeopslag, materiale pr. sagstype, gemt anmodning
+Object.assign(window.I18N.en, {
+  "Ingen kunde i porteføljen eller på sagslisten har CVR {cvr}. Demoen slår kun op blandt EIFOs egne kunder. Tjek nummeret, eller søg på navnet.": "No customer in the portfolio or on the case list has CVR {cvr}. The demo only looks up EIFO's own customers. Check the number, or search by name.",
+  "Ikke kunde i porteføljen endnu": "Not a portfolio customer yet",
+  "Forvalget og begrundelserne følger sagstypen.": "The preselection and the reasons follow the case type.",
+  "Vælg sagstypen ovenfor. Materialet og begrundelserne til kunden afhænger af produktet.": "Choose the case type above. The material and the reasons given to the customer depend on the product.",
+  "Rødt flag i sag {nr}": "Red flag in case {nr}",
+  "{date} (kundens frist for materialet, ikke sagsfristen)": "{date} (the customer's deadline for the material, not the case deadline)",
+  "Anmodningen til {name} med {n} punkter og svarfrist {date} er gemt på sagen. Der er ikke sendt noget til kunden.": "The request to {name} with {n} items and response deadline {date} is saved on the case. Nothing has been sent to the customer.",
+  "Anmodningen med {n} punkter og svarfrist {date} er gemt på sagen. Der er ikke sendt noget til kunden.": "The request with {n} items and response deadline {date} is saved on the case. Nothing has been sent to the customer.",
+  "Skriv beløbet som et tal, fx 4.500.000 eller 4,5 mio.": "Write the amount as a number, e.g. 4,500,000 or 4.5m.",
+  "Send anmodningen": "Send the request",
+  // Materialekataloget (case_state.js)
+  "Likviditetsbudgettet viser, hvor meget af kreditten I forventer at bruge, og hvornår.": "The cash flow budget shows how much of the credit you expect to use, and when.",
+  "Budgettet viser, om investeringen kan betale lånet tilbage.": "The budget shows whether the investment can repay the loan.",
+  "Ved et vækstlån vurderer vi planen for væksten, og hvad lånet skal bruges til.": "For a growth loan we assess the growth plan and what the loan will be used for.",
+  "Fordelingen viser, hvor afhængige I er af enkelte markeder.": "The split shows how dependent you are on individual markets.",
+  "Valutapolitik og terminsforretninger": "Currency policy and forward contracts",
+  "Jeres valutapolitik, hvis I har en, og en oversigt over terminsforretninger og valutaoptioner. Har I ingen, så skriv det.": "Your currency policy, if you have one, and an overview of forward contracts and currency options. If you have none, say so.",
+  "Periodetallene viser, at 41 % af omsætningen faktureres i USD eller EUR uden kurssikring. Vi skal vide, hvordan I styrer kursrisikoen.": "The interim figures show that 41% of revenue is invoiced in USD or EUR without hedging. We need to know how you manage the currency risk.",
+  "Salg i udenlandsk valuta giver en kursrisiko. Vi skal vide, hvordan I styrer den.": "Sales in foreign currency carry a currency risk. We need to know how you manage it.",
+  "Ordrebog": "Order book",
+  "Bekræftede ordrer for de næste fire kvartaler fordelt på kunder, med beløb og forventet levering.": "Confirmed orders for the next four quarters by customer, with amounts and expected delivery.",
+  "De tre største kunder står for 64 % af omsætningen. Ordrebogen viser, hvor meget af de næste fire kvartaler der er bekræftet, og hos hvem.": "The three largest customers account for 64% of revenue. The order book shows how much of the next four quarters is confirmed, and with whom.",
+  "Ordrebogen viser, hvor meget af det kommende salg der er bekræftet, og hos hvilke kunder.": "The order book shows how much of the coming sales is confirmed, and with which customers.",
+  "ark Ordrebog": "Order book sheet",
 });
