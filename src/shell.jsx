@@ -41,6 +41,12 @@ function Sidebar({ route, go, openNewCase }) {
   const isActive = (r) => route === r || (r === "cases" && route.startsWith("workspace"));
   const awaitingMe = DATA.CASES.filter(DATA.caseAwaitingMe).length;
   const stuck = DATA.requestRows().filter(r => r.status === 'stuck').length;
+  // Kontomappingen er en side for sig; andre skærme kan åbne den med 'cw-open-mapper'
+  React.useEffect(() => {
+    const on = () => go('mapping');
+    window.addEventListener('cw-open-mapper', on);
+    return () => window.removeEventListener('cw-open-mapper', on);
+  }, [go]);
   const item = (r, icon, label, count, countTitle) => (
     <button
       className={"nav-item " + (isActive(r) ? "active" : "")}
@@ -74,6 +80,14 @@ function Sidebar({ route, go, openNewCase }) {
         {item("cases", <I.Briefcase className="ic"/>, t('Mine opgaver'), awaitingMe, t('sager afventer dig'))}
         {item("requests", <I.Send className="ic"/>, t('Dataanmodninger'), stuck, t('sidder fast (ingen aktivitet i 3 hverdage)'))}
         {item("analyse", <I.Filter className="ic"/>, t('Porteføljeanalyse'))}
+        {/* Demo: kontomappingen (src/mapper.jsx). Stiplet, fordi det ikke er aftalt,
+            hvem der mapper, og hvor det skal ligge i produktet. */}
+        <button type="button" id="nav-mapper" className={'nav-item nav-demo' + (isActive('mapping') ? ' active' : '')}
+          aria-current={isActive('mapping') ? 'page' : undefined} onClick={() => go('mapping')}
+          title={t('Demo: mapping af kundens konti fra e-conomic til Crediwires kategorier. Hvem der mapper, og hvor det skal ligge, er ikke aftalt.')}>
+          <I.GitBranch className="ic"/> {t('Kontomapping')}
+          <span className="nav-demo-tag">{t('demo')}</span>
+        </button>
       </nav>
 
       {/* Bunden: brugerkortet åbner en lille menu med sprog og Nulstil demo.

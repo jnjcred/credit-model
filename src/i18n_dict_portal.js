@@ -908,4 +908,12 @@ Object.assign(window.I18N.en, {
 });
 Object.assign(window.I18N.en, {
   "Kunden er nået til trinnet {step}.": "The customer has reached the step {step}.",
+  // Demo: upload demofil pr. punkt
+  'Upload demofil pr. punkt': 'Upload demo file per item',
+  'Demo: send sagens fil til ét punkt ad gangen, som om kunden havde uploadet den.': "Demo: send the case's file to one item at a time, as if the customer had uploaded it.",
+  'Upload demofil til {item}': 'Upload demo file to {item}',
+  '{item} er sendt (demo)': '{item} has been sent (demo)',
+  'Landefordeling udfyldes': 'Country split is filled in',
+  'Sendt videre': 'Forwarded',
+  'Venlig hilsen\n{sender}\n{company}': 'Kind regards\n{sender}\n{company}',
 });

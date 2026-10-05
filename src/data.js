@@ -807,17 +807,19 @@ const DOC_CUSTOMER_SOURCES = ['Kundeupload', 'e-conomic'];
 function docIsCustomers(d) { return !!d && d.origin === 'uploaded' && DOC_CUSTOMER_SOURCES.indexOf(d.sourceLabel || d.source) >= 0; }
 function customerDocs() { return (Array.isArray(window.CASE_DOCS) ? window.CASE_DOCS : []).filter(docIsCustomers); }
 
-let DOC_CACHE = null, DOC_CACHE_EXPORTS = false;
+let DOC_CACHE = null, DOC_CACHE_EXPORTS = -1;
 function docRegistry() {
-  // Eksporterne defineres i financials.jsx, som indlæses senere end første opslag
-  const hasExports = Array.isArray(window.CW_EXPORT_DOCS);
+  // Eksporterne defineres i financials.jsx og memo_handoff.jsx, som indlæses senere
+  // end første opslag: registret bygges igen, når der er kommet flere til
+  const hasExports = Array.isArray(window.CW_EXPORT_DOCS) ? window.CW_EXPORT_DOCS.length : 0;
   if (DOC_CACHE && DOC_CACHE_EXPORTS === hasExports) return DOC_CACHE;
   DOC_CACHE_EXPORTS = hasExports;
   // Kildedokumenterne plus Crediwires egne eksporter (financials.jsx, window.CW_EXPORT_DOCS)
   // Eksporterne bygges af koden i financials.jsx. En eksport, der fejler, må ikke
   // vælte registret (og dermed Dokumenter og Credit memo): den udelades med en advarsel.
   const exportDocs = (Array.isArray(window.CW_EXPORT_DOCS) ? window.CW_EXPORT_DOCS : []).map(d => {
-    try { return { id: d.id, name: d.name, type: d.type, source: d.source, origin: d.origin, period: d.period, date: d.date, meta: d.meta, pages: d.pages }; }
+    // lazy: indholdet bygges først, når filen hentes eller vises (vejledningen læser selv registret)
+    try { return { id: d.id, name: d.name, type: d.type, source: d.source, origin: d.origin, period: d.period, date: d.date, meta: d.meta, size: d.size, pages: d.lazy ? [{ ref: 's. 1', title: d.name }] : d.pages }; }
     catch (e) { try { console.warn('Eksporten ' + (d && d.name) + ' kunne ikke bygges: ' + e.message); } catch (x) {} return null; }
   });
   const src = (Array.isArray(window.CASE_DOCS) ? window.CASE_DOCS : []).filter(d => !docIsCustomers(d)).concat(exportDocs);
@@ -991,7 +993,10 @@ window.DATA = {
   // Alle sager med aktuel ejer og status, inkl. kladder fra Ny sag-guiden
   get CASES() { return allCases(); },
   // Dokumentregistret, bygget af window.CASE_DOCS
-  get DOCS() { return docRegistry(); },
+  // Uden de hentede dokumenter, rådgiveren har slettet (CW.removeDoc, fx en forkert årsrapport fra CVR)
+  get DOCS() { const reg = docRegistry(); return window.CW && CW.isDocRemoved ? reg.filter(d => !CW.isDocRemoved(d.name)) : reg; },
+  // Hele registret, også de slettede (til listen "Slettet" og årsrapportpunkterne)
+  get ALL_DOCS() { return docRegistry(); },
   // Kundens dokumenter i CASE_DOCS, der først kommer på sagen, når kunden uploader dem
   customerDocs,
   // Sagsmodel (grænseflade 1 og 2)
