@@ -624,6 +624,20 @@ function finCellSet(row, col, v) {
 // Rå værdi for en række i en kolonne (kind: annual, est, b9, q, bs, b).
 // 2026E og 2027B udledes af kvartalerne, så rettelser i dem slår igennem.
 function finRawValue(row, col) {
+  // Regnskab v2: en kolonne uden leverede tal (col.off) er tom. 2026 kan være
+  // realiseret jan-aug alene (mode 'ytd') eller budget alene (mode 'budget').
+  if (col.off) return null;
+  if (col.kind === 'est' && col.mode === 'ytd') {
+    const q = FIN_ACTUAL_Q.map((p, i) => finCellGet(row, { kind: 'q', idx: i }));
+    if (q.some(v => v == null)) return null;
+    return row.stock ? q[q.length - 1] : q.reduce((a, b) => a + b, 0);
+  }
+  if (col.kind === 'est' && col.mode === 'budget') {
+    const b0 = finCellGet(row, { kind: 'b', idx: 0 });
+    if (row.stock || b0 == null) return b0;
+    const sep = finCellGet(row, { kind: 'bs' });
+    return (sep || 0) + b0;
+  }
   if (col.kind !== 'b9' && col.kind !== 'est') return finCellGet(row, col);
   const bq = (i) => finCellGet(row, { kind: 'b', idx: i });
   if (col.kind === 'b9') {
@@ -642,11 +656,84 @@ function finEntryVal(e, col, rowByLabel, entryByLabel) {
   const get = (label) => {
     if (rowByLabel[label]) return finRawValue(rowByLabel[label], col);
     const x = entryByLabel && entryByLabel[label];
-    return x && col.kind === 'annual' && x.vals ? x.vals[col.idx] : null;
+    return x ? finChildVal(x, col) : null;
   };
   if (e.derive) return e.annualOnly && col.kind !== 'annual' ? null : e.derive(get, col);
-  return col.kind === 'annual' && e.vals ? e.vals[col.idx] : null;
+  return finChildVal(e, col);
 }
+// Tal for en række uden ref eller en detaljelinje: årsrapporternes vals og,
+// i de realiserede perioder, kontomappingens qvals (se finSyncMapping)
+function finChildVal(x, col) {
+  if (col.off) return null;
+  if (col.kind === 'annual') return x.vals && x.vals[col.idx] != null ? x.vals[col.idx] : null;
+  if (col.kind === 'q') return x.qvals && x.qvals[col.idx] != null ? x.qvals[col.idx] : null;
+  // 2026E for en resultatpost uden budget (fx Andre driftsindtægter): de realiserede
+  // perioder alene, ligesom de indgår i EBITDA's 2026E
+  if (col.kind === 'est' && x.qflow && x.qvals) return x.qvals.reduce((a, v) => a + (v || 0), 0);
+  return null;
+}
+
+/* Regnskab v2 (5. oktober): hvad kunden har leveret til 2026 og 2027.
+   hasBudget = budgetfilen er modtaget eller godkendt, eller rådgiveren har
+               importeret et budget (Importér budget)
+   months    = måneder med realiserede tal: periodetal modtaget eller
+               bogføringen forbundet (CW.consent), ellers 0
+   Graf og tabel viser kun 2026 og 2027 ud fra det, der er leveret. */
+function finDataState() {
+  const st = (id) => (window.CW && CW.itemState ? CW.itemState(id) : null);
+  const has = (id) => {
+    const x = st(id);
+    return !!x && (x.status === 'received' || x.status === 'approved') && ((x.files || []).length > 0 || x.noteKind === 'system');
+  };
+  const imported = finLoadEdits().some(x => FIN_EDIT_COL[x.colKey] && FIN_EDIT_COL[x.colKey].budget && /^Excel-import/.test(x.reason || ''));
+  const connected = !!(window.CW && CW.consent && CW.consent());
+  const months = connected || has('m-interim') ? FIN_ACTUAL_Q.reduce((a, p) => a + p.months, 0) : 0;
+  return { hasBudget: has('m-budget') || imported, months };
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Realiserede perioder fra kontomappingen (src/mapping.js, window.CW_MAP).
+   Når kundens saldobalance fra e-conomic er hentet, og hver gang mappingen
+   gemmes, regnes Q1, Q2 og jul-aug 2026 i ANNUAL_REPORT om af de mappede
+   konti, og rækker uden ref og detaljelinjerne får egne kvartalstal (qvals).
+   Summerne regnes som i FIN_EDIT_SUMS. Egenkapitalen er saldoen på
+   egenkapitalkontiene plus årets resultat til og med perioden. Kan filen ikke
+   hentes, står periodetallene, som de er i ANNUAL_REPORT.
+   ──────────────────────────────────────────────────────────────────────── */
+let FIN_MAPPED = false;
+function finSyncMapping() {
+  const M = window.CW_MAP;
+  if (!M || !M.ready()) return false;
+  const res = M.compute();
+  const r6 = (v) => Math.round(v * 1e6) / 1e6;
+  const set = (label, vals) => { const r = FIN_ROW_BY_LABEL[label]; if (r && r.q) vals.forEach((v, i) => { r.q[i] = r6(v); }); };
+  const E = (label) => res.periods.map(p => p.entry[label] || 0);
+  const add = (...arrs) => arrs[0].map((_, i) => arrs.reduce((s, a) => s + a[i], 0));
+  const oms = E('Omsætning i alt'), vare = E('Vareforbrug/Produktionsomkostninger');
+  const bf = add(oms, vare);
+  const ebitda = add(bf, E('Personaleomkostninger'), E('Andre eksterne omkostninger'), E('Andre driftsindtægter'), E('Andre driftsomkostninger'));
+  const ebit = add(ebitda, E('Årets af- og nedskrivninger i alt'));
+  const result = add(ebit, E('Netto finansielle poster'), E('Skat af årets resultat i alt'));
+  let ytd = 0;
+  const ytdResult = result.map(v => (ytd += v));
+  const anl = add(E('Immaterielle anlægsaktiver i alt'), E('Materielle anlægsaktiver i alt'), E('Finansielle anlægsaktiver i alt'));
+  const oak = add(E('Varebeholdninger i alt'), E('Tilgodehavender i alt'), E('Værdipapirer'), E('Likvide beholdninger'));
+  const lang = E('Langfristet gæld i alt'), kort = E('Kortfristet gæld i alt');
+  set('Nettoomsætning', oms); set('Vareforbrug', vare); set('Bruttofortjeneste', bf);
+  set('Personaleomkostninger', E('Personaleomkostninger')); set('Andre eksterne omkostninger', E('Andre eksterne omkostninger'));
+  set('EBITDA', ebitda); set('Afskrivninger', E('Årets af- og nedskrivninger i alt')); set('Resultat før finansielle poster', ebit);
+  set('Finansielle omkostninger', E('Netto finansielle poster')); set('Årets resultat', result);
+  set('Anlægsaktiver', anl); set('Omsætningsaktiver', oak); set('Likvide beholdninger', E('Likvide beholdninger'));
+  set('Aktiver i alt', add(anl, oak)); set('Egenkapital', add(E('Egenkapital'), ytdResult));
+  set('Langfristet gæld', lang); set('Kortfristet gæld', kort); set('Gæld i alt', add(lang, kort));
+  FIN_LAYOUT.forEach(g => g.entries.forEach(e => {
+    if (!e.ref && !e.sum && !e.derive) { e.qvals = E(e.label).map(r6); e.qflow = g.label === 'Resultatopgørelse'; }
+    (e.children || []).forEach(c => { c.qvals = res.periods.map(p => r6(p.child[e.label + ' / ' + c.label] || 0)); });
+  }));
+  FIN_MAPPED = true;
+  return true;
+}
+window.addEventListener('cw-mapping-changed', () => { finSyncMapping(); });
 
 /* ─────────────────────────────────────────────────────────────────────────
    Rettelser i regnskabstabellen
@@ -663,7 +750,7 @@ const FIN_EDIT_COLS = [
   ...FIN_ANNUAL_YEARS.map((y, i) => ({ key: 'y' + i, kind: 'annual', idx: i, budget: false,
     name: () => y, source: () => t('Årsrapport') + ' ' + y })),
   ...FIN_ACTUAL_Q.map((p, i) => ({ key: 'q' + i, kind: 'q', idx: i, budget: false,
-    name: () => t(p.label) + ' ' + p.year, source: () => t('Periodetal') })),
+    name: () => t(p.label) + ' ' + p.year, source: () => (FIN_MAPPED ? t('Saldobalance fra e-conomic') : t('Periodetal')) })),
   { key: 'bs', kind: 'bs', budget: true,
     name: () => t(FIN_BUDGET_SEP.label) + ' ' + FIN_BUDGET_SEP.year + ' (' + t('budget') + ')', source: () => t('Kundens budget') },
   ...FIN_BUDGET_Q.map((p, i) => ({ key: 'b' + i, kind: 'b', idx: i, budget: true,
@@ -688,6 +775,8 @@ FIN_LAYOUT.forEach(g => g.entries.forEach(e => {
 }));
 const FIN_ROW_BY_LABEL = {};
 ANNUAL_REPORT.groups.forEach(g => g.rows.forEach(r => { FIN_ROW_BY_LABEL[r.label] = r; }));
+// Er saldobalancen allerede hentet, når filen indlæses, slår mappingen igennem med det samme
+finSyncMapping();
 
 // Det oprindelige tal (fra årsrapport, periodetal eller kundens budget), eller null
 // hvis cellen ikke har et tal og derfor ikke kan rettes
@@ -699,6 +788,17 @@ function finOriginal(rowRef, colKey) {
   const vals = p.child ? p.child.vals : p.entry.vals;
   return vals && vals[col.idx] != null ? vals[col.idx] : null;
 }
+
+// Det tal, en rettelse står i stedet for, som kilden siger nu. Efter en ommapning
+// kan det være et andet end det, der stod, da rettelsen blev lavet (x.original).
+// Omsætningen må mangle i en årsrapport (små virksomheder må udelade den). Så kan
+// rådgiveren indtaste den, fx fra en intern årsrapport. Summerne (bruttofortjeneste
+// osv.) står som i årsrapporten.
+function finFillable(rowRef, colKey) {
+  const col = FIN_EDIT_COL[colKey];
+  return !!col && col.kind === 'annual' && rowRef === 'Nettoomsætning';
+}
+function finOrigOf(x) { const o = finOriginal(x.rowRef, x.colKey); return o != null ? o : x.original; }
 
 // Summerne bag posterne. En rettelse lægges som en ændring oven i den oprindelige
 // sum, så kolonner uden rettelser står præcis som i kilderne. Rækkefølgen er vigtig.
@@ -740,7 +840,12 @@ function finApplyEdits(edits) {
         if (x && c.vals[col.idx] != null) { kids += x.value - c.vals[col.idx]; c.vals[col.idx] = x.value; }
       });
       const cur = e.ref ? finCellGet(byLabel[e.ref], col) : (col.kind === 'annual' && e.vals ? e.vals[col.idx] : null);
-      if (cur == null) return;
+      if (cur == null) {
+        // Et tal, årsrapporten ikke oplyser (omsætning): det indtastede står alene, summerne røres ikke
+        const x = own(ref);
+        if (x && e.ref && finFillable(e.ref, col.key)) finCellSet(byLabel[e.ref], col, x.value);
+        return;
+      }
       const x = own(ref);
       const next = x ? x.value : cur + kids;
       if (next === cur) return;
@@ -834,11 +939,11 @@ function finSaveEdits(changes, reason) {
   changes.forEach(ch => {
     const col = FIN_EDIT_COL[ch.colKey], p = FIN_POSTS[ch.rowRef];
     const original = finOriginal(ch.rowRef, ch.colKey);
-    if (!col || !p || original == null || ch.value == null || isNaN(ch.value)) return;
+    if (!col || !p || (original == null && !finFillable(ch.rowRef, ch.colKey)) || ch.value == null || isNaN(ch.value)) return;
     const from = finPostValue(current, ch.rowRef, col);
     if (from != null && Math.abs(ch.value - from) < 1e-9) return;
     const i = list.findIndex(x => x.rowRef === ch.rowRef && x.colKey === ch.colKey);
-    if (Math.abs(ch.value - original) < 1e-9) {
+    if (original != null && Math.abs(ch.value - original) < 1e-9) {
       if (i >= 0) list.splice(i, 1);
       else return;
       done.push({ rowRef: ch.rowRef, colKey: ch.colKey, from, to: original, removed: true });
@@ -1015,7 +1120,7 @@ function FinNotesPop({ anchor, comments, onAdd, onDelete, onClose }) {
             <li key={c.id}>
               <div className="fin-notes-meta">
                 <span>{c.by}{c.at ? ' · ' + finShortDate(c.at) : ''}</span>
-                <button type="button" title={t('Slet kommentaren')} aria-label={t('Slet kommentaren')} onClick={() => onDelete(c.id)}><I.X size={11}/></button>
+                <button type="button" title={t('Slet kommentaren')} aria-label={t('Slet kommentaren')} onClick={() => onDelete(c.id)}>{t('Slet')}</button>
               </div>
               <div className="fin-notes-text">{t(c.text)}</div>
             </li>
@@ -1048,6 +1153,9 @@ function AnnualReportSection({ go, unit, setUnit }) {
   const notes = React.useMemo(() => finLoadNotes(), [caseVersion]);
   const commentsOf = (ref, colKey) => finCommentsFor(notes, edits, ref, colKey);
   const locked = !!(CW.caseState() || {}).submittedAt;
+  // Hvad kunden har leveret (budget, periodetal): styrer 2026 og 2027 i graf og tabel
+  const data = finDataState();
+  const hasForecast = data.hasBudget || data.months > 0;
   const [editing, setEditing] = React.useState(null);   // { ref, col, text, initial, bad, typed }
   const editingRef = React.useRef(null);
   editingRef.current = editing;
@@ -1055,6 +1163,12 @@ function AnnualReportSection({ go, unit, setUnit }) {
   const [importMsg, setImportMsg] = React.useState(null);
   const fileRef = React.useRef(null);
   const undoBusy = React.useRef(false);
+  // Kontomappingen: de realiserede kvartaler kommer fra kundens saldobalance (src/mapping.js).
+  // Selve mapperen er et demopunkt i venstremenuen (Sidebar i shell.jsx); her åbnes den kun fra advarslen.
+  const mapRes = window.CW_MAP && CW_MAP.ready() ? CW_MAP.compute() : null;
+  const mapUnmapped = mapRes ? mapRes.unmapped : [];
+  const mapStatus = window.CW_MAP ? CW_MAP.status() : 'error';
+  const openMapper = () => { try { window.dispatchEvent(new CustomEvent('cw-open-mapper')); } catch (e) {} CW.focusSoon('#fin-mapper-title'); };
 
   // Kolonnerne i visningsrækkefølge. Årskolonnerne står altid først og flytter
   // sig ikke når kvartalerne foldes ud, så trendrækken bliver liggende.
@@ -1067,29 +1181,38 @@ function AnnualReportSection({ go, unit, setUnit }) {
   // group = båndets nøgle, groupLabel = dets overskrift, sep = lodret skel.
   const cols = React.useMemo(() => {
     const annual = FIN_ANNUAL_YEARS.map((y, i) => ({ key: 'y' + i, kind: 'annual', idx: i, ann: 1, group: 'annual', groupLabel: t('Årsrapporter'), label: y }));
-    const est = { key: 'est', kind: 'est', ann: 1, label: '2026E', note: 'jan-aug + budget', minWidth: 104,
-      title: 'Januar-august realiseret plus budget for september og Q4' };
-    const b9 = { key: 'b9', kind: 'b9', ann: 4 / 3, label: '2027B', note: '9 mdr. budget', minWidth: 96,
-      title: 'Kun 9 måneder: budget for Q1-Q3 2027. Kan ikke sammenlignes direkte med et helt år.' };
+    // 2026 og 2027 efter det, kunden har leveret (Regnskab v2)
+    const B = data.hasBudget, M = data.months;
+    const est = B && M ? { key: 'est', kind: 'est', ann: 1, label: '2026E', note: 'jan-aug + budget', minWidth: 104,
+        title: 'Januar-august realiseret plus budget for september og Q4' }
+      : B ? { key: 'est', kind: 'est', mode: 'budget', ann: 3, label: '2026E', note: 'sep-dec budget', minWidth: 104,
+        title: 'Der er ingen periodetal for 2026. Kolonnen er budgettet for september-december.' }
+      : M ? { key: 'est', kind: 'est', mode: 'ytd', ann: 12 / M, label: '2026', note: 'periodetal jan-aug', minWidth: 104,
+        title: 'Realiseret januar-august. Der er intet budget.' }
+      : { key: 'est', kind: 'est', off: true, ann: 1, label: '2026', note: 'ingen data', minWidth: 104 };
+    const b9 = B ? { key: 'b9', kind: 'b9', ann: 4 / 3, label: '2027B', note: '9 mdr. budget', minWidth: 96,
+        title: 'Kun 9 måneder: budget for Q1-Q3 2027. Kan ikke sammenlignes direkte med et helt år.' }
+      : { key: 'b9', kind: 'b9', off: true, ann: 1, label: '2027', note: M ? 'intet budget' : 'ingen data', minWidth: 96 };
+    const progLabel = B || M ? t('Prognose') : t('Ingen data');
     if (!showQuarters) {
-      return [...annual, { ...est, group: 'prog', groupLabel: t('Prognose'), sep: true }, { ...b9, group: 'prog', groupLabel: t('Prognose') }];
+      return [...annual, { ...est, group: 'prog', groupLabel: progLabel, sep: true }, { ...b9, group: 'prog', groupLabel: progLabel }];
     }
     const pending = { key: 'y' + FIN_ANNUAL_YEARS.length, kind: 'pending', ann: 1, group: 'annual', groupLabel: t('Årsrapporter'), zone: 'pending',
       label: FIN_ACTUAL_Q[0].year, note: 'ikke klar endnu', minWidth: 92,
       title: 'Årsrapporten for 2026 er ikke klar endnu. Året står som realiserede kvartaler og budget til højre.' };
     const realLabel = t('Realiseret kvartal') + ' · ' + FIN_ACTUAL_Q[0].year;
-    const q = FIN_ACTUAL_Q.map((p, i) => ({ key: 'q' + i, kind: 'q', idx: i, ann: 12 / p.months, partial: !!p.partial,
+    const q = FIN_ACTUAL_Q.map((p, i) => ({ key: 'q' + i, kind: 'q', idx: i, ann: 12 / p.months, partial: !!p.partial, off: !M,
       group: 'real', groupLabel: realLabel, zone: 'real', sep: i === 0,
       label: t(p.label), note: p.partial ? '2 mdr.' : null, minWidth: 82,
       title: p.partial ? 'Tredje kvartal er ikke afsluttet. Kolonnen dækker kun juli og august.' : undefined }));
     const budgetYears = [...new Set([FIN_BUDGET_SEP.year, ...FIN_BUDGET_Q.map(p => p.year)])].join('/');
     const budgetLabel = t('Budget') + ' · ' + budgetYears;
-    const bs = { key: 'bs', kind: 'bs', ann: 12, group: 'budget', groupLabel: budgetLabel, zone: 'budget', sep: true,
+    const bs = { key: 'bs', kind: 'bs', ann: 12, off: !B, group: 'budget', groupLabel: budgetLabel, zone: 'budget', sep: true,
       year: FIN_BUDGET_SEP.year, label: t(FIN_BUDGET_SEP.label), minWidth: 72, title: 'Budget for september 2026' };
-    const b = FIN_BUDGET_Q.map((p, i) => ({ key: 'b' + i, kind: 'b', idx: i, ann: 4, group: 'budget', groupLabel: budgetLabel, zone: 'budget',
+    const b = FIN_BUDGET_Q.map((p, i) => ({ key: 'b' + i, kind: 'b', idx: i, ann: 4, off: !B, group: 'budget', groupLabel: budgetLabel, zone: 'budget',
       year: p.year, label: p.label, minWidth: 72 }));
     return [...annual, pending, ...q, bs, ...b];
-  }, [showQuarters, window.CW_LANG]);
+  }, [showQuarters, window.CW_LANG, data.hasBudget, data.months]);
   // Gruppeoverskrifterne: én pr. række af kolonner med samme gruppe
   const colGroups = cols.reduce((a, c) => {
     const last = a[a.length - 1];
@@ -1130,7 +1253,7 @@ function AnnualReportSection({ go, unit, setUnit }) {
   const entryById = React.useMemo(() => { const m = {}; layout.forEach(g => g.entries.forEach(e => { if (e.id) m[e.id] = e; })); return m; }, [layout]);
   const entryVal = (e, col, ci) => finEntryVal(e, col, rowByLabel, model.entryByLabel);
   const annualVals = (e) => FIN_ANNUAL_YEARS.map((y, i) => (e.vals ? e.vals[i] : null));
-  const isEmpty = (e) => !e.ref && !e.derive && annualVals(e).every(v => v == null || v === 0);
+  const isEmpty = (e) => !e.ref && !e.derive && annualVals(e).every(v => v == null || v === 0) && (e.qvals || []).every(v => v == null || v === 0);
 
   /* ── Rettelser ─────────────────────────────────────────────────────────── */
   const fmtU = (v) => fmt(v, {});
@@ -1189,8 +1312,8 @@ function AnnualReportSection({ go, unit, setUnit }) {
   const resetCell = (x) => {
     const from = x.value;
     finRemoveEdits([x]);
-    finLogChanges([{ rowRef: x.rowRef, colKey: x.colKey, from, to: x.original, removed: true }]);
-    CW.toast(finFill(t('{post} er nulstillet til {tal}'), { post: finEditName(x.rowRef, x.colKey), tal: fmtU(x.original) }), {
+    finLogChanges([{ rowRef: x.rowRef, colKey: x.colKey, from, to: finOrigOf(x), removed: true }]);
+    CW.toast(finFill(t('{post} er nulstillet til {tal}'), { post: finEditName(x.rowRef, x.colKey), tal: (fmtU(finOrigOf(x)) || '-') }), {
       action: { label: t('Fortryd'), onClick: () => { const d = finSaveEdits([{ rowRef: x.rowRef, colKey: x.colKey, value: from }], x.reason || ''); finLogChanges(d); } },
     });
     CW.focusSoon(cellEl(x.rowRef, x.colKey));
@@ -1225,8 +1348,8 @@ function AnnualReportSection({ go, unit, setUnit }) {
       >
         {x && !isEd && (
           <span className="fin-editmark" role="img"
-            title={finFill(t('Rettet af {navn} {dato}. Oprindeligt {tal} ({kilde}).'), { navn: x.by, dato: finShortDate(x.at), tal: fmtU(x.original), kilde: FIN_EDIT_COL[col.key].source() }).replace('..', '.')}
-            aria-label={finFill(t('Rettet af {navn} {dato}. Oprindeligt {tal} ({kilde}).'), { navn: x.by, dato: finShortDate(x.at), tal: fmtU(x.original), kilde: FIN_EDIT_COL[col.key].source() }).replace('..', '.')}>
+            title={finFill(t('Rettet af {navn} {dato}. Oprindeligt {tal} ({kilde}).'), { navn: x.by, dato: finShortDate(x.at), tal: (fmtU(finOrigOf(x)) || '-'), kilde: FIN_EDIT_COL[col.key].source() }).replace('..', '.')}
+            aria-label={finFill(t('Rettet af {navn} {dato}. Oprindeligt {tal} ({kilde}).'), { navn: x.by, dato: finShortDate(x.at), tal: (fmtU(finOrigOf(x)) || '-'), kilde: FIN_EDIT_COL[col.key].source() }).replace('..', '.')}>
             <span className="fin-editdot"/>
           </span>
         )}
@@ -1240,8 +1363,8 @@ function AnnualReportSection({ go, unit, setUnit }) {
               {nCom > 0 && <span className="fin-ccount">{nCom}</span>}
             </button>
             {x && (
-              <button type="button" title={finFill(t('Nulstil til {tal}'), { tal: fmtU(x.original) })}
-                aria-label={finFill(t('Nulstil {post} til {tal}'), { post: name, tal: fmtU(x.original) })}
+              <button type="button" title={finFill(t('Nulstil til {tal}'), { tal: (fmtU(finOrigOf(x)) || '-') })}
+                aria-label={finFill(t('Nulstil {post} til {tal}'), { post: name, tal: (fmtU(finOrigOf(x)) || '-') })}
                 onMouseDown={(e) => e.stopPropagation()}
                 onClick={(e) => { e.stopPropagation(); resetCell(x); }}>
                 <I.Undo size={12}/>
@@ -1273,7 +1396,7 @@ function AnnualReportSection({ go, unit, setUnit }) {
       </td>
     );
   };
-  const canEdit = (ref, col) => !!FIN_EDIT_COL[col.key] && finOriginal(ref, col.key) != null;
+  const canEdit = (ref, col) => !col.off && !!FIN_EDIT_COL[col.key] && (finOriginal(ref, col.key) != null || finFillable(ref, col.key));
 
   // Excel: budgetkvartalerne ud og ind. Importerede tal bliver rettelser.
   const budgetCols = FIN_EDIT_COLS.filter(c => c.budget);
@@ -1384,7 +1507,7 @@ function AnnualReportSection({ go, unit, setUnit }) {
   return (
     <FinSection
       title={t('Regnskab')}
-      sub={locked ? t('Årsrapporter fra CVR og kundens egne tal for 2026 og budget.') : t('Årsrapporter fra CVR og kundens egne tal for 2026 og budget. Klik på et tal for at rette det.')}
+      sub={locked ? t('Årsrapporter fra CVR, kundens bogføring for 2026 fra e-conomic via kontomappingen og budget.') : t('Årsrapporter fra CVR, kundens bogføring for 2026 fra e-conomic via kontomappingen og budget. Klik på et tal for at rette det.')}
       badge={
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
         <button
@@ -1429,6 +1552,15 @@ function AnnualReportSection({ go, unit, setUnit }) {
           </button>
         </span>
       </div>
+      {(mapUnmapped.length > 0 || mapStatus === 'error') && (
+        <div role="status" className="fin-map-note">
+          <I.AlertTriangle size={13} aria-hidden="true"/>
+          <span>{mapStatus === 'error'
+            ? t('Kundens saldobalance fra e-conomic kunne ikke hentes. De realiserede kvartaler står efter periodetallene.')
+            : finFill(mapUnmapped.length === 1 ? t('1 konto fra e-conomic er ikke mappet, så beløbet mangler i de realiserede kvartaler.') : t('{n} konti fra e-conomic er ikke mappet, så beløbene mangler i de realiserede kvartaler.'), { n: mapUnmapped.length })}</span>
+          {mapStatus !== 'error' && <button type="button" className="btn-link" onClick={openMapper}>{t('Åbn kontomapping')}</button>}
+        </div>
+      )}
       {importMsg && (
         <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: importMsg.err ? 'var(--c-danger)' : 'var(--c-text-2)', margin: '-2px 0 10px' }}>
           <span>{importMsg.text}</span>
@@ -1437,13 +1569,17 @@ function AnnualReportSection({ go, unit, setUnit }) {
       )}
       {reasonFor && <FinNotesPop anchor={() => cellEl(reasonFor.ref, reasonFor.col)} comments={commentsOf(reasonFor.ref, reasonFor.col)}
         onAdd={(txt) => finAddNote(reasonFor.ref, reasonFor.col, txt)} onDelete={(id) => finDeleteNote(id, reasonFor.ref, reasonFor.col)} onClose={closeReason}/>}
+      {/* Grafen (src/fin_chart.jsx) i sit eget kort over tabellen */}
+      <FinChart model={model} unit={unit} fmt={fmt} data={data} locked={locked} go={go}
+        onImport={() => fileRef.current && fileRef.current.click()}/>
       <div className="card" style={{ overflow: 'clip' }}>
-        {/* Uden kvartaler: clip, så kolonnenavnene følger siden. Med kvartaler er tabellen bredere end siden og ruller vandret; så får omslaget en højde og ruller også lodret, og kolonnenavnene sidder fast i det. */}
-        <div className="fin-wrap" style={showQuarters ? { overflow: 'auto', maxHeight: 'calc(100vh - 230px)' } : { overflowX: 'clip' }}>
-          <table id="fin-annual-table" className="fin-tbl">
+        {/* Uden kvartaler: clip, så kolonnenavnene følger siden. Med kvartaler er tabellen bredere end siden og ruller vandret; siden ruller lodret, så grafen over tabellen ruller væk med rækkerne. */}
+        <div className="fin-wrap" style={showQuarters ? { overflowX: 'auto' } : { overflowX: 'clip' }}>
+          <table id="fin-annual-table" className={'fin-tbl' + (showQuarters ? ' fin-q' : '')}>
             <thead>
               <tr>
-                <th className="fin-c1" rowSpan={2} style={{ verticalAlign: 'middle', borderBottom: '1px solid var(--c-line)', width: showQuarters ? undefined : 330 }}>
+                {/* Rækkenavnene er præcis så brede som det længste navn (width 1 %), så tallene og grafen over tabellen får pladsen */}
+                <th className="fin-c1" rowSpan={2} style={{ verticalAlign: 'middle', borderBottom: '1px solid var(--c-line)', width: showQuarters ? undefined : '1%' }}>
                   <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--c-text-3)' }}>{t('Regnskabspost')}</span>
                 </th>
                 {colGroups.map(g => (
@@ -1453,12 +1589,12 @@ function AnnualReportSection({ go, unit, setUnit }) {
                     {g.group === 'prog' ? (
                       <span className="fin-band-row">
                         <span>{g.label}</span>
-                        <button type="button" className="fin-qtoggle" data-fin-toggle="expand"
+                        {hasForecast && <button type="button" className="fin-qtoggle" data-fin-toggle="expand"
                           aria-expanded="false" aria-controls="fin-annual-table" onClick={() => toggleQuarters(true)}
                           title={t('Vis kvartalerne bag 2026E og 2027B')}>
                           {t('Udfold kvartaler')}
                           <I.ChevronRight size={12} aria-hidden="true"/>
-                        </button>
+                        </button>}
                       </span>
                     ) : g.group === 'real' ? (
                       <span className="fin-band-row">
@@ -1527,7 +1663,7 @@ function AnnualReportSection({ go, unit, setUnit }) {
                         <td className="fin-c1"><span style={{ paddingLeft: 30, color: 'var(--c-text-2)' }}>{t(c.label)}</span></td>
                         {cols.map((col, ci) => (!e.sum && !e.derive && canEdit(cref, col)
                           ? editCell(cref, c.label, col, c.vals[col.idx])
-                          : numCell(col, ci, fmt(col.kind === 'annual' ? c.vals[col.idx] : null, {}))))}
+                          : numCell(col, ci, fmt(finChildVal(c, col), {}))))}
                       </tr>
                     );
                   });
@@ -1587,12 +1723,16 @@ function AnnualReportSection({ go, unit, setUnit }) {
             {t('Kilder')}:{' '}
             {[
               ...FIN_ANNUAL_YEARS.map(y => ({ key: y, label: t('Årsrapport') + ' ' + y, doc: finSourceDoc('Årsrapport', y) })),
-              { key: 'periode', label: t('Periodetal'), doc: finSourceDoc('Periodetal') },
+              FIN_MAPPED
+                ? { key: 'saldo', label: t('Saldobalance fra e-conomic (kontomapping)') }
+                : { key: 'periode', label: t('Periodetal'), doc: finSourceDoc('Periodetal') },
               { key: 'budget', label: t('Budget'), doc: finSourceDoc('Budget') },
             ].map((it, i) => (
               <React.Fragment key={it.key}>
                 {i > 0 && ' · '}
-                {it.doc && go
+                {it.onClick
+                  ? <button type="button" onClick={it.onClick} style={{ background: 'none', border: 0, padding: 0, font: 'inherit', color: 'var(--c-primary)', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2 }}>{it.label}</button>
+                  : it.doc && go
                   ? <button type="button" onClick={() => {
                       const detail = { doc: it.doc.id, name: it.doc.name, ref: null, back: null };
                       try { sessionStorage.setItem('kabul:open-doc', JSON.stringify(detail)); } catch (e) {}
@@ -1857,7 +1997,7 @@ function exFinancialsPages() {
       (e.children || []).forEach(c => {
         if (isZero(c.vals)) return;
         const r1 = main.length;
-        main.push(line(['- ' + t(c.label)].concat(mainCols.map(col => (col.kind === 'annual' ? money(c.vals[col.idx]) : '-'))).concat(editNote(ref + ' / ' + c.label, mainCols))));
+        main.push(line(['- ' + t(c.label)].concat(mainCols.map(col => money(finChildVal(c, col)))).concat(editNote(ref + ' / ' + c.label, mainCols))));
         addC(cmts.main, r1, ref + ' / ' + c.label, mainCols);
       });
     });
@@ -1868,7 +2008,9 @@ function exFinancialsPages() {
   // Ark 2: kvartalerne bag 2026E og 2027B (rå poster og nøgletal)
   const qs = [
     DATA.COMPANY.name + ' - ' + t('Kvartaler'),
-    t('Realiseret 2026 efter periodetal, budget efter budgetversionen på sagen. Beløb i DKK t.'),
+    FIN_MAPPED
+      ? t('Realiseret 2026 efter kundens saldobalance fra e-conomic, mappet til Crediwires kategorier. Budget efter budgetversionen på sagen. Beløb i DKK t.')
+      : t('Realiseret 2026 efter periodetal, budget efter budgetversionen på sagen. Beløb i DKK t.'),
     '',
     line([t('Regnskabspost')].concat(qCols.map(c => c.head)).concat(edits.length ? [t('Note')] : [])),
   ];
@@ -1885,11 +2027,11 @@ function exFinancialsPages() {
 
   // Ark 3: noter og kilder
   const docOf = finSourceDoc;
-  const sources = FIN_ANNUAL_YEARS.map(y => docOf('Årsrapport', y)).concat([docOf('Periodetal'), docOf('Budget')]).filter(Boolean).map(d => d.name);
+  const sources = FIN_ANNUAL_YEARS.map(y => docOf('Årsrapport', y)).concat([FIN_MAPPED ? { name: CW_MAP.FILE_NAME } : docOf('Periodetal'), docOf('Budget')]).filter(Boolean).map(d => d.name);
   // Rettelserne én pr. linje, i DKK t.
   const editLines = edits.slice()
     .sort((a, b) => (FIN_POST_ORDER.indexOf(a.rowRef) - FIN_POST_ORDER.indexOf(b.rowRef)) || (FIN_EDIT_COL[a.colKey].order - FIN_EDIT_COL[b.colKey].order))
-    .map(x => finEditName(x.rowRef, x.colKey) + ': ' + finLogNum(x.original) + ' → ' + finLogNum(finPostValue(model, x.rowRef, FIN_EDIT_COL[x.colKey]))
+    .map(x => finEditName(x.rowRef, x.colKey) + ': ' + finLogNum(finOrigOf(x)) + ' → ' + finLogNum(finPostValue(model, x.rowRef, FIN_EDIT_COL[x.colKey]))
       + ' (' + [x.by, finShortDate(x.at), x.reason ? t(x.reason) : ''].filter(Boolean).join(', ') + ')');
   const notes = [
     t('Noter til regnskabstabellen'),

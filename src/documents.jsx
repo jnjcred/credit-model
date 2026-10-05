@@ -12,25 +12,40 @@ function docFill(s, vars) {
   return String(s).replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
 }
 
-// Emner i dokumentlisten (samme som i anmodningen), ud fra dokumenttypen
-const DOC_CATS = [
-  { key: 'fin',    label: 'Regnskab og budget',  types: ['Årsrapport', 'Periodetal', 'Budget'] },
-  { key: 'debt',   label: 'Gæld og sikkerheder', types: ['Låneaftale', 'Sikkerhed'] },
-  { key: 'market', label: 'Marked og drift',     types: ['Kontrakt', 'Marked', 'Salg', 'Præsentation'] },
-  { key: 'owners', label: 'Ejere og selskab',    types: ['Selskab'] },
+// Emner i dokumentlisten: de fire fra anmodningen og kundens portal (CW.MATERIAL_CATS)
+// plus sagens egne dokumenter og Crediwires eksporter. En fil, der hører til et
+// punkt, står under punktets emne; andre dokumenter efter dokumenttypen.
+const DOC_CATS = CW.MATERIAL_CATS.map(c => ({ key: c.key, label: c.label, types: c.types })).concat([
   { key: 'case',   label: 'Ansøgning og rating', types: ['Ansøgning', 'Ratingberegning'] },
   { key: 'export', label: 'Eksport fra Crediwire', types: ['Crediwire-eksport'] },
-];
+]);
+function docCatKey(d) {
+  if (d.itemId) {
+    const it = CW.itemById(d.itemId);
+    const label = it ? CW.itemCat(it) : null;
+    const c = label && DOC_CATS.find(x => x.label === label);
+    if (c) return c.key;
+    if (it) return 'other';
+  }
+  const c = DOC_CATS.find(x => x.types.includes(d.type));
+  return c ? c.key : 'other';
+}
 
-// Dokumenttype ud fra det anmodede punkt, ellers ud fra filnavnet
+// Dokumenttype ud fra det anmodede punkt, ellers ud fra filnavnet. Typen hører
+// til samme emne som punktet (CW.MATERIAL_CATS.types).
 const DOC_TYPE_BY_ITEM = {
   'm-annual': 'Årsrapport', 'm-interim': 'Periodetal', 'm-budget': 'Budget', 'm-pitch': 'Præsentation',
   'm-ejerbog': 'Selskab', 'm-loans': 'Låneaftale', 'm-security': 'Sikkerhed', 'm-trade': 'Salg', 'm-ownership': 'Selskab',
-  'm-fx': 'Selskab', 'm-orderbook': 'Kontrakt',
-  'm-assumptions': 'Budget', 'm-lowcase': 'Budget', 'm-group': 'Årsrapport', 'm-protocol': 'Årsrapport', 'm-tech': 'Periodetal',
-  'm-agri': 'Periodetal', 'm-capital': 'Selskab', 'm-bizplan': 'Præsentation',
-  'm-pub-cvr': 'Selskab', 'm-pub-market': 'Præsentation', 'm-pub-product': 'Præsentation',
+  'm-fx': 'Valuta', 'm-orderbook': 'Kontrakt',
+  'm-assumptions': 'Budget', 'm-lowcase': 'Budget', 'm-group': 'Årsrapport', 'm-protocol': 'Årsrapport', 'm-tech': 'Nøgletal',
+  'm-agri': 'Nøgletal', 'm-capital': 'Selskab', 'm-bizplan': 'Præsentation',
+  'm-pub-cvr': 'Selskab', 'm-pub-market': 'Marked', 'm-pub-product': 'Marked',
 };
+function docTypeForItem(itemId) {
+  if (!itemId) return null;
+  if (/^m-annual-/.test(itemId)) return 'Årsrapport';
+  return DOC_TYPE_BY_ITEM[itemId] || null;
+}
 function inferDocType(name) {
   const n = String(name || '').toLowerCase();
   if (n.includes('aarsrapport') || n.includes('årsrapport')) return 'Årsrapport';
@@ -44,7 +59,7 @@ function inferDocType(name) {
 // Forslag til punkt i upload-dialogen (vises, vælges ikke i det skjulte)
 function suggestItemFor(files, requested) {
   const type = inferDocType(files[0] && files[0].name);
-  const hit = requested.find(it => DOC_TYPE_BY_ITEM[it.id] === type && !CW.isApproved(it.id));
+  const hit = requested.find(it => docTypeForItem(it.id) === type && !CW.isApproved(it.id));
   return hit ? hit.id : '';
 }
 
@@ -55,7 +70,7 @@ function docFromUpload(f) {
   return {
     fileId: f.id,
     name: f.name,
-    type: (f.itemId && DOC_TYPE_BY_ITEM[f.itemId]) || inferDocType(f.name),
+    type: docTypeForItem(f.itemId) || inferDocType(f.name),
     year: '-',
     size: f.sizeLabel,
     sizeBytes: f.size,
@@ -391,9 +406,33 @@ function WSDocuments() {
 
   // Samme emner som i anmodningen og kundens portal. Om et dokument er hentet
   // offentligt eller uploadet, står i rækkens grå linje (kilden).
-  const inCat = (c) => (d) => c.types.includes(d.type);
-  const groups = DOC_CATS.map(c => ({ key: c.key, label: c.label, items: docs.filter(inCat(c)) }))
-    .concat([{ key: 'other', label: 'Øvrigt', items: docs.filter(d => !DOC_CATS.some(c => inCat(c)(d))) }]);
+  const groups = DOC_CATS.map(c => ({ key: c.key, label: c.label, items: docs.filter(d => docCatKey(d) === c.key) }))
+    .concat([{ key: 'other', label: 'Øvrigt', items: docs.filter(d => docCatKey(d) === 'other') }]);
+
+  // Alle filer kan slettes og gendannes (CW.removeDoc / CW.restoreDoc). Slettede
+  // filer står i folden Slettet nederst: sagens egne dokumenter og uploads.
+  const removedMap = CW.removedDocs();
+  const removed = Object.keys(removedMap).map(key => {
+    const r = removedMap[key];
+    if (r.kind === 'upload') return { key, name: r.name || (r.file && r.file.name) || key, source: r.file && r.file.by === 'rådgiver' ? 'Uploadet af rådgiver' : 'Kundeupload', r };
+    const d = (DATA.ALL_DOCS || []).find(x => x.name === key);
+    return d ? { key, name: d.name, source: d.sourceLabel || 'CVR', r } : null;
+  }).filter(Boolean).sort((a, b) => String(b.r.at || '').localeCompare(String(a.r.at || '')));
+  function removeDoc(d) {
+    CW.confirm({
+      title: docFill(t('Slet {navn}?'), { navn: d.name }),
+      text: t('Filen fjernes fra sagen. Du kan gendanne den under Slettet nederst i Dokumenter.'),
+      confirmLabel: t('Slet'), danger: true,
+    }).then(r => {
+      if (!r || !r.ok) return;
+      const res = CW.removeDoc(d.fileId ? { fileId: d.fileId } : d.name);
+      if (!res) return;
+      const it = res.itemReset && res.itemId ? CW.itemById(res.itemId) : null;
+      CW.toast(it ? docFill(t('{navn} er slettet. {punkt} mangler nu en fil.'), { navn: d.name, punkt: t(it.label) }) : docFill(t('{navn} er slettet'), { navn: d.name }),
+        { action: { label: t('Fortryd'), onClick: () => CW.restoreDoc(res.key) } });
+      CW.focusSoon('#doc-removed .cw-fold');
+    });
+  }
   const groupCount = (items) => items.reduce((n, d) => n + 1 + olderOf(d).length, 0);
 
   const selCase = selected && !selected.fileId ? findCaseDoc(selected.name) : null;
@@ -463,11 +502,34 @@ function WSDocuments() {
                   </h2>
                   {g.items.map(d => (
                     <DocRow key={docKey(d)} d={d} older={olderOf(d)} openOlder={!!ql && olderOf(d).some(hit)}
-                      hiKey={hiKey} selectedKey={selKey} onSelect={select} preview={DOC_PREVIEW}/>
+                      hiKey={hiKey} selectedKey={selKey} onSelect={select} preview={DOC_PREVIEW}
+                      onRemove={CW.canRemoveDoc(d) ? () => removeDoc(d) : null}/>
                   ))}
                 </div>
               )
             ))}
+            {/* Slettede, hentede dokumenter kan gendannes */}
+            {removed.length > 0 && (
+              <div id="doc-removed">
+              <CWFold id="doc-removed-list" className="doc-older" label={t('Slettet')} count={removed.length} style={{ marginTop: 14 }}>
+                {removed.map(d => {
+                  const r = d.r;
+                  return (
+                    <div key={d.key} className="cw-row">
+                      <div className="cw-row-main">
+                        <span className="cw-row-title" style={{ color: 'var(--c-text-2)' }}><s>{d.name}</s></span>
+                        <span className="cw-row-meta">{docMeta([t(d.source), docFill(t('slettet {dato} af {navn}'), { dato: CW.fmtDate(r.at), navn: r.by || '' })])}</span>
+                      </div>
+                      <button type="button" className="btn btn-sm" aria-label={docFill(t('Gendan {navn}'), { navn: d.name })}
+                        onClick={() => { CW.restoreDoc(d.key); CW.toast(docFill(t('{navn} er gendannet'), { navn: d.name })); }}>
+                        <I.Undo size={12} aria-hidden="true"/> {t('Gendan')}
+                      </button>
+                    </div>
+                  );
+                })}
+              </CWFold>
+              </div>
+            )}
             {docs.length === 0 && (
               <div style={{ padding: '24px 0', fontSize: 13, color: 'var(--c-text-3)', textAlign: 'center' }}>
                 {t('Ingen dokumenter matcher søgningen.')}
@@ -671,7 +733,7 @@ function docMeta(parts) {
 /* Én stille række som i "Anmod om materiale": filnavnet med fed er linket, der
    henter filen, én grå metalinje og typen som grå tekst til højre. Med viser
    (DOC_PREVIEW) vælger filnavnet i stedet dokumentet til viseren. */
-function DocRow({ d, older, openOlder, hiKey, selectedKey, onSelect, preview }) {
+function DocRow({ d, older, openOlder, hiKey, selectedKey, onSelect, preview, onRemove }) {
   const key = docKey(d);
   const url = d.fileId ? CW.fileUrl(d.fileId) : null;
   const [showOlder, setShowOlder] = React.useState(false);
@@ -716,7 +778,15 @@ function DocRow({ d, older, openOlder, hiKey, selectedKey, onSelect, preview }) 
           <span className="cw-row-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
           <span className="cw-row-meta">{meta}</span>
         </div>
-        <span className="cw-row-cat">{t(d.type)}</span>
+        {onRemove ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span className="cw-row-cat">{t(d.type)}</span>
+            <button type="button" className="icon-btn doc-remove" onClick={onRemove} style={{ margin: '-4px -6px -4px 0' }}
+              aria-label={docFill(t('Slet {navn}'), { navn: d.name })} title={t('Slet filen')}>
+              <I.Trash size={14}/>
+            </button>
+          </span>
+        ) : <span className="cw-row-cat">{t(d.type)}</span>}
       </div>
       {hasOlder && (
         <CWFold className="doc-older" label={t('Tidligere versioner')} count={older.length} open={showOlder} onToggle={setShowOlder}>

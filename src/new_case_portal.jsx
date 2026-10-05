@@ -638,6 +638,71 @@ function demoFileName(it) {
   return (base || 'Dokument') + '.pdf';
 }
 
+/* Demo: rådgiveren spiller kunden og uploader sagens demofil til ét punkt ad gangen
+   (samme filer som "Udfyld alt (demo)"). Står kun i demobjælken nederst. */
+const DEMO_COUNTRIES = [{ code: 'DK', name: 'Danmark', pct: 39 }, { code: 'DE', name: 'Tyskland', pct: 26 }, { code: 'GB', name: 'Storbritannien', pct: 20 }, { code: 'US', name: 'USA', pct: 15 }];
+function portalDemoFileFor(it) {
+  return CW.demoUploadFile(it.id) || demoPdf(demoFileName(it), t(it.label) + ' - ' + DATA.COMPANY.name);
+}
+function portalDemoUploadOne(it) {
+  if (it.form === 'countries') {
+    CW.markReceived(it.id, { by: 'kunde', files: [], note: '', answers: { countries: DEMO_COUNTRIES } });
+  } else {
+    const file = portalDemoFileFor(it);
+    CW.markReceived(it.id, { by: 'kunde', files: CW.putFiles([file], { by: 'kunde', itemId: it.id }), note: '' });
+  }
+  CW.toast(ncFill(t('{item} er sendt (demo)'), { item: t(it.label) }));
+}
+function PortalDemoUploads({ requested }) {
+  CW.useCase();
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') { setOpen(false); CW.focusSoon('#cwp-demo-items-btn'); } };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+  // Filnavnet vises, før der klikkes (navnet uden at bygge filen)
+  const fileLabel = (it) => {
+    if (it.form === 'countries') return t('Landefordeling udfyldes');
+    return (CW.demoUploadName && CW.demoUploadName(it.id)) || demoFileName(it);
+  };
+  const doneLabel = { received: t('Sendt'), noted: t('Sendt'), approved: t('Godkendt'), delegated: t('Sendt videre') };
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button id="cwp-demo-items-btn" type="button" className="cwp-demo-fill" aria-expanded={open} aria-controls="cwp-demo-panel" onClick={() => setOpen(v => !v)}>
+        {t('Upload demofil pr. punkt')}
+      </button>
+      {open && (
+        <div id="cwp-demo-panel" className="cwp-demo-panel" role="group" aria-label={t('Upload demofil pr. punkt')}>
+          <div className="cwp-demo-panel-head">{t('Demo: send sagens fil til ét punkt ad gangen, som om kunden havde uploadet den.')}</div>
+          {requested.map(it => {
+            const st = portalStatus(it.id);
+            const done = doneLabel[st];
+            return (
+              <div key={it.id} className="cwp-demo-item">
+                <div className="cwp-demo-item-main">
+                  <div className="cwp-demo-item-label">{t(it.label)}</div>
+                  <div className="cwp-demo-item-file" title={fileLabel(it)}>{fileLabel(it)}</div>
+                </div>
+                {done
+                  ? <span className="cwp-demo-item-done"><I.Check size={12} aria-hidden="true"/>{done}</span>
+                  : <button type="button" className="btn btn-sm" onClick={() => portalDemoUploadOne(it)}
+                      aria-label={ncFill(t('Upload demofil til {item}'), { item: t(it.label) })}>
+                      {st === 'rejected' ? t('Send igen') : t('Upload')}
+                    </button>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Regnskabssystemet (demo): samtykke, hentning og saldobalance ─────────── */
 
 const ERP_SOURCES = [
@@ -765,6 +830,15 @@ const PORTAL_CSS = `
 .cwp .cwp-demo > * { pointer-events: auto; }
 .cwp .cwp-demo-back { background: var(--c-primary); color: #fff; border: none; padding: 8px 12px; min-height: 32px; border-radius: 999px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-lg); font-family: inherit; }
 .cwp .cwp-demo-fill { background: transparent; color: var(--c-text-4); border: none; padding: 4px 8px; min-height: 28px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; }
+.cwp .cwp-demo-right { display: flex; align-items: center; gap: 4px; position: relative; }
+.cwp .cwp-demo-fill[aria-expanded="true"] { color: var(--c-ink); background: var(--c-surface-2); }
+.cwp .cwp-demo-panel { position: absolute; right: 0; bottom: calc(100% + 8px); width: 380px; max-width: calc(100vw - 36px); max-height: min(60vh, 520px); overflow: auto; padding: 6px; background: var(--c-surface); border: 1px dashed var(--c-line-strong); border-radius: 10px; box-shadow: var(--shadow-lg); }
+.cwp .cwp-demo-panel-head { padding: 6px 8px 8px; font-size: 12px; color: var(--c-text-3); line-height: 1.45; }
+.cwp .cwp-demo-item { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-top: 1px solid var(--c-line-2); }
+.cwp .cwp-demo-item-main { flex: 1; min-width: 0; }
+.cwp .cwp-demo-item-label { font-size: 13px; color: var(--c-ink); }
+.cwp .cwp-demo-item-file { font-size: 11.5px; color: var(--c-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cwp .cwp-demo-item-done { font-size: 12px; color: var(--c-success); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
 @keyframes cwp-spin { to { transform: rotate(360deg); } }
 @media (max-width: 600px) {
   .cwp .cwp-main { padding: 18px 16px 24px !important; }
@@ -1100,7 +1174,12 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
         <div className="cwp-demo">
           <button type="button" className="cwp-demo-back" onClick={back}><I.ArrowLeft size={12}/> {t('Tilbage til rådgiver-visning')}</button>
           {hasReq && !lock && (!loggedIn || obStep) && <button type="button" className="cwp-demo-fill" onClick={demoSkip}>{demoSkipLabel}</button>}
-          {hasReq && loggedIn && !obStep && !lock && <button type="button" className="cwp-demo-fill" onClick={fillAll}>{t('Udfyld alt (demo)')}</button>}
+          {hasReq && loggedIn && !obStep && !lock && (
+            <span className="cwp-demo-right">
+              <PortalDemoUploads requested={requested}/>
+              <button type="button" className="cwp-demo-fill" onClick={fillAll}>{t('Udfyld alt (demo)')}</button>
+            </span>
+          )}
         </div>
       )}
 

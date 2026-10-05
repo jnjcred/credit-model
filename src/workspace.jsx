@@ -1434,8 +1434,9 @@ function WSActivity() {
    ──────────────────────────────────────────────────────────────────────── */
 const AUTO_SOURCES = [
   { src: "CVR-registret", what: "Selskab, vedtægter, bestyrelse", reports: true },
-  { src: "Branche­opslag", what: "Markedsdata" },
-  { src: "Bløde signaler", what: "Trustpilot, hjemmeside, presse, virksomhedsbeskrivelser" },
+  // docs: Crediwires egne eksporter (financials.jsx, CW_EXPORT_DOCS), som kan hentes ligesom årsrapporterne
+  { src: "Branche­opslag", what: "Markedsdata", docs: [{ name: 'Produkt_marked_og_branche.pdf', label: 'Produkt, marked og branche' }] },
+  { src: "Bløde signaler", what: "Trustpilot, hjemmeside, presse, virksomhedsbeskrivelser", docs: [{ name: 'Trustpilot.pdf', label: 'Trustpilot' }] },
 ];
 
 // Dagen de offentlige data blev hentet (sagens tidslinje i data.js), samme dato som stamdata
@@ -1462,22 +1463,36 @@ function WSPublicSources({ go, caseId }) {
           <div className="cw-row-main">
             <span className="cw-row-title">{t(x.src)}</span>
             <span className="cw-row-meta">{t(x.what)} · <span style={{ color: 'var(--c-text-3)' }}>{fetched}</span></span>
-            {x.reports && reports.length > 0 && (
-              <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: 0 }}>
-                {reports.map(y => {
-                  const d = reportDoc(y);
-                  const url = d && d.fileId ? CW.fileUrl(d.fileId) : null;
-                  return (
-                    <li key={y} className="ws-req-file" style={{ fontSize: 13, padding: '2px 0', gap: 10 }}>
-                      <I.FileText size={12} aria-hidden="true" style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
-                      {url ? <a className="btn-link" href={url} download={d.name} title={t('Download')}>{t('Årsrapport') + ' ' + y}</a>
-                        : d ? <button type="button" className="btn-link" title={t('Download')} onClick={() => CW.downloadDoc(d.name)}>{t('Årsrapport') + ' ' + y}</button>
-                        : <span>{t('Årsrapport') + ' ' + y}</span>}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+            {(() => {
+              // Årsrapporterne fra CVR, eller kildens egne dokumenter (eksporterne)
+              const items = x.reports
+                ? reports.map(y => ({ key: y, label: t('Årsrapport') + ' ' + y, doc: reportDoc(y) }))
+                : (x.docs || []).map(o => ({ key: o.name, label: t(o.label), doc: (window.CASE_DOCS || []).concat(window.CW_EXPORT_DOCS || []).find(d => d.name === o.name) }));
+              if (!items.length) return null;
+              return (
+                <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: 0 }}>
+                  {items.map(it => {
+                    const d = it.doc;
+                    const url = d && d.fileId ? CW.fileUrl(d.fileId) : null;
+                    // Slettet under Dokumenter (fx forkert årsrapport): navnet står, men uden link
+                    if (d && CW.isDocRemoved(d.name)) return (
+                      <li key={it.key} className="ws-req-file" style={{ fontSize: 13, padding: '2px 0', gap: 10, color: 'var(--c-text-3)' }}>
+                        <I.FileText size={12} aria-hidden="true" style={{ flexShrink: 0 }}/>
+                        <span><s>{it.label}</s> · {t('slettet')}</span>
+                      </li>
+                    );
+                    return (
+                      <li key={it.key} className="ws-req-file" style={{ fontSize: 13, padding: '2px 0', gap: 10 }}>
+                        <I.FileText size={12} aria-hidden="true" style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
+                        {url ? <a className="btn-link" href={url} download={d.name} title={t('Download')}>{it.label}</a>
+                          : d ? <button type="button" className="btn-link" title={t('Download')} onClick={() => CW.downloadDoc(d.name)}>{it.label}</button>
+                          : <span>{it.label}</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              );
+            })()}
           </div>
           <span/>
         </div>
@@ -1683,21 +1698,11 @@ function WSDraftBar({ caseData }) {
   );
 }
 
-// Emnerne i materialevalget
-const WS_MATERIAL_CATS = [
-  { key: 'fin', label: 'Regnskab og budget', ids: ['m-annual', 'm-interim', 'm-budget', 'm-assumptions', 'm-lowcase', 'm-group', 'm-protocol'] },
-  { key: 'debt', label: 'Gæld og sikkerheder', ids: ['m-loans', 'm-security'] },
-  { key: 'market', label: 'Marked og drift', ids: ['m-orderbook', 'm-trade', 'm-fx', 'm-tech', 'm-agri', 'm-pub-market', 'm-pub-product'] },
-  { key: 'owners', label: 'Ejere og selskab', ids: ['m-ejerbog', 'm-pub-cvr', 'm-ownership', 'm-capital', 'm-bizplan', 'm-pitch'] },
-];
+// Emnerne i materialevalget: samme tabel som kundens portal og Dokumenter (case_state.js)
+const WS_MATERIAL_CATS = CW.MATERIAL_CATS;
 
-// Emne for et punkt i anmodningen (kataloget har ikke selv emner)
-function wsMaterialCat(it) {
-  if (it.custom) return it.cat || 'Øvrigt';
-  if (it.tier === 'year') return 'Regnskab og budget';
-  const c = WS_MATERIAL_CATS.find(x => x.ids.includes(it.id));
-  return c ? c.label : 'Øvrigt';
-}
+// Emne for et punkt i anmodningen
+function wsMaterialCat(it) { return CW.itemCat(it); }
 // Har rådgiveren selv uploadet punktet på kundens vegne?
 function wsUploadedByAdvisor(id) {
   const s = CW.itemState(id);
@@ -2311,6 +2316,14 @@ function WSMaterialCard({ go, caseId, locked }) {
   const kept = wsCustomerList().filter(e => { const p = wsItemPlace(e); return p === 'done' || p === 'dropped'; })
     .sort((a, b) => (wsItemPlace(a) === 'dropped') - (wsItemPlace(b) === 'dropped'));
   const approved = kept.filter(e => wsItemPlace(e) === 'done').length;
+  // Det kunden har sendt, som venter på gennemgang: står allerede under Dokumenter,
+  // men kommer først her, når det er godkendt
+  const inReview = request ? wsCustomerList().filter(e => wsItemPlace(e) === 'review').length : 0;
+  // Bankens og EIFO's egne dokumenter (ansøgning, sikkerheder, rating) står under
+  // Dokumenter fra start; her får de en plads, så de to lister dækker det samme
+  const caseDocs = (DATA.DOCS || []).filter(d => d.origin === 'uploaded' && !d.superseded && d.type !== 'Crediwire-eksport'
+    && ['Kundeupload', 'e-conomic'].indexOf(d.sourceLabel) < 0);
+  const bySource = caseDocs.reduce((m, d) => { (m[d.sourceLabel] = m[d.sourceLabel] || []).push(d); return m; }, {});
   return (
     <section id="ws-received" className="card ws-mat" aria-labelledby="ws-received-title">
       <div className="card-head ws-mat-cardhead">
@@ -2323,13 +2336,43 @@ function WSMaterialCard({ go, caseId, locked }) {
             <h3 id="ws-public-title" className="ws-mat-h">{t('Offentlige data')} <span className="n">({AUTO_SOURCES.length})</span></h3>
           </div>
           <WSPublicSources go={go} caseId={caseId}/>
+          {caseDocs.length > 0 && (
+            <div id="ws-bank-sources" style={{ marginTop: 18 }}>
+              <div className="ws-mat-head">
+                <h3 id="ws-bank-title" className="ws-mat-h">{t('Fra banken og EIFO')} <span className="n">({caseDocs.length})</span></h3>
+              </div>
+              {Object.keys(bySource).map(src => (
+                <div key={src} className="cw-row">
+                  <div className="cw-row-main">
+                    <span className="cw-row-title">{t(src)}</span>
+                    <span className="cw-row-meta">{wsFill(t('modtaget {date}'), { date: wsDay(bySource[src].map(d => d.date).filter(Boolean).sort().slice(-1)[0]) })}</span>
+                    <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: 0 }}>
+                      {bySource[src].map(d => (
+                        <li key={d.name} className="ws-req-file" style={{ fontSize: 13, padding: '2px 0', gap: 10 }}>
+                          <I.FileText size={12} aria-hidden="true" style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
+                          <button type="button" className="btn-link" title={t('Download')} onClick={() => CW.downloadDoc(d.name)}>{d.name}</button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <span/>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="ws-mat-col">
           <div className="ws-mat-head">
             <h3 id="ws-cust-title" className="ws-mat-h">{t('Fra kunden')}{request && <> <span className="n">({approved})</span></>}</h3>
           </div>
+          {inReview > 0 && (
+            <div className="ws-mat-empty" style={{ marginBottom: kept.length ? 8 : 0 }}>
+              {wsFill(inReview === 1 ? t('1 punkt fra kunden venter på din gennemgang under {sted}. Det står her, når det er godkendt.') : t('{n} punkter fra kunden venter på din gennemgang under {sted}. De står her, når de er godkendt.'), { n: inReview, sted: t('Afventer kunden') })}
+              {' '}<button type="button" className="btn-link" onClick={() => CW.focusSoon('#ws-outstanding-title')}>{t('Gå til gennemgang')}</button>
+            </div>
+          )}
           {!request ? <div className="ws-mat-empty">{t('Kunden er ikke bedt om materiale endnu.')}</div>
-            : !kept.length ? <div className="ws-mat-empty">{t('Intet godkendt endnu. Det, du godkender under Udestående, kommer til at stå her.')}</div>
+            : !kept.length ? (inReview ? null : <div className="ws-mat-empty">{t('Intet godkendt endnu. Det, du godkender under Afventer kunden, kommer til at stå her.')}</div>)
             : <WSItemList entries={kept} locked={locked} labelledBy="ws-cust-title"/>}
         </div>
       </div>
@@ -2613,7 +2656,6 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
     }
   }
   if (quiet) parts.push(t('Ikke længere påkrævet'));
-  if (reminder) parts.push(wsFill(t('påmindet {when}'), { when: wsDay(reminder.at) }));
   // Din note til kunden (ved afvisning) følger punktet, også når det er sendt videre
   if ((status === 'rejected' || status === 'delegated' || status === 'approved') && s && s.reviewNote) parts.push(t('Din note:') + ' ' + s.reviewNote);
   if (optional && (review || status === 'approved')) parts.push(t('valgfri'));

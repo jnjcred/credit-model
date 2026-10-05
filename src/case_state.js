@@ -39,6 +39,7 @@
     owners: 'kabul:owners',                         // { [caseId]: navn } (omfordelinger)
     customItems: 'kabul:custom-items:nordhavn',     // [{ id, label, cat }] materiale rådgiveren selv har tilføjet til anmodningen
     ownersLog: 'kabul:owners-log',                  // [{ at, caseId, name, by }] flytning af andre sager end sag 1
+    removedDocs: 'kabul:removed-docs:nordhavn',     // { [filnavn]: { at, by } } hentede dokumenter, rådgiveren har slettet (fx forkert årsrapport fra CVR)
   };
   var EVENT = 'cw-case-changed';
   var LIVE_CASE_ID = 1; // kun sag 1 (Nordhavn, 2026-0184) har levende data
@@ -276,21 +277,121 @@
     annualYears().forEach(function (y) {
       out.push({ id: 'm-annual-' + y, label: t('Årsrapport {y}').replace('{y}', y), tag: 'Valgfri', tier: 'year', year: y, docType: 'Årsrapport', docMatch: y, group: 'Dokumenter',
         desc: t('Årsrapporten for {y} i den interne version med alle noter og specifikationer.').replace('{y}', y),
-        why: t('Vi har årsrapporten for {y}, men har brug for en opdateret version.').replace('{y}', y) });
+        why: (isDocRemoved(annualDocName(y)) ? t('Den årsrapport for {y}, der blev hentet automatisk, var forkert og er slettet.') : t('Vi har årsrapporten for {y}, men har brug for en opdateret version.')).replace('{y}', y) });
     });
     // Materiale, rådgiveren selv har skrevet ind ("Tilføj andet materiale")
     customItems().forEach(function (c) { out.push({ id: c.id, label: c.label, desc: '', why: '', tag: 'Anbefalet', custom: true, cat: c.cat || 'Øvrigt', group: 'Øvrigt' }); });
     return out;
   }
   function customItems() { var v = read('customItems', []); return Array.isArray(v) ? v : []; }
-  /** Årstal for de årsrapporter, der ligger i dokumentregistret (nyeste først). */
+  /** Årstal for de årsrapporter, der er hentet til sagen (nyeste først). Slettede
+   *  årsrapporter tæller med, så man stadig kan bede kunden om netop det år. */
   function annualYears() {
-    if (!window.DATA || !Array.isArray(DATA.DOCS)) return [];
-    var ys = DATA.DOCS.filter(function (d) { return d.type === 'Årsrapport' && d.status !== 'Erstattet'; })
+    var docs = window.DATA && (Array.isArray(DATA.ALL_DOCS) ? DATA.ALL_DOCS : DATA.DOCS);
+    if (!Array.isArray(docs)) return [];
+    var ys = docs.filter(function (d) { return d.type === 'Årsrapport' && d.status !== 'Erstattet'; })
       .map(function (d) { var m = /(20\d{2})/.exec(d.name || ''); return m ? m[1] : null; })
       .filter(function (y, i, a) { return y && a.indexOf(y) === i; });
     return ys.sort().reverse();
   }
+  /* ── Filer, rådgiveren har slettet under Dokumenter ───────────────────────
+     Alle filer kan slettes og gendannes. Nøglen er filnavnet for sagens egne
+     dokumenter (registret: CVR, banken, ratingmodellen, eksporterne), som så
+     forsvinder fra DATA.DOCS og dermed fra Dokumenter, Overblik og "Ligger
+     allerede på sagen". For en upload er nøglen 'u:' + filens id: filen tages
+     ud af punktet (eller af de løse uploads), og punktets tilstand gemmes, så
+     Gendan kan sætte den tilbage. Indholdet bliver i IndexedDB.
+     Post: { at, by, kind?: 'upload', name?, file?, itemId?, prev? } */
+  function removedDocs() { var v = read('removedDocs', {}); return v && typeof v === 'object' ? v : {}; }
+  function isDocRemoved(name) { var r = name && removedDocs()[name]; return !!(r && r.kind !== 'upload'); }
+  function annualDocName(y) {
+    var docs = window.DATA && (Array.isArray(DATA.ALL_DOCS) ? DATA.ALL_DOCS : DATA.DOCS) || [];
+    var d = docs.filter(function (x) { return x.type === 'Årsrapport' && String(x.name).indexOf(y) >= 0; })[0];
+    return d ? d.name : null;
+  }
+  /** Kan filen slettes? Alt under Dokumenter undtagen erstattede versioner (de er kun metadata). */
+  function canRemoveDoc(d) { return !!d && !d.superseded; }
+  /** Slet en fil: et dokument fra registret (filnavn eller { name }) eller en upload ({ fileId }).
+   *  Returnerer { key, itemId, itemReset } eller null. */
+  function removeDoc(d) {
+    if (typeof d === 'string') d = { name: d };
+    if (!d) return null;
+    var m = removedDocs();
+    if (!d.fileId) {
+      if (m[d.name]) return null;
+      m[d.name] = { at: now(), by: advisorName() };
+      write('removedDocs', m);
+      log('doc-removed', t('Slettet fra Dokumenter') + ': ' + d.name, { who: 'rådgiver', data: { name: d.name } });
+      return { key: d.name };
+    }
+    var key = 'u:' + d.fileId;
+    if (m[key]) return null;
+    var st = items(), itemId = null, file = null;
+    Object.keys(st).forEach(function (id) {
+      (st[id].files || []).forEach(function (f) { if (f.id === d.fileId) { itemId = id; file = f; } });
+    });
+    var rec = { at: now(), by: advisorName(), kind: 'upload' };
+    var itemReset = false;
+    if (itemId) {
+      var s = st[itemId];
+      rec.itemId = itemId; rec.file = file; rec.name = file.name;
+      rec.prev = JSON.parse(JSON.stringify(s));
+      var files = (s.files || []).filter(function (f) { return f.id !== d.fileId; });
+      if (!files.length && !s.answers) { patchItem(itemId, null); itemReset = true; }
+      else patchItem(itemId, { files: files });
+    } else {
+      var loose = read('uploads', []);
+      file = loose.filter(function (f) { return f.id === d.fileId; })[0];
+      if (!file) return null;
+      rec.file = file; rec.name = file.name;
+      write('uploads', loose.filter(function (f) { return f.id !== d.fileId; }));
+    }
+    m = removedDocs(); m[key] = rec;
+    write('removedDocs', m);
+    log('doc-removed', t('Slettet fra Dokumenter') + ': ' + rec.name, { who: 'rådgiver', itemId: itemId, data: { name: rec.name, fileId: d.fileId } });
+    return { key: key, itemId: itemId, itemReset: itemReset };
+  }
+  /** Gendan en slettet fil (nøgle fra removeDoc: filnavn eller 'u:' + id). */
+  function restoreDoc(key) {
+    var m = removedDocs();
+    var rec = m[key];
+    if (!rec) return;
+    if (rec.kind === 'upload' && rec.file) {
+      if (rec.itemId) {
+        var cur = itemState(rec.itemId);
+        if (!cur) patchItem(rec.itemId, rec.prev);   // punktet blev nulstillet ved sletningen
+        else if (!(cur.files || []).some(function (f) { return f.id === rec.file.id; })) patchItem(rec.itemId, { files: (cur.files || []).concat([rec.file]) });
+      } else {
+        write('uploads', read('uploads', []).concat([rec.file]));
+      }
+    }
+    m = removedDocs(); delete m[key];
+    write('removedDocs', Object.keys(m).length ? m : null);
+    log('doc-restored', t('Gendannet i Dokumenter') + ': ' + (rec.name || key), { who: 'rådgiver', itemId: rec.itemId || null, data: { name: rec.name || key } });
+  }
+
+  /* ── Emner for materialet ──────────────────────────────────────────────────
+     Ét sted for anmodningen, kundens portal og Dokumenter, så et punkt og dets
+     filer står under samme emne overalt. Dokumenter uden punkt får emne efter
+     dokumenttypen (types). */
+  var MATERIAL_CATS = [
+    { key: 'fin', label: 'Regnskab og budget', ids: ['m-annual', 'm-interim', 'm-budget', 'm-assumptions', 'm-lowcase', 'm-group', 'm-protocol'],
+      types: ['Årsrapport', 'Periodetal', 'Budget'] },
+    { key: 'debt', label: 'Gæld og sikkerheder', ids: ['m-loans', 'm-security'], types: ['Låneaftale', 'Sikkerhed'] },
+    { key: 'market', label: 'Marked og drift', ids: ['m-orderbook', 'm-trade', 'm-fx', 'm-tech', 'm-agri', 'm-pub-market', 'm-pub-product'],
+      types: ['Kontrakt', 'Marked', 'Salg', 'Nøgletal', 'Valuta'] },
+    { key: 'owners', label: 'Ejere og selskab', ids: ['m-ejerbog', 'm-pub-cvr', 'm-ownership', 'm-capital', 'm-bizplan', 'm-pitch'],
+      types: ['Selskab', 'Præsentation'] },
+  ];
+  /** Emnet (dansk etiket) for et punkt i kataloget, et årsrapportpunkt eller rådgiverens eget punkt. */
+  function itemCat(it) {
+    if (!it) return 'Øvrigt';
+    if (it.custom) return it.cat || 'Øvrigt';
+    if (it.tier === 'year' || /^m-annual-/.test(it.id)) return 'Regnskab og budget';
+    var c = MATERIAL_CATS.filter(function (x) { return x.ids.indexOf(it.id) >= 0; })[0];
+    return c ? c.label : 'Øvrigt';
+  }
+
   /** Tilføj et punkt, der ikke står i kataloget. Det vælges med det samme. */
   function addCustomItem(label, cat) {
     var id = 'c-' + Date.now().toString(36);
@@ -1367,7 +1468,9 @@
     }
     var doc = (window.CASE_DOCS || []).concat(window.CW_EXPORT_DOCS || []).filter(function (d) { return d.name === name; })[0];
     if (!doc) { notInDemo(name); return false; }
-    var blob = /\.xlsx?$/i.test(name) ? buildXlsx(doc.pages) : buildPdf(doc.name + (doc.meta ? '\n' + doc.meta : ''), doc.pages);
+    // Markdown (vejledningen til den AI, der læser pakken) hentes som ren tekst
+    var blob = /\.md$/i.test(name) ? new Blob([String((doc.pages[0] || {}).body || '')], { type: 'text/markdown;charset=utf-8' })
+      : /\.xlsx?$/i.test(name) ? buildXlsx(doc.pages) : buildPdf(doc.name + (doc.meta ? '\n' + doc.meta : ''), doc.pages);
     if (!blob) { notInDemo(name); return false; }
     saveBlob(blob, name);
     return true;
@@ -1386,6 +1489,11 @@
     'm-ejerbog': { doc: 'Ejerbog_2026.pdf' },
     'm-orderbook': { doc: 'GE_Vernova_rammekontrakt.pdf' },
   };
+  /** Filnavnet på punktets demofil (uden at bygge filen), eller null. */
+  function demoUploadName(itemId) {
+    var m = DEMO_UPLOADS[itemId];
+    return m ? (m.name || m.doc) : null;
+  }
   /** En rigtig fil med indhold til et punkt (File), eller null, hvis punktet ikke har en demofil. */
   function demoUploadFile(itemId) {
     var m = DEMO_UPLOADS[itemId];
@@ -1405,7 +1513,7 @@
   /* ── Bekræftelsesdialog (uden React, kan kaldes fra alle filer) ──────────── */
 
   /**
-   * confirmDialog({ title, text, confirmLabel, cancelLabel, requireReason, reasonLabel, danger })
+   * confirmDialog({ title, text, confirmLabel, cancelLabel, requireReason, reasonLabel, danger, focusCancel })
    * → Promise<{ ok, reason }>. Fokus ind, Tab holdes inde, Esc annullerer,
    * fokus tilbage til det element der var aktivt.
    */
@@ -1444,7 +1552,9 @@
       var ok = document.createElement('button'); ok.type = 'button'; ok.className = 'btn btn-sm ' + (o.danger ? 'btn-danger' : 'btn-primary'); ok.textContent = o.confirmLabel || t('Fortsæt');
       row.appendChild(cancel); row.appendChild(ok); box.appendChild(row);
       back.appendChild(box); document.body.appendChild(back);
-      function close(res) { document.removeEventListener('keydown', onKey, true); back.remove(); if (prev && prev.focus && document.contains(prev)) { try { prev.focus(); } catch (e) {} } resolve(res); }
+      // Øverst på dialogstakken, så en React-dialog nedenunder (useDialog) ikke tager Esc og Tab
+      dialogStack.push(box);
+      function close(res) { var at = dialogStack.lastIndexOf(box); if (at >= 0) dialogStack.splice(at, 1); document.removeEventListener('keydown', onKey, true); back.remove(); if (prev && prev.focus && document.contains(prev)) { try { prev.focus(); } catch (e) {} } resolve(res); }
       function onKey(e) {
         if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close({ ok: false }); return; }
         if (e.key !== 'Tab') return;
@@ -1459,7 +1569,7 @@
         if (ta && o.requireReason && ta.value.trim().length < 5) { err.textContent = t('Skriv en årsag på mindst et par ord.'); ta.focus(); return; }
         close({ ok: true, reason: ta ? ta.value.trim() : '', checked: cb ? cb.checked : false });
       };
-      setTimeout(function () { (ta || ok).focus(); }, 0);
+      setTimeout(function () { (ta || (o.focusCancel ? cancel : ok)).focus(); }, 0);
     });
   }
 
@@ -1494,7 +1604,7 @@
         var f = Array.prototype.filter.call(el.querySelectorAll(FOCUSABLE), function (n) { return n.offsetParent !== null; });
         if (!f.length) { e.preventDefault(); return; }
         var a = f[0], z = f[f.length - 1];
-        if (!el.contains(document.activeElement)) { e.preventDefault(); a.focus(); }
+        if (!el.contains(document.activeElement) || f.indexOf(document.activeElement) < 0) { e.preventDefault(); (e.shiftKey ? z : a).focus(); }
         else if (e.shiftKey && document.activeElement === a) { e.preventDefault(); z.focus(); }
         else if (!e.shiftKey && document.activeElement === z) { e.preventDefault(); a.focus(); }
       }
@@ -1554,7 +1664,9 @@
     useCase: useCase,
     fmtWhen: fmtWhen, fmtDate: fmtDate, workdaysFromNow: workdaysFromNow, workdaysBetween: workdaysBetween, isPast: isPast,
     toast: toast, hideToast: hideToast, notInDemo: notInDemo, confirm: confirmDialog,
-    downloadDoc: downloadDoc, demoUploadFile: demoUploadFile,
+    downloadDoc: downloadDoc, demoUploadFile: demoUploadFile, demoUploadName: demoUploadName,
+    removedDocs: removedDocs, isDocRemoved: isDocRemoved, canRemoveDoc: canRemoveDoc, removeDoc: removeDoc, restoreDoc: restoreDoc,
+    MATERIAL_CATS: MATERIAL_CATS, itemCat: itemCat,
     setPreview: setPreview, isPreview: isPreview, customerLock: customerLock, fmtAgo: fmtAgo,
     useDialog: useDialog, focusSoon: focusSoon,
   };

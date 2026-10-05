@@ -1072,3 +1072,17 @@ Object.assign(window.I18N.en, {
   "Stamdata": "Company details",
   "Fra CVR-registret, opdateret {date}.": "From the CVR register, updated {date}.",
 });
+// Vejledningen 00_Laes_mig_foerst.md (memo_handoff.jsx)
+Object.assign(window.I18N.en, {
+  "Vedhæft filerne i Copilot, og bed den starte med 00_README_for_AI.md. Filen fortæller Copilot, hvad hver fil er, og hvor meget den kan bære.": "Attach the files in Copilot and ask it to start with 00_README_for_AI.md. The file tells Copilot what each file is and how far it can be trusted.",
+  "Skriv memoet ud fra materialet, og kontrollér tal og kilder mod dokumenterne.": "Write the memo from the material, and check figures and sources against the documents.",
+  "Vejledning til den AI, der skal læse materialet": "Guide for the AI that will read the material",
+  // Materiale på sagen: bankens og EIFO's dokumenter og det, der venter på gennemgang
+  'Fra banken og EIFO': 'From the bank and EIFO',
+  'modtaget {date}': 'received {date}',
+  'EIFO ratingmodel': 'EIFO rating model',
+  '1 punkt fra kunden venter på din gennemgang under {sted}. Det står her, når det er godkendt.': '1 item from the customer is waiting for your review under {sted}. It appears here once approved.',
+  '{n} punkter fra kunden venter på din gennemgang under {sted}. De står her, når de er godkendt.': '{n} items from the customer are waiting for your review under {sted}. They appear here once approved.',
+  'Gå til gennemgang': 'Go to review',
+  'Intet godkendt endnu. Det, du godkender under Afventer kunden, kommer til at stå her.': 'Nothing approved yet. What you approve under Awaiting customer will appear here.',
+});

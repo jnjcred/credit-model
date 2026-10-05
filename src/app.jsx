@@ -26,7 +26,7 @@ function routeTitle(route) {
     parts.push(c ? c.name : t('Sag'));
     parts.push(t(WS_TAB_TITLES[tab || 'overview'] || 'Sagen'));
   } else {
-    const map = { cases: 'Mine opgaver', requests: 'Dataanmodninger', analyse: 'Porteføljeanalyse', portal: 'Kundeportal' };
+    const map = { cases: 'Mine opgaver', requests: 'Dataanmodninger', analyse: 'Porteføljeanalyse', portal: 'Kundeportal', mapping: 'Kontomapping' };
     parts.push(t(map[route] || 'Mine opgaver'));
   }
   parts.push('Crediwire');
@@ -36,7 +36,7 @@ function routeTitle(route) {
 // Den gemte rute skal pege på en skærm, der findes. En ældre rute (fx den
 // fjernede "settings") eller en sag, som "Nulstil demo" har slettet, fører
 // til Mine opgaver i stedet for en tom side.
-const APP_ROUTES = ['cases', 'requests', 'analyse', 'portal'];
+const APP_ROUTES = ['cases', 'requests', 'analyse', 'portal', 'mapping'];
 function validRoute(r) {
   if (r && r.startsWith('workspace:')) {
     const id = r.split(':')[1];
@@ -236,6 +236,8 @@ function App() {
             {isWorkspace && <WorkspaceShell tab={workspaceTab} caseId={workspaceCaseId} go={go} openMemo={() => go("workspace:" + workspaceCaseId + ":memo")}/>}
             {route === "analyse" && <PortfolioAnalyse go={go}/>}
             {route === "requests" && <DataRequests go={go}/>}
+            {/* Demo: kontomappingen (src/mapper.jsx) */}
+            {route === "mapping" && <MapperPage go={go}/>}
           </main>
         </div>
         </>

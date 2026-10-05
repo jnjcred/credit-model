@@ -217,6 +217,21 @@ vises ikke for kunden. "Ligger allerede hos EIFO" tæller årsrapporterne fra
 DATA.DOCS. "Det har vi bedt om"-listen og demoknappen fillAll er uændrede.
 Den store tidslinje (CWTimeline) bruges stadig på statussiden efter "Vi er færdige".
 
+**Vejledning til den videre AI (5. oktober, version 2): `00_README_for_AI.md`.**
+Markdown-fil til Copilot (eller en anden AI), der skal læse sagens materiale og hjælpe
+med credit memoet. Den står under Dokumenter og først i "Fra Crediwire" på Credit
+memo, og den kommer med i "Hent alle". Den bygges, når den hentes (hoGuideMarkdown i
+memo_handoff.jsx), af præcis de filer, som "Hent alle" henter (hoGroups).
+Valg: altid engelsk, også i den danske app, fordi læseren er en AI og modeller følger
+engelske instruktioner bedst. Sagens filer er danske, så der er en dansk-engelsk
+ordliste, og memoet bedes skrevet på dansk. Navnet README med 00_ foran gør den til
+"læs først"-filen, sorteret øverst. Den er kort (ca. 85 linjer): YAML-metadata, fire
+principper med begrundelse, en filtabel (fil, hvad, kilde og dato, pålidelighed), fakta
+om tallene, kendte uoverensstemmelser (CASE_FACTS.conflicts, engelsk tekst) og
+ordlisten. Der er bevidst ingen fast læserækkefølge eller afsnitsskabelon, så den
+videre AI ikke bindes unødigt. Registret læser ikke dens indhold (`lazy: true`), og
+CW.downloadDoc gemmer .md som tekst. Test: `scratchpad\guide_test.js` i session 746e68ca.
+
 **Kundeside og Kundeflow (5. oktober).** Rådgiverens forhåndsvisning har to spor
 (sagshovedets knapper, WSCustomerPreview i workspace.jsx → CustomerPortal med
 `flow`):
@@ -705,3 +720,196 @@ vurderingsfasen. Før anmodningen er sendt, står der under feltet: "Anmodningen
 ikke sendt endnu. Kunden ser beskeden i sin portal, når anmodningen er sendt." Det
 passer med portalen, som ikke kan åbnes uden en anmodning. `CWConversation` har
 fået en valgfri `note`. Test: `SP\dialog.js` (8 kontroller).
+
+## Kontomapping: kundens saldobalance fra e-conomic (5. oktober)
+
+De realiserede kvartaler i Regnskab (Q1, Q2 og jul-aug 2026) kommer nu fra
+kundens saldobalance i stedet for hårdkodede periodetal.
+
+- **Kilden er et Excel-ark:** `data/Saldobalance_e-conomic_jan-aug_2026.xlsx`.
+  Det har en e-conomic-agtig kontoplan for Nordhavn med 125 rækker:
+  overskrifter, 85 drifts- og statuskonti og sumkonti. Kolonnerne er Kontonr,
+  Kontonavn, Kontotype, Sum fra/til, Primo 01-01-2026, ét beløb pr. måned
+  (jan-aug 2026) og Saldo 31-08-2026.
+  - Fortegnene er som i e-conomic: debet plus og kredit minus.
+  - Driftskonti har månedens bevægelse, statuskonti har primo plus bevægelser.
+  - Sumkonti og kontrolrækken er SUMIFS-formler.
+  - Fanen "Læs mig" forklarer arket.
+  - Arket bygges af `data/make_trial_balance.py` (`python data/make_trial_balance.py .`).
+- **Tallene er lavet, så standardmappingen giver præcis sagens tidligere
+  kvartalstal**, for både resultat og balance. Memo, nøgletal og eksporter
+  flytter sig derfor ikke, før nogen mapper om. Saldobalancen går i nul hver
+  måned, fordi banken udligner.
+- **`src/mapping.js` (`window.CW_MAP`)** henter arket med fetch og SheetJS.
+  - Det holder Crediwires kategoritræ (opgørelse › gruppe › undergruppe ›
+    kategori), og hver kategori peger på en række og evt. en detaljelinje i
+    `FIN_LAYOUT`.
+  - Det har standardmappingen pr. kontonummer. Konto 1090, 3850 og 6240 står
+    som "Tilpasset" af Mette.
+  - Rådgiverens ændringer gemmes i `kabul:mapping:nordhavn`, som Nulstil demo
+    rydder.
+  - `compute()` lægger beløbene sammen pr. række og periode i tabellens
+    fortegn.
+- **`finSyncMapping()` i financials.jsx** skriver tallene ind i
+  `ANNUAL_REPORT.q` (summer som i `FIN_EDIT_SUMS`) og i `qvals` på rækker uden
+  ref og på detaljelinjerne.
+  - Detaljelinjerne viser derfor nu tal i kvartalerne.
+  - Egenkapitalen er egenkapitalkontiene plus årets resultat til og med
+    perioden.
+  - Hentes arket ikke, står de gamle periodetal, og der vises en note.
+  - Rettelser i tabellen ligger stadig ovenpå: originalen er nu det mappede
+    tal, og kilden hedder "Saldobalance fra e-conomic".
+- **Mapperen (`src/mapper.jsx`, `MapperPage`)** er en side for sig med ruten
+  `mapping`, som åbnes med "Kontomapping" i venstremenuen (`Sidebar` i
+  shell.jsx).
+  - Punktet er stiplet med et DEMO-mærke, fordi det ikke er aftalt, hvem der
+    mapper, og hvor det skal ligge i produktet.
+  - Regnskab har ingen egen knap; kun advarslen om konti uden mapping fører
+    til siden (hændelsen 'cw-open-mapper').
+  - Siden har "Se Regnskab" øverst.
+  - Et udkast, der ikke er gemt, bliver stående, når man skifter side
+    (`MAP_DRAFT`), men ikke ved genindlæsning.
+  - Den er bygget efter Crediwires mapper:
+  - Råbalance (konto, navn, bogført værdi) og Crediwire-kategori med
+    "Vælg" og metodeikon (automatisk, tilpasset, ikke mappet, ikke gemt).
+  - Et panel med opgørelse, grupper, undergrupper og "Flyt hertil" samt fanen
+    "Søg efter kategori".
+  - Periodevælger, søgning, metodefilter, Shift-klik for at vælge et
+    interval og klik på en konto for at se månedsbeløbene.
+  - "Hent Excel", "Nulstil ændringer" og "Gem ændringer". Gem logger
+    hændelsen.
+  - Driftskonti kan kun flyttes til resultatopgørelsen og statuskonti kun til
+    balancen.
+- **Nye konti i arket**, som standardmappingen ikke kender, står som "Ikke
+  mappet". Beløbet mangler så i Regnskab, og der vises en advarsel med antal
+  på knappen.
+
+Efter en kodegennemgang og en blind brugertest er følgende rettet:
+- **Excel-arket:** sumkontiens SUMIFS slutter på rækken over sig selv, så der
+  ikke er cirkulære referencer.
+- **Perioderne** bygger på månedsnøgler ('2026-01'), og et ark, der mangler
+  måneder eller primo, giver en tydelig fejl.
+- **Advarsel om konti uden mapping** gælder også konti med kun en primosaldo.
+- **Ændringer i en anden fane** slår igennem (storage-hændelsen).
+- **Rettelser i tabellen** viser og nulstiller til det aktuelle kildetal
+  (`finOrigOf`).
+- **2026E for resultatposter uden budget** (fx Andre driftsindtægter) er summen
+  af kvartalerne, så kolonnen går op.
+- **"Skjul tomme rækker"** tager hensyn til kvartalstal.
+- **Mapperen:**
+  - Ét tabstop pr. konto, og et skjult "Gå til kategorierne"-link.
+  - Fokus går til Gem efter "Flyt hertil".
+  - En forklaring med genvej, når de valgte konti ikke passer til opgørelsen.
+  - Hver kategori viser, hvor den lander i Regnskab ("I Regnskab: …").
+  - Søgning på kategori.
+  - "Tilbage til automatisk" pr. konto.
+  - "Ekstraordinære poster" er stavet rigtigt.
+- **Fælles i case_state.js:**
+  - `CW.confirm` lægger sig på dialogstakken, så Esc og Tab ikke går til
+    dialogen nedenunder, og har fået et nyt flag, `focusCancel`, som mapperen
+    bruger.
+  - `useDialog` fanger Tab, også når fokus står på en titel.
+
+Ikke rettet med vilje: Saldobalancens "AKTIVER I ALT" og "PASSIVER I ALT"
+afviger med periodens resultat, som i e-conomic, før året er lukket.
+
+Backup før ændringen: `..\credit-model_backup_2026-10-05_foer-mapper` (src,
+index.html, styles.css, tokens.css, HANDOVER.md). Test: `mapper_test.js` (46
+kontroller pr. sprog) i session d1d0f86c's scratchpad. To gamle tests er
+forældede af omdøbningen den 5. oktober:
+- `company_test.js` leder efter sektionen "Virksomheden".
+- `fin_test.js` leder efter knappen "Vis kvartaler".
+
+## Regnskab v2: grafen efter designet (5. oktober)
+
+Grafen over Regnskab under Virksomheden følger designet "Virksomheden v2" fra
+Claude Design (projekt be34be2d, mappen `design_handoff_regnskab_graf`). Den er
+tegnet med prototypens eget designsystem (Inter, appens farver, `.card`, `.btn`)
+i stedet for designets navy, orange og Source Sans.
+
+Jesper har bevidst fjernet tre ting fra de første versioner:
+- menuen med forvalg (Indtjening, Soliditet osv.),
+- knapperne ved rækkenavnene,
+- omridset med årstakt for 2027B.
+
+Lav ikke noget ved graferne, som ikke står i designet. **Tabellen er som før.**
+Jesper ville kun have grafen lavet om. Det eneste, der er ændret i tabellen, er,
+at 2026 og 2027 følger det, kunden har leveret (se nedenfor).
+
+**Grafen** (`src/fin_chart.jsx`, `FinChart`, eget kort over tabellen):
+- "Omsætning og EBITDA" med fem kolonner: 2023, 2024, 2025, 2026 og 2027.
+- Omsætning er primærblå: fyldt er realiseret, skraveret er budget, stiplet er
+  fremskrevet. EBITDA-søjlerne er skifer.
+- En strimmel med EBITDA-margin.
+- Kolonnerne følger tabellen: grafen måler tabelhovedet (`useFinTableCols`), så
+  2023, 2024, 2025, 2026 og 2027 står lige over årene i tabellen. Detaljefeltet til
+  venstre er lige så bredt som rækkenavnene. Når kvartalerne er foldet ud, eller
+  før målingen, bruger grafen sit eget gitter (300 px / 260 px under 1180 px).
+- Detaljefeltet viser omsætning og EBITDA for den valgte periode, kilde og
+  marginer. Der vises ingen procentændring; Jesper fjernede "+25 % mod 2024".
+  Feltet følger hover og står som standard på 2025.
+- Tabellens rækkenavne er præcis så brede som det længste navn (`width: 1%` på
+  `th.fin-c1`). På smal skærm (under 1180 px) må de bryde, mindst 200 px. Grafen
+  følger med og får pladsen.
+- EBITDA-margin: punkterne står lige under årstallene (grafen måler årstallenes
+  midte). Linjen og punkterne bruger samme koordinater, så de rammer hinanden.
+- Mangler der tal til margin, siger strimlen det og linker til "Anmod kunden om
+  budget":
+  - "Ingen margin for 2026 og 2027 endnu" uden budget og periodetal,
+  - et link under 2027 med periodetal, men uden budget.
+- Jespers egne ændringer i forhold til designet:
+  - forklaringen hedder "Omsætning" (ikke "Realiseret"),
+  - knappen hedder "Anmod kunden om periodetal" (ikke "Forbind kundens
+    bogføring").
+- **Årsrapport uden omsætning** (små virksomheder må udelade den):
+  - Året viser boksen "Omsætning ikke oplyst" med "Indtast omsætning", som åbner
+    cellen i tabellen, og "Anmod om intern årsrapport", som vælger `m-annual` i
+    Anmod om materiale.
+  - Detaljefeltet forklarer, hvorfor tallet mangler.
+  - `finFillable()` i financials.jsx tillader, at en tom omsætning i en årskolonne
+    rettes. Summerne står som i årsrapporten.
+- Prognosen har tabellens 2026E-flade og et stiplet skel. "Skjul graf" huskes i
+  `kabul:fin-chart`.
+- Når kvartalerne er foldet ud, bliver grafen ved de fem år. Tabellens omslag har
+  ingen indre lodret rulning længere, så grafen ruller væk med siden.
+
+**Data styrer tilstanden** (`finDataState()` i financials.jsx):
+- `hasBudget`: punktet `m-budget` er modtaget eller godkendt med en fil, eller
+  rådgiveren har importeret et budget ("Excel-import" i rettelserne). "Har vi
+  ikke" tæller ikke.
+- `months`: 8, når `m-interim` er modtaget eller bogføringen er forbundet
+  (`CW.consent()`), ellers 0.
+
+| Tilstand | Graf | Tabel |
+|---|---|---|
+| 1. budget + periodetal | 2026E = jan-aug realiseret + budget sep-dec; 2027B budget | som før |
+| 2. kun budget | 2026E = budget sep-dec alene; "Anmod kunden om periodetal" i feltet | 2026E "sep-dec budget" |
+| 3. kun periodetal | 2026 = jan-aug + stiplet fremskrivning (÷ 8 × 12); 2027: "Intet budget" + "Anmod kunden om budget" | 2026 = jan-aug, 2027 "-" |
+| 4. ingen af delene | kortet "Ingen prognose for 2026 og 2027" med "Anmod kunden om budget", "Importér budget" og "Anmod kunden om periodetal" | "Ingen data", ingen "Udfold kvartaler" |
+
+Afvigelse fra designet i tilstand 2: designet viser et budget for hele 2026, men
+budget v3 dækker kun sep 2026–Q3 2027. Derfor står 2026E som budget for sep-dec, og
+der vises ingen ændring mod 2025.
+
+**Knapperne:** "Anmod kunden om budget" og "Anmod kunden om periodetal" vælger
+`m-budget` eller `m-interim` i "Anmod om materiale" (`CW.setSelection`) og åbner
+dialogen på Overblik (`window.CW_REQUEST_MORE`). "Importér budget" åbner
+filvælgeren.
+
+**Tabellen:**
+- Kolonner uden leverede tal har `col.off`, så `finRawValue` og `finChildVal`
+  returnerer null og tabellen viser "-".
+- 2026 har `mode: 'ytd'` (realiseret alene) eller `'budget'` (budget alene).
+- Memoet, Overblik og eksporterne læser stadig `ANNUAL_REPORT` direkte.
+
+**Test:** `v2_test.js da|en` (75 kontroller pr. sprog, inkl. flugtning, margin-punkter, smal skærm og årsrapport uden omsætning) i scratchpad for session
+bbfd8932. Skærmbilleder: `v2_shot.js`.
+
+To gamle regressionstests var forældede af omdøbningen til "Udfold kvartaler" og
+er rettet til den nuværende tabel, med budget og periodetal leveret i testdata:
+- `design/data_check.js` (51/51),
+- `r3/data/t2_fin.js`.
+
+Den gamle version af testene ligger som `.foer-v2.bak`.
+
+Backup før ændringen: `..\credit-model_backup_2026-10-05_foer-regnskab-v2`.
