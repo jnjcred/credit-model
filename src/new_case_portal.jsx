@@ -1,694 +1,1927 @@
-// New case wizard + customer-facing upload portal
-function NewCaseModal({ close, go }) {
-  const [step, setStep] = React.useState(1);
-  const [cvr, setCvr] = React.useState("");
-  const [foundCompany, setFoundCompany] = React.useState(null);
-  const [caseType, setCaseType] = React.useState("export");
-  const [amount, setAmount] = React.useState("");
-  const [datapack, setDatapack] = React.useState(["annual","interim","budget","ownership","loans","security","pep"]);
-  const [contact, setContact] = React.useState({ name: "Anders Nielsen", email: "an@nordhavn-composite.dk", role: "CFO" });
-  const [sent, setSent] = React.useState(false);
+// Ny sag-guiden og kundeportalen (det kunden ser på crediwire.app).
+// Begge læser materialekataloget og punkternes tilstand fra window.CW
+// (src/case_state.js), så portalen, kundens statusside, "Udestående fra
+// kunden" og Dokumenter altid viser det samme.
+//
+// Ny sag-guiden skriver aldrig i en eksisterende sag: den opretter en ny
+// kladdesag med CW.addDemoCase og sender ikke noget.
+// Kundeportalen er også rådgiverens "Kundeside": <CustomerPortal preview back={luk}/>.
 
-  const lookup = (v) => {
-    setCvr(v);
-    if (v.replace(/\s/g, '').length >= 8) {
-      setFoundCompany({
-        name: "Nordhavn Composite A/S",
-        cvr: v,
-        address: "Havnegade 47, 9900 Frederikshavn",
-        industry: "Komposit­materialer / vindenergi",
-        employees: 142,
-        founded: 2014,
-      });
-    } else {
-      setFoundCompany(null);
-    }
+// Udfylder {navn}-pladsholdere efter oversættelse: ncFill(t('Frist {date}'), { date })
+function ncFill(s, vars) {
+  return String(s).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] != null ? vars[k] : m));
+}
+const ncCvrDigits = (s) => String(s || '').replace(/\D/g, '');
+// Navn uden selskabsform, så "Nordhavn Composite A/S" og "... ApS" er samme virksomhed
+const ncCompanyKey = (s) => String(s || '').toLowerCase().replace(/\s+(a\/s|aps|i\/s|p\/s|ivs)$/, '').trim();
+const ncFirstName = (n) => String(n || '').trim().split(/\s+/)[0] || '';
+const NC_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * "4.500.000", "4,500,000", "4,5 mio.", "4.5m", "DKK 4500000" -> 4500000. Alt andet -> null.
+ * Punktum og komma efterfulgt af grupper på tre cifre er tusindtalsskilletegn (dansk
+ * og engelsk skrivemåde); ellers er et enkelt punktum eller komma decimaltegnet.
+ */
+function ncParseAmount(s) {
+  let x = String(s || '').trim().toLowerCase().replace(/^(dkk|kr\.?)/, '').replace(/(dkk|kr\.?)$/, '').replace(/\s/g, '');
+  let mult = 1;
+  const m = x.match(/^(.*?)(mio\.?|m)$/);
+  if (m) { x = m[1]; mult = 1e6; }
+  if (!m && /^\d{1,3}([.,])\d{3}(\1\d{3})*$/.test(x)) x = x.replace(/[.,]/g, '');
+  else if (/^\d+[.,]\d+$/.test(x)) x = x.replace(',', '.');
+  if (!/^\d+(\.\d+)?$/.test(x)) return null;
+  const v = parseFloat(x) * mult;
+  return v > 0 ? v : null;
+}
+const ncFmtDKK = (v) => 'DKK ' + Math.round(v).toLocaleString(window.CW_LANG === 'en' ? 'en-GB' : 'da-DK');
+
+// Virksomheder demoen kender: sagens egen (DATA.COMPANY), dem fra sagslisten og
+// porteføljens kunder (DATA.PORTFOLIO). Guiden slår kun op blandt dem.
+function ncKnownCompanies() {
+  const C = DATA.COMPANY;
+  const list = [{ key: ncCompanyKey(C.name), name: C.name, cvr: C.cvr, primary: true }];
+  const add = (name, cvr, extra) => {
+    const k = ncCompanyKey(name);
+    const hit = list.find(x => x.key === k);
+    if (hit) Object.assign(hit, extra || {}, { name: hit.name, cvr: hit.cvr || cvr });
+    else list.push(Object.assign({ key: k, name, cvr, primary: false }, extra || {}));
+  };
+  (DATA.CASES || []).forEach(c => add(c.name, c.cvr));
+  (DATA.PORTFOLIO || []).forEach(p => add(p.name, p.cvr, { portfolio: true, dept: p.dept, branche: p.branche }));
+  return list;
+}
+// Sagstype ud fra en værdi ('grow'), et dansk navn ('Vækstlån') eller et oversat navn
+function ncTypeFrom(x) {
+  const s = String(x || '').trim().toLowerCase();
+  if (!s) return null;
+  return NC_CASE_TYPES.find(o => o.v === s || o.l.toLowerCase() === s || t(o.l).toLowerCase() === s) || null;
+}
+function ncOpenCasesFor(company) {
+  const k = ncCompanyKey(company.name);
+  return (DATA.CASES || []).filter(c => ncCompanyKey(c.name) === k && !c.archived && !['Approved', 'Declined'].includes(c.status));
+}
+
+// Sagstyper. basis: hvilket beløb der spørges om. Ved kautioner er det bankens
+// facilitet (EIFO kautionerer for en andel af den); ved lån er det lånebeløbet.
+const NC_CASE_TYPES = [
+  { v: 'export', l: 'Eksportkaution', basis: 'facility', d: 'EIFO kautionerer for en del af bankens facilitet til eksport.' },
+  { v: 'op', l: 'Driftskredit', basis: 'facility', d: 'EIFO kautionerer for en del af bankens driftskredit.' },
+  { v: 'grow', l: 'Vækstlån', basis: 'loan', d: 'EIFO låner direkte til virksomheden.' },
+  { v: 'inv', l: 'Investeringslån', basis: 'loan', d: 'EIFO låner til en konkret investering, fx maskiner eller byggeri.' },
+];
+const NC_GUARANTEE_SHARE = 0.8; // EIFO's typiske andel af bankens facilitet ved kaution
+
+// Næste ledige sagsnummer i år (sagslisten og sager oprettet i demoen)
+function ncNextCaseNr() {
+  const year = new Date().getFullYear();
+  let max = 0;
+  (DATA.CASES || []).concat(CW.demoCases()).forEach(c => {
+    const m = /^(\d{4})-(\d{4})$/.exec(String(c.caseNr || ''));
+    if (m && +m[1] === year && +m[2] > max) max = +m[2];
+  });
+  return year + '-' + String(max + 1).padStart(4, '0');
+}
+// Et personligt link til kundens side for en ny sag (vises kun i mailens forhåndsvisning)
+function ncRequestLink(name) {
+  const slug = ncCompanyKey(name).replace(/[^a-z0-9]+/g, '-').split('-').filter(Boolean).map(w => w.slice(0, 2)).join('').slice(0, 4) || 'nc';
+  return 'crediwire.app/c/' + slug + '-' + Math.random().toString(36).slice(2, 6) + '-' + Math.random().toString(36).slice(2, 6);
+}
+
+// Hvordan kunden leverer et punkt i portalen
+const portalKind = (id) => id === 'm-interim' ? 'connect' : id === 'm-trade' ? 'trade' : 'upload';
+
+function NcFieldError({ id, children }) {
+  return <div id={id} role="alert" style={{ fontSize: 12, color: 'var(--c-danger)' }}>{children}</div>;
+}
+const ncHidden = { position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 };
+
+/* ── Ny sag-guiden ──────────────────────────────────────────────────────── */
+
+/**
+ * prefill (valgfri): { name, cvr, type?, amount? } fra en anden skærm, fx en række i
+ * Porteføljeanalysen. Virksomheden vælges, hvis demoen kender den; type og beløb udfyldes.
+ */
+function NewCaseModal({ close, go, prefill }) {
+  const ref = React.useRef(null);
+  const [step, setStep] = React.useState(1);
+  const [q, setQ] = React.useState('');
+  const [company, setCompany] = React.useState(null);
+  const [caseType, setCaseType] = React.useState(() => { const o = prefill && ncTypeFrom(prefill.type); return o ? o.v : ''; }); // påkrævet, intet forvalg
+  const [amount, setAmount] = React.useState(() => {
+    const a = prefill && prefill.amount;
+    if (a == null || a === '') return '';
+    return typeof a === 'number' ? Math.round(a).toLocaleString(window.CW_LANG === 'en' ? 'en-GB' : 'da-DK') : String(a);
+  });
+  // Forvalget følger sagstypen (CW.defaultSelection); manual er det, rådgiveren selv har ændret
+  const [manual, setManual] = React.useState({});
+  const [confirmDrop, setConfirmDrop] = React.useState(null); // punkt der ventes bekræftelse på at fravælge
+  const [contact, setContact] = React.useState({ name: '', role: '', email: '' });
+  const [deadline, setDeadline] = React.useState(CW.workdaysFromNow(10));
+  const [tried, setTried] = React.useState({}); // { [trin]: true } når "Næste" er forsøgt
+  const [confirmClose, setConfirmClose] = React.useState(false);
+  const [done, setDone] = React.useState(null); // den oprettede demosag
+  const caseNr = React.useMemo(() => ncNextCaseNr(), []);
+  const link = React.useMemo(() => company ? ncRequestLink(company.name) : '', [company && company.key]);
+  // Det guiden blev åbnet med (inkl. prefill), så luk uden egne ændringer ikke spørger.
+  // Sættes ved første tegning; prefill-effekten nedenfor retter søgefeltet til virksomheden.
+  const initial = React.useRef(null);
+  if (initial.current === null) initial.current = { q: '', amount };
+
+  // Læses, når der lukkes (ikke ved tegning), så en ref sat i en effekt tæller med
+  const isDirty = () => !done && (step > 1 || q !== initial.current.q || amount !== initial.current.amount);
+  const requestClose = () => { if (isDirty()) setConfirmClose(true); else close(); };
+  CW.useDialog(ref, true, () => {
+    if (confirmDrop) setConfirmDrop(null);
+    else if (confirmClose) setConfirmClose(false);
+    else requestClose();
+  });
+
+  const pick = (c) => {
+    setCompany(c);
+    setQ(c.primary ? c.cvr : c.name);
+    setManual({});
+    const r = c.primary ? (DATA.REQUEST_RECIPIENT || {}) : {};
+    setContact({ name: r.name || '', role: (r.role || '').split(',')[0].trim(), email: r.email || '' });
   };
 
-  const dataOptions = [
-    { id: "annual", name: "Seneste årsrapport", req: true, auto: false },
-    { id: "interim", name: "Periodetal", req: true, auto: true, src: "e-conomic" },
-    { id: "budget", name: "Budget 2026-2028", req: true, auto: false },
-    { id: "ownership", name: "Ejerbog", req: true, auto: false },
-    { id: "articles", name: "Vedtægter", req: false, auto: true, src: "CVR-registret" },
-    { id: "shareholder", name: "Ejeraftale", req: false, auto: false },
-    { id: "loans", name: "Eksisterende låneaftaler", req: true, auto: false },
-    { id: "security", name: "Sikkerheds­dokumenter", req: true, auto: false },
-    { id: "pep", name: "PEP-erklæring", req: true, auto: false },
-    { id: "org", name: "Organisations­diagram", req: false, auto: false },
-    { id: "trade", name: "Samhandelslande", req: false, auto: false },
-  ];
+  // Forudfyldt fra en anden skærm: vælg virksomheden, hvis demoen kender den
+  React.useEffect(() => {
+    if (!prefill || (!prefill.name && !prefill.cvr)) return;
+    const d = ncCvrDigits(prefill.cvr);
+    const k = ncCompanyKey(prefill.name);
+    const hit = ncKnownCompanies().find(c => (d.length === 8 && ncCvrDigits(c.cvr) === d) || (k && c.key === k));
+    const c = hit || { key: k || d, name: String(prefill.name || prefill.cvr), cvr: prefill.cvr || '', primary: false, adhoc: true };
+    pick(c);
+    initial.current = { q: c.primary ? c.cvr : c.name, amount };
+  }, []);
 
-  const toggle = (id) => setDatapack(d => d.includes(id) ? d.filter(x => x !== id) : [...d, id]);
+  // Søgning: 8 cifre = CVR-opslag, bogstaver = navnesøgning blandt kendte virksomheder
+  const digits = ncCvrDigits(q);
+  const hasLetters = /[a-zæøå]/i.test(q);
+  let results = null, cvrState = null;
+  if (!company) {
+    if (hasLetters && q.trim().length >= 2) {
+      const needle = q.trim().toLowerCase();
+      results = ncKnownCompanies().filter(c => c.name.toLowerCase().includes(needle));
+    } else if (!hasLetters && digits.length === 8) cvrState = 'none';
+    else if (!hasLetters && digits.length > 0) cvrState = digits.length > 8 ? 'long' : 'short';
+  }
+  const onQuery = (v) => {
+    setQ(v);
+    setCompany(null);
+    const d = ncCvrDigits(v);
+    if (!/[a-zæøå]/i.test(v) && d.length === 8) {
+      const hit = ncKnownCompanies().find(c => ncCvrDigits(c.cvr) === d);
+      if (hit) { pick(hit); setQ(v); }
+    }
+  };
+  const openCases = company ? ncOpenCasesFor(company) : [];
+
+  const typeObj = NC_CASE_TYPES.find(x => x.v === caseType) || null;
+  const amountVal = ncParseAmount(amount);
+  const amountWarn = amountVal != null && (amountVal < 50000 || amountVal > 500e6) ? (amountVal < 50000 ? 'low' : 'high') : null;
+  // Punkterne med mærke og "hvorfor" for den valgte sagstype. Sagens egen virksomhed
+  // (Nordhavn): det der allerede ligger under Dokumenter, er ikke forvalgt, og punkter
+  // for sagens røde flag peger på flaget.
+  const own = !!(company && company.primary);
+  const items = typeObj ? CW.itemsFor(typeObj.l, { own }) : CW.allItems();
+  const sel = React.useMemo(() => Object.assign({}, typeObj ? CW.defaultSelection(typeObj.l, { own }) : {}, manual), [caseType, own, manual]);
+  const selectedItems = items.filter(it => sel[it.id]);
+  // Som i "Anmod om materiale": kernen og det valgte står i listen; resten ligger i
+  // en fold. Sagens egen virksomhed: det, der allerede findes i sagen, har sin egen fold.
+  const inCase = (it) => { const f = own ? CW.onFile(it) : null; return !!f && !f.stale; };
+  const mainItems = items.filter(it => sel[it.id] || (it.tier === 'core' && !inCase(it)));
+  const moreItems = items.filter(it => !mainItems.includes(it) && !inCase(it));
+  const caseItems = items.filter(it => !mainItems.includes(it) && inCase(it));
+  const catOf = (it) => (typeof wsMaterialCat === 'function' ? t(wsMaterialCat(it)) : '');
+  const toggleItem = (it) => {
+    if (sel[it.id] && it.tag === 'Anbefalet') { setConfirmDrop(it.id); return; }
+    setManual(m => ({ ...m, [it.id]: !sel[it.id] }));
+  };
+
+  const emailOk = NC_EMAIL_RE.test(contact.email.trim());
+  const errors = {
+    1: company ? null : 'company',
+    2: !caseType ? 'type' : amountVal == null ? 'amount' : selectedItems.length === 0 ? 'items' : null,
+    3: contact.email.trim() && !emailOk ? 'email' : !deadline ? 'deadline' : CW.isPast(deadline) ? 'deadlinePast' : null,
+  };
+  const FIELD = { company: 'nc-q', type: 'nc-type-' + NC_CASE_TYPES[0].v, amount: 'nc-amount', items: 'nc-item-' + (mainItems[0] && mainItems[0].id), email: 'nc-email', deadline: 'nc-deadline', deadlinePast: 'nc-deadline' };
+  const FIRST = { 1: 'nc-q', 2: 'nc-type-' + NC_CASE_TYPES[0].v, 3: 'nc-name' };
+  const invalid = (k) => tried[step] && errors[step] === k;
+
+  const next = () => {
+    setTried(p => ({ ...p, [step]: true }));
+    if (errors[step]) { CW.focusSoon('#' + FIELD[errors[step]]); return; }
+    setStep(step + 1);
+    CW.focusSoon('#' + FIRST[step + 1]);
+  };
+  const back = () => { setStep(step - 1); CW.focusSoon('#' + FIRST[step - 1]); };
+
+  // Mailen kunden får, når rådgiveren sender anmodningen fra sagen. Samme skabelon som sagen.
+  const to = { name: contact.name.trim(), email: contact.email.trim() };
+  const mail = step === 3 && company ? CW.requestMail({ items: selectedItems, deadline: deadline && !CW.isPast(deadline) ? deadline : null, to, company: company.name, caseNr, link }) : null;
+
+  // Sagen gemmes med EIFOs beløb (ved kaution 80 % af bankens facilitet) og med
+  // anmodningen (punkter, modtager, svarfrist, link). Svarfristen er kundens frist
+  // for materialet, ikke sagsfristen, så sagen får ingen sagsfrist her.
+  // Guiden lukker, og den nye sag åbnes med en kvittering som toast.
+  const creating = React.useRef(false); // dobbeltklik på "Opret sag" må ikke give to sager
+  const create = () => {
+    if (creating.current || done) return;
+    setTried(p => ({ ...p, 3: true }));
+    if (errors[3]) { CW.focusSoon('#' + FIELD[errors[3]]); return; }
+    creating.current = true;
+    const facility = typeObj.basis === 'facility' ? amountVal : null;
+    const why = {}, tags = {};
+    selectedItems.forEach(it => { why[it.id] = it.why; tags[it.id] = it.tag; });
+    const who = { name: contact.name.trim(), role: contact.role.trim(), email: contact.email.trim() };
+    const d = CW.addDemoCase({
+      name: company.name, cvr: company.cvr, caseNr, own,
+      type: typeObj.l, amount: facility ? Math.round(facility * NC_GUARANTEE_SHARE) : amountVal,
+      facilityAmount: facility, eifoShare: facility ? NC_GUARANTEE_SHARE : null, amountBasis: typeObj.basis,
+      // Dansk som i sagslisten; vis den med CW.demoCaseAmountNote(sag), der følger sproget
+      amountNote: facility ? Math.round(NC_GUARANTEE_SHARE * 100) + ' % af bankens facilitet på ' + (facility / 1e6).toLocaleString('da-DK', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' mio.' : null,
+      risk: null, responsible: DATA.ME, lastActivityAt: new Date().toISOString(), missing: null,
+      deadline: null,
+      contact: who,
+      request: { items: selectedItems.map(it => it.id), why, tags, deadline, to: who, link, sent: false },
+    });
+    setDone(d);
+    openCase(d.id);
+    CW.toast(t('Sagen er oprettet som kladde. Der er ikke sendt noget til kunden.'));
+  };
+  const openCase = (id) => { close(); go('workspace:' + id); };
+
+  const STEP_NAMES = { 1: 'Find virksomheden', 2: 'Sag og materiale', 3: 'Kontakt og svarfrist' };
 
   return (
-    <div className="scrim" onClick={close}>
-      <div className="modal" style={{ width: 720 }} onClick={e => e.stopPropagation()}>
+    // Fast top: modalen står samme sted på alle trin og hopper ikke, når indholdet skifter højde
+    <div className="scrim" style={{ placeItems: 'start center', paddingTop: '6vh', overflowY: 'auto' }}>
+      <div className="modal" ref={ref} role="dialog" aria-modal="true" aria-labelledby="nc-title" aria-describedby="nc-step" style={{ width: 720, maxHeight: 'calc(100vh - 12vh)' }}>
         <div className="modal-head">
           <div>
-            <div className="modal-title">{t('Ny sag')}</div>
-            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{t('Trin')} {sent ? 3 : step} {t('af')} 3</div>
+            <div className="modal-title" id="nc-title">{t('Ny sag')}</div>
+            <div id="nc-step" className="muted" aria-live="polite" style={{ fontSize: 13, marginTop: 2 }}>{done ? t('Oprettet som kladde') : ncFill(t('Trin {n} af 3: {name}'), { n: step, name: t(STEP_NAMES[step]) })}</div>
           </div>
-          <button className="icon-btn" onClick={close}><I.X size={16}/></button>
+          <button className="icon-btn" onClick={requestClose} aria-label={t('Luk')}><I.X size={16}/></button>
         </div>
 
-        <div style={{ padding: '0 22px', borderBottom: '1px solid var(--c-line)' }}>
-          <div style={{ display: 'flex', gap: 0 }}>
-            {[
-              { n: 1, t: "Virksomhed" },
-              { n: 2, t: "Sag og data" },
-              { n: 3, t: "Kontakt og link" },
-            ].map((s, i) => (
-              <div key={s.n} style={{ flex: 1, padding: '12px 0', borderBottom: '2px solid ' + ((sent ? 3 : step) === s.n ? 'var(--c-ink)' : 'transparent'), color: ((sent ? 3 : step) === s.n ? 'var(--c-ink)' : 'var(--c-text-3)'), fontSize: 12.5, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 18, height: 18, borderRadius: '50%', background: (sent ? 3 : step) >= s.n ? 'var(--c-ink)' : 'var(--c-line-2)', color: '#fff', fontSize: 10.5, display: 'grid', placeItems: 'center', fontWeight: 600 }}>{s.n}</span>
-                {t(s.t)}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="modal-body">
-          {step === 1 && !sent && (
-            <div className="vstack" style={{ gap: 16 }}>
+        <div className="modal-body" style={{ minHeight: 380 }}>
+          {step === 1 && !done && (
+            <div className="vstack" style={{ gap: 14 }}>
               <div className="field">
-                <label>{t('CVR-nummer eller virksomhedsnavn')}</label>
-                <input className="input input-lg mono" placeholder="38 42 71 56" value={cvr} onChange={e => lookup(e.target.value)} autoFocus/>
-                <div className="muted" style={{ fontSize: 11.5 }}>{t('Vi finder selskabsdata automatisk fra CVR-registret.')}</div>
+                <label htmlFor="nc-q">{t('CVR-nummer eller virksomhedsnavn')}</label>
+                {/* CW.useDialog giver fokus til elementet med autofocus-attributten, som React ikke selv skriver ud */}
+                <input id="nc-q" className="input input-lg" placeholder={t('fx') + ' ' + DATA.COMPANY.cvr} value={q} onChange={e => onQuery(e.target.value)} autoComplete="off"
+                  aria-invalid={invalid('company') ? 'true' : undefined} aria-describedby={'nc-q-hint' + (invalid('company') ? ' nc-q-err' : '')}
+                  ref={el => { if (el) el.setAttribute('autofocus', ''); }}/>
+                <div id="nc-q-hint" className="muted" style={{ fontSize: 12 }}>{t('Vi finder selskabsdata automatisk fra CVR-registret.')}</div>
               </div>
-              {foundCompany && (
-                <div style={{ border: '1px solid var(--c-line)', borderRadius: 8, padding: 14, display: 'flex', gap: 14 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', display: 'grid', placeItems: 'center', fontWeight: 600 }}>NC</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ fontWeight: 600, fontSize: 15 }}>{foundCompany.name}</div>
-                      <span style={{ color: 'var(--c-success)', fontSize: 11.5, display: 'inline-flex', alignItems: 'center', gap: 4 }}><I.Check size={12}/> {t('Fundet i CVR')}</span>
-                    </div>
-                    <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 2 }}>{foundCompany.address}</div>
-                    <div className="muted" style={{ fontSize: 11.5, marginTop: 4 }}>{foundCompany.industry} · {foundCompany.employees} {t('ansatte')} · {t('stiftet')} {foundCompany.founded}</div>
+
+              {!company && q.trim().length === 0 && (
+                <div className="muted" style={{ fontSize: 12.5, textAlign: 'center', padding: 14 }}>
+                  {t('Indtast CVR eller virksomhedsnavn, prøv fx')} <button type="button" className="mono" style={{ background: 'var(--c-surface-2)', padding: '3px 6px', minHeight: 24, borderRadius: 4, cursor: 'pointer', border: 0, font: 'inherit', color: 'inherit' }} onClick={() => onQuery(DATA.COMPANY.cvr)}>{DATA.COMPANY.cvr}</button>
+                </div>
+              )}
+              {cvrState === 'short' && <div className="muted" style={{ fontSize: 12.5 }}>{t('Et CVR-nummer har 8 cifre.')}</div>}
+              {cvrState === 'long' && <NcFieldError>{t('Et CVR-nummer har 8 cifre.')}</NcFieldError>}
+              {cvrState === 'none' && (
+                <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.5 }}>
+                  <b style={{ color: 'var(--c-ink)', fontWeight: 600 }}>{t('Ingen virksomhed fundet')}</b>
+                  <div>{ncFill(t('Ingen kunde i porteføljen eller på sagslisten har CVR {cvr}. Demoen slår kun op blandt EIFOs egne kunder. Tjek nummeret, eller søg på navnet.'), { cvr: q.trim() })}</div>
+                </div>
+              )}
+              {results && results.length === 0 && (
+                <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.5 }}>
+                  <b style={{ color: 'var(--c-ink)', fontWeight: 600 }}>{t('Ingen virksomhed fundet')}</b>
+                  <div>{ncFill(t('Ingen virksomheder matcher "{q}". Prøv en del af navnet eller CVR-nummeret.'), { q: q.trim() })}</div>
+                </div>
+              )}
+              {results && results.length > 0 && (
+                <div role="list" aria-label={t('Søgeresultater')} style={{ border: '1px solid var(--c-line)', borderRadius: 8, overflow: 'hidden' }}>
+                  {results.map((c, i) => (
+                    <button key={c.key} type="button" role="listitem" onClick={() => pick(c)}
+                      style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 12, padding: '10px 14px', border: 0, borderTop: i ? '1px solid var(--c-line-2)' : 0, background: '#fff', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
+                      <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{c.name}</span>
+                      <span className="mono muted" style={{ fontSize: 12 }}>CVR {c.cvr}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {company && (
+                <div className="cw-row" style={{ border: '1px solid var(--c-line)', borderRadius: 8, padding: '12px 14px', alignItems: 'center' }}>
+                  <div className="cw-row-main">
+                    <span>
+                      <span className="cw-row-title" style={{ fontSize: 14.5 }}>{company.name}</span>
+                      {!company.adhoc && <span className="muted" style={{ fontSize: 12, marginLeft: 8 }}>{t('Fundet i CVR')}</span>}
+                    </span>
+                    <span className="cw-row-meta">
+                      {company.primary ? DATA.COMPANY.address + ', ' + DATA.COMPANY.postal + ' · CVR ' + DATA.COMPANY.cvr
+                        : company.adhoc ? (company.cvr ? 'CVR ' + company.cvr + ' · ' : '') + t('Ikke kunde i porteføljen endnu')
+                        : 'CVR ' + company.cvr + ' · ' + t('Eksisterende kunde hos EIFO') + (company.portfolio && company.dept ? ' · ' + company.dept : '')}
+                    </span>
+                  </div>
+                  <button type="button" className="btn-ghost-sm" onClick={() => { setCompany(null); setQ(''); CW.focusSoon('#nc-q'); }}>{t('Skift')}</button>
+                </div>
+              )}
+
+              {company && openCases.length > 0 && (
+                <div>
+                  <div role="status" style={{ fontSize: 13, color: 'var(--c-text)', lineHeight: 1.5 }}>
+                    <b style={{ fontWeight: 600 }}>{ncFill(openCases.length === 1 ? t('{name} har allerede en åben sag.') : t('{name} har allerede {n} åbne sager.'), { name: company.name, n: openCases.length })}</b>{' '}
+                    <span style={{ color: 'var(--c-text-2)' }}>{t('Opret kun en ny sag, hvis det er en ny ansøgning. Den nye sag får sit eget sagsnummer og rører ikke den åbne sag.')}</span>
+                  </div>
+                  <div style={{ marginTop: 6 }}>
+                    {openCases.map(c => (
+                      <div key={c.id} className="cw-row" style={{ alignItems: 'center', padding: '6px 0' }}>
+                        <div className="cw-row-main" style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                          <span className="mono cw-row-title" style={{ fontSize: 13 }}>{c.caseNr}</span>
+                          <span className="cw-row-meta">{t(c.type)} · {/^\d+$/.test(String(c.amount)) ? ncFmtDKK(+c.amount) : 'DKK ' + c.amount} · {c.responsible}</span>
+                        </div>
+                        <button type="button" className="btn-ghost-sm" onClick={() => openCase(c.id)}>{t('Åbn sagen')} <I.ArrowRight size={12}/></button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
-              {!foundCompany && cvr.length === 0 && (
-                <div className="muted" style={{ fontSize: 12, textAlign: 'center', padding: 18 }}>
-                  {t('Indtast CVR eller virksomhedsnavn - prøv fx')} <span className="mono" style={{ background: 'var(--c-surface-2)', padding: '1px 5px', borderRadius: 4, cursor: 'pointer' }} onClick={() => lookup("38 42 71 56")}>38 42 71 56</span>
-                </div>
-              )}
+              {invalid('company') && <NcFieldError id="nc-q-err">{t('Vælg en virksomhed for at fortsætte.')}</NcFieldError>}
             </div>
           )}
 
-          {step === 2 && !sent && (
+          {step === 2 && !done && (
             <div className="vstack" style={{ gap: 18 }}>
-              <div className="grid g-2" style={{ gap: 14 }}>
-                <div className="field">
-                  <label>{t('Sagstype')}</label>
-                  <select className="input" value={caseType} onChange={e => setCaseType(e.target.value)}>
-                    <option value="export">{t('Eksportkaution')}</option>
-                    <option value="op">{t('Driftskredit')}</option>
-                    <option value="grow">{t('Vækstlån')}</option>
-                    <option value="inv">{t('Investeringslån')}</option>
-                  </select>
-                </div>
-                <div className="field">
-                  <label>{t('Beløb')}</label>
-                  <input className="input mono" placeholder="DKK 45.000.000" value={amount} onChange={e => setAmount(e.target.value)}/>
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 12, color: 'var(--c-text-2)', fontWeight: 500, display: 'block', marginBottom: 8 }}>{t('Ønsket datagrundlag')}</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--c-line-2)', borderRadius: 8, border: '1px solid var(--c-line)', overflow: 'hidden' }}>
-                  {dataOptions.map(o => (
-                    <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 12px', background: '#fff', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={datapack.includes(o.id)} onChange={() => toggle(o.id)}/>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 500 }}>{t(o.name)}{o.req && <span style={{ color: 'var(--c-text-3)' }}> ·</span>}</div>
-                        <div style={{ fontSize: 10.5, color: 'var(--c-text-3)' }}>{o.auto ? t('Auto fra') + ' ' + o.src : t('Kunde uploader')}</div>
-                      </div>
-                      {o.req && <span className="tag" style={{ fontSize: 9.5 }}>{t('Krævet')}</span>}
+              <fieldset style={{ border: 0, margin: 0, padding: 0 }} aria-describedby={invalid('type') ? 'nc-type-err' : undefined}>
+                <legend style={{ fontSize: 12, color: 'var(--c-text-2)', fontWeight: 500, padding: 0, marginBottom: 6 }}>{t('Sagstype')} <span style={{ color: 'var(--c-danger)' }} aria-hidden="true">*</span><span style={ncHidden}>{t('påkrævet')}</span></legend>
+                <div role="radiogroup" aria-required="true" aria-invalid={invalid('type') ? 'true' : undefined} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  {NC_CASE_TYPES.map(x => (
+                    <label key={x.v} style={{ display: 'flex', gap: 10, padding: '10px 12px', border: '1px solid ' + (caseType === x.v ? 'var(--c-ink)' : invalid('type') ? 'var(--c-danger)' : 'var(--c-line-strong)'), borderRadius: 8, cursor: 'pointer', background: '#fff' }}>
+                      <input id={'nc-type-' + x.v} type="radio" name="nc-type" checked={caseType === x.v} onChange={() => setCaseType(x.v)} style={{ marginTop: 3 }}
+                        aria-describedby={invalid('type') ? 'nc-type-err' : undefined}/>
+                      <span>
+                        <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--c-ink)' }}>{t(x.l)}</span>
+                        <span style={{ display: 'block', fontSize: 12, color: 'var(--c-text-3)', marginTop: 1, lineHeight: 1.4 }}>{t(x.d)}</span>
+                      </span>
                     </label>
                   ))}
                 </div>
+                {invalid('type') && <div style={{ marginTop: 6 }}><NcFieldError id="nc-type-err">{t('Vælg sagstypen, så vi ved, hvilket beløb der menes.')}</NcFieldError></div>}
+              </fieldset>
+
+              <div className="field" style={{ maxWidth: 420 }}>
+                <label htmlFor="nc-amount">
+                  {!typeObj ? t('Beløb (DKK)') : typeObj.basis === 'facility' ? t('Bankens facilitet (DKK)') : t('Lånebeløb fra EIFO (DKK)')} <span style={{ color: 'var(--c-danger)' }} aria-hidden="true">*</span>
+                </label>
+                <input id="nc-amount" className="input mono" placeholder={t('fx 4.500.000 eller 4,5 mio.')} value={amount} inputMode="decimal"
+                  aria-invalid={invalid('amount') ? 'true' : undefined} aria-required="true"
+                  aria-describedby={['nc-amount-hint', invalid('amount') ? 'nc-amount-err' : null, amountWarn ? 'nc-amount-warn' : null].filter(Boolean).join(' ')}
+                  style={invalid('amount') ? { borderColor: 'var(--c-danger)' } : undefined}
+                  onChange={e => setAmount(e.target.value)}/>
+                <div id="nc-amount-hint" className="muted" style={{ fontSize: 12, lineHeight: 1.45 }}>
+                  {!typeObj ? t('Vælg sagstype først. Ved kaution er det bankens facilitet, ved lån det beløb, EIFO låner ud.')
+                    : typeObj.basis === 'facility'
+                      ? (amountVal != null
+                        ? ncFill(t('{amount}. EIFO kautionerer typisk for op til 80 % af facilitetens beløb, her ca. {eifo}.'), { amount: ncFmtDKK(amountVal), eifo: ncFmtDKK(amountVal * NC_GUARANTEE_SHARE) })
+                        : t('Hele bankens facilitet. EIFO kautionerer typisk for op til 80 % af den.'))
+                      : (amountVal != null ? ncFmtDKK(amountVal) + '. ' + t('Det beløb, virksomheden søger at låne hos EIFO.') : t('Det beløb, virksomheden søger at låne hos EIFO.'))}
+                </div>
+                {invalid('amount') && <NcFieldError id="nc-amount-err">{amount.trim() ? t('Skriv beløbet som et tal, fx 4.500.000 eller 4,5 mio.') : t('Beløbet skal udfyldes.')}</NcFieldError>}
+                {amountWarn && (
+                  <div id="nc-amount-warn" role="status" style={{ fontSize: 12, color: 'var(--c-warn)' }}>
+                    {amountWarn === 'low' ? t('Beløbet er usædvanligt lavt for en sag hos EIFO. Tjek antallet af nuller.') : t('Beløbet er usædvanligt højt. Tjek antallet af nuller.')}
+                  </div>
+                )}
               </div>
+
+              <fieldset style={{ border: 0, margin: 0, padding: 0 }} aria-describedby={'nc-items-hint' + (invalid('items') ? ' nc-items-err' : '')}>
+                <legend style={{ fontSize: 12, color: 'var(--c-text-2)', fontWeight: 500, marginBottom: 2, padding: 0 }}>{t('Materiale kunden skal sende')}</legend>
+                <div id="nc-items-hint" className="muted" style={{ fontSize: 12.5, marginBottom: 6 }}>
+                  {typeObj ? t('Forvalgt ud fra sagstypen. Du kan ændre listen i sagen, før du sender.') : t('Vælg sagstypen ovenfor. Materialet og begrundelserne til kunden afhænger af produktet.')}
+                </div>
+                {typeObj && (
+                  <div>
+                    {mainItems.map(it => (
+                      <React.Fragment key={it.id}>
+                        <div className="cw-row lead" title={it.why ? t(it.why) : undefined} style={{ padding: '8px 0', background: confirmDrop === it.id ? 'var(--c-surface-2)' : undefined }}>
+                          <input id={'nc-item-' + it.id} type="checkbox" checked={!!sel[it.id]} onChange={() => toggleItem(it)} style={{ margin: '4px 0 0', accentColor: 'var(--c-primary)' }}/>
+                          <label htmlFor={'nc-item-' + it.id} className="cw-row-main" style={{ cursor: 'pointer' }}>
+                            <span className="cw-row-title">{t(it.label)}</span>
+                          </label>
+                          <span className="cw-row-cat">{catOf(it)}</span>
+                        </div>
+                        {confirmDrop === it.id && (
+                          <div role="alertdialog" aria-label={t('Fravælg anbefalet punkt')} style={{ margin: '0 0 8px 28px', fontSize: 12.5, color: 'var(--c-text)', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ flex: 1, minWidth: 240, lineHeight: 1.5 }}>
+                              <b style={{ fontWeight: 600 }}>{ncFill(t('{item} er anbefalet.'), { item: t(it.label) })}</b> <span style={{ color: 'var(--c-text-2)' }}>{t(it.why)} {t('Fravælg alligevel?')}</span>
+                            </div>
+                            <button type="button" className="btn btn-sm" onClick={() => setConfirmDrop(null)} autoFocus>{t('Behold')}</button>
+                            <button type="button" className="btn-ghost-sm" onClick={() => { setManual(m => ({ ...m, [it.id]: false })); setConfirmDrop(null); CW.focusSoon('#nc-item-' + it.id); }}>{t('Fravælg')}</button>
+                          </div>
+                        )}
+                      </React.Fragment>
+                    ))}
+                    {moreItems.length > 0 && (
+                      <CWFold label={ncFill(t('Mere materiale, du kan bede om ({n})'), { n: moreItems.length })} id="nc-more">
+                        {moreItems.map(it => (
+                          <div key={it.id} className="cw-row" style={{ alignItems: 'center', padding: '6px 0' }}>
+                            <div className="cw-row-main">
+                              <span style={{ color: 'var(--c-ink)' }}>{t(it.label)}</span>
+                              {it.hint && <span className="cw-row-meta">{t(it.hint)}</span>}
+                            </div>
+                            <button type="button" className="btn-ghost-sm" aria-label={ncFill(t('Tilføj {item}'), { item: t(it.label) })}
+                              onClick={() => { setManual(m => ({ ...m, [it.id]: true })); CW.focusSoon('#nc-item-' + it.id); }}>
+                              <I.Plus size={12}/> {t('Tilføj')}
+                            </button>
+                          </div>
+                        ))}
+                      </CWFold>
+                    )}
+                    {caseItems.length > 0 && (
+                      <CWFold label={ncFill(t('Findes allerede i sag {nr} ({n})'), { nr: DATA.COMPANY.caseNr, n: caseItems.length })} id="nc-incase">
+                        {caseItems.map(it => (
+                          <div key={it.id} className="cw-row" style={{ alignItems: 'center', padding: '6px 0' }}>
+                            <div className="cw-row-main"><span style={{ color: 'var(--c-ink)' }}>{t(it.label)}</span></div>
+                            <button type="button" className="btn-ghost-sm" onClick={() => { setManual(m => ({ ...m, [it.id]: true })); CW.focusSoon('#nc-item-' + it.id); }}>{t('Bed om ny version')}</button>
+                          </div>
+                        ))}
+                      </CWFold>
+                    )}
+                  </div>
+                )}
+                {invalid('items') && <div style={{ marginTop: 8 }}><NcFieldError id="nc-items-err">{t('Vælg mindst ét punkt.')}</NcFieldError></div>}
+              </fieldset>
             </div>
           )}
 
-          {step === 3 && !sent && (
+          {step === 3 && !done && (
             <div className="vstack" style={{ gap: 16 }}>
+              <div style={{ fontSize: 13, color: 'var(--c-text-2)' }}>{t('Sagen oprettes som kladde. Der sendes ikke noget til kunden endnu.')}</div>
               <div className="grid g-2" style={{ gap: 14 }}>
                 <div className="field">
-                  <label>{t('Modtagernavn')}</label>
-                  <input className="input" value={contact.name} onChange={e => setContact({...contact, name: e.target.value})}/>
+                  <label htmlFor="nc-name">{t('Kontaktperson hos kunden')}</label>
+                  <input id="nc-name" className="input" value={contact.name} placeholder={t('Fornavn og efternavn')} onChange={e => setContact({ ...contact, name: e.target.value })}/>
                 </div>
                 <div className="field">
-                  <label>{t('Rolle')}</label>
-                  <input className="input" value={contact.role} onChange={e => setContact({...contact, role: e.target.value})}/>
+                  <label htmlFor="nc-role">{t('Rolle')}</label>
+                  <input id="nc-role" className="input" value={contact.role} placeholder={t('fx økonomichef')} onChange={e => setContact({ ...contact, role: e.target.value })}/>
                 </div>
               </div>
-              <div className="field">
-                <label>{t('Email')}</label>
-                <input className="input" value={contact.email} onChange={e => setContact({...contact, email: e.target.value})}/>
-              </div>
-              <div className="field">
-                <label>{t('Personlig besked (valgfri)')}</label>
-                <textarea className="input" rows={3} style={{ height: 'auto', padding: 10, resize: 'vertical' }}
-                  placeholder={t("Hej Anders,\n\nFor at vurdere jeres ansøgning skal vi bruge nedenstående materiale. Det tager ca. 10 minutter at uploade.\n\nMvh Mette")}/>
-              </div>
-              <div style={{ background: 'var(--c-surface-2)', padding: 14, borderRadius: 8, fontSize: 12.5 }}>
-                <div className="label-mini" style={{ marginBottom: 4 }}>{t('Forhåndsvisning')}</div>
-                <div className="mono" style={{ color: 'var(--c-text)' }}>crediwire.app/c/nh-9j2k-7Aq3</div>
-                <div className="muted" style={{ marginTop: 4 }}>{t('Linket udløber efter 30 dage og kræver ingen login.')}</div>
-              </div>
-            </div>
-          )}
-
-          {sent && (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--c-success-bg)', color: 'var(--c-success)', display: 'grid', placeItems: 'center', margin: '0 auto 12px' }}>
-                <I.Check size={22}/>
-              </div>
-              <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Sagen er oprettet')}</div>
-              <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{t('Indhentningslinket er sendt til')} {contact.name}.</div>
-              <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', gap: 8 }}>
-                <button className="btn" onClick={() => { close(); go('cases'); }}>{t('Til sagsoversigt')}</button>
-                <button className="btn btn-primary" onClick={() => { close(); go('workspace:1'); }}>{t('Åbn sagen')} <I.ArrowRight className="ic"/></button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {!sent && (
-          <div className="modal-foot">
-            {step > 1 && <button className="btn" onClick={() => setStep(step-1)}><I.ChevronLeft className="ic"/> {t('Tilbage')}</button>}
-            <div style={{ flex: 1 }}/>
-            <button className="btn btn-ghost" onClick={close}>{t('Annullér')}</button>
-            {step < 3
-              ? <button className="btn btn-primary" disabled={step === 1 && !foundCompany} onClick={() => setStep(step+1)}>{t('Næste')} <I.ArrowRight className="ic"/></button>
-              : <button className="btn btn-primary" onClick={() => setSent(true)}><I.Send className="ic"/> {t('Send link til kunden')}</button>}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// External customer-facing upload portal - multi-screen flow
-function CustomerPortal({ back }) {
-  const [screen, setScreen] = React.useState("welcome"); // welcome | terms | agreement | hub | upload | connect | trade | followup | done | status
-  const [items, setItems] = React.useState([
-    { id: "annual", l: "Seneste årsrapport", kind: "upload", st: "done", note: "Hentet automatisk fra CVR-registret · Årsrapport 2024", auto: true, min: 1 },
-    { id: "internal_annual", l: "Intern årsrapport", kind: "upload", st: "open", min: 1 },
-    { id: "interim", l: "Periodetal", kind: "connect", st: "open", note: "Forbind bogføringssystem eller upload råbalance", min: 0 },
-    { id: "budget", l: "Budget", kind: "upload", st: "open", note: "Træk budget PDF/Excel ind", min: 1 },
-    { id: "pitchdeck", l: "Pitch deck", kind: "upload", st: "open", min: 1 },
-    { id: "ownership", l: "Ejerbog", kind: "upload", st: "open", note: "Træk ejerbog-PDF ind", min: 1 },
-    { id: "loans", l: "Eksisterende låneaftaler", kind: "upload", st: "open", note: "Træk PDF'er ind", min: 2 },
-    { id: "security", l: "Sikkerheds­dokumenter", kind: "upload", st: "open", note: "Pantebreve, kautionserklæringer", min: 2 },
-    { id: "trade", l: "Samhandelslande", kind: "trade", st: "open", note: "Vælg fra liste", min: 1 },
-    { id: "shareholder", l: "Ejeraftale", kind: "upload", st: "open", note: "Træk ejeraftale-PDF ind", optional: true, min: 1 },
-  ]);
-  const [activeItem, setActiveItem] = React.useState(null);
-  const [followupAnswered, setFollowupAnswered] = React.useState(false);
-  const [bundleOpen, setBundleOpen] = React.useState(false);
-  const [bundlePreselect, setBundlePreselect] = React.useState(null); // item id to pre-select
-
-  const done = items.filter(x => x.st === "done").length;
-  const skipped = items.filter(x => x.st === "skipped").length;
-  const accountant = items.filter(x => x.st === "accountant").length;
-  const total = items.length;
-  const pct = Math.round(((done + skipped + accountant * 0.5) / total) * 100);
-
-  const openItem = (item) => {
-    setActiveItem(item);
-    if (item.kind === "upload") setScreen("upload");
-    else if (item.kind === "connect") setScreen("connect");
-    else if (item.kind === "pep") setScreen("pep");
-    else if (item.kind === "trade") setScreen("trade");
-  };
-
-  const completeItem = (id, note) => {
-    setItems(prev => prev.map(x => x.id === id ? { ...x, st: "done", note } : x));
-    setScreen("hub");
-  };
-
-  const skipItem = (id) => {
-    setItems(prev => prev.map(x => x.id === id ? { ...x, st: "skipped" } : x));
-    setScreen("hub");
-  };
-
-  const reopenItem = (item) => {
-    setItems(prev => prev.map(x => x.id === item.id ? { ...x, st: "open" } : x));
-    setActiveItem({ ...item, st: "open" });
-    if (item.kind === "upload") setScreen("upload");
-    else if (item.kind === "connect") setScreen("connect");
-    else if (item.kind === "pep") setScreen("pep");
-    else if (item.kind === "trade") setScreen("trade");
-  };
-
-  const delegateToHelper = (itemIds, contact, helperKind) => {
-    const label = helperKind === 'bank' ? 'bank' : 'revisor';
-    setItems(prev => prev.map(x => itemIds.includes(x.id) ? {
-      ...x,
-      st: "accountant",
-      helperKind,
-      helperName: contact.name,
-      helperEmail: contact.email,
-      note: "Anmodet fra " + label + " (" + contact.email + ") · afventer svar"
-    } : x));
-    setBundleOpen(false);
-    setBundlePreselect(null);
-  };
-
-  const takeBack = (item) => {
-    setItems(prev => prev.map(x => x.id === item.id ? { ...x, st: "open", note: "Klar til upload" } : x));
-  };
-
-  const openBundle = (preselect) => {
-    setBundlePreselect(preselect || null);
-    setBundleOpen(true);
-  };
-
-  return (
-    <div style={{ background: '#faf8f4', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Persistent header */}
-      <div style={{ borderBottom: '1px solid var(--c-line)', background: '#fff', position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ maxWidth: 760, margin: '0 auto', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div className="brand-mark" style={{ background: 'var(--c-primary)' }}>cw</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-primary)' }}>{t('Kreditmateriale')}</div>
-            <div className="muted" style={{ fontSize: 11.5 }}>{t('Sikker indlevering')} · Nordhavn Composite A/S</div>
-          </div>
-          {screen !== "welcome" && screen !== "done" && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12, color: 'var(--c-text-2)' }}>
-              <div style={{ width: 100, height: 4, borderRadius: 999, background: 'var(--c-line-2)', overflow: 'hidden' }}>
-                <div style={{ width: pct + '%', height: '100%', background: 'var(--c-primary)', borderRadius: 999, transition: 'width 240ms' }}/>
-              </div>
-              <span className="mono">{done + skipped}/{total}</span>
-            </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--c-text-3)' }}>
-            <I.Lock size={11}/> {t('Sikker')}
-          </div>
-          <LanguageSwitcher compact/>
-        </div>
-      </div>
-
-      {/* "Back to advisor view" floating chip */}
-      <button onClick={back} style={{ position: 'fixed', bottom: 18, left: 18, background: 'var(--c-primary)', color: '#fff', border: 'none', padding: '8px 12px', borderRadius: 999, cursor: 'pointer', fontSize: 11.5, display: 'flex', alignItems: 'center', gap: 6, zIndex: 50, boxShadow: 'var(--shadow-lg)' }}>
-        <I.ArrowLeft size={12}/> {t('Tilbage til rådgiver-visning')}
-      </button>
-
-      {/* Demo shortcut */}
-      <button onClick={() => { setItems(prev => prev.map(x => x.st === 'done' ? x : { ...x, st: 'done', note: 'Udfyldt til demo' })); setScreen('hub'); }} style={{ position: 'fixed', bottom: 18, right: 18, background: 'transparent', color: 'var(--c-text-4)', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', fontSize: 11 }}>
-        {t('Udfyld alt (demo)')}
-      </button>
-
-      <div style={{ flex: 1, padding: '32px 24px' }}>
-        {screen === "welcome" && <PortalWelcome onStart={() => setScreen("terms")}/>}
-        {screen === "terms" && <PortalTerms onNext={() => setScreen("hub")} onBack={() => setScreen("welcome")}/>}
-        {screen === "hub" && <PortalHub items={items} pct={pct} done={done} total={total} accountant={accountant} onOpen={openItem} onReopen={reopenItem} onTakeBack={takeBack} onOpenBundle={openBundle} onSubmit={() => setScreen("done")} onClose={back} onBack={() => setScreen("terms")} onFollowup={() => setScreen("followup")} followupAnswered={followupAnswered}/>}
-        {screen === "upload" && <PortalUpload item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)} onSkip={() => skipItem(activeItem.id)}/>}
-        {screen === "connect" && <PortalConnect item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
-        {screen === "trade" && <PortalTrade item={activeItem} onBack={() => setScreen("hub")} onDone={(note) => completeItem(activeItem.id, note)}/>}
-        {screen === "followup" && <PortalFollowup onBack={() => setScreen("hub")} onSubmit={() => { setFollowupAnswered(true); setItems(prev => prev.map(x => x.hasFollowup ? { ...x, hasFollowup: false, note: x.note + " · spørgsmål besvaret" } : x)); setScreen("hub"); }}/>}
-        {screen === "done" && <PortalDone onBack={() => setScreen("hub")} onStatus={() => setScreen("status")}/>}
-        {screen === "status" && (
-          <div style={{ maxWidth: 760, margin: '0 auto' }}>
-            <button onClick={() => setScreen("done")} className="btn btn-sm btn-ghost" style={{ marginBottom: 18 }}><I.ArrowLeft className="ic"/> {t('Tilbage')}</button>
-            <WSCustomerStatus/>
-          </div>
-        )}
-      </div>
-
-      {bundleOpen && <DelegateBundleModal items={items} preselect={bundlePreselect} onClose={() => { setBundleOpen(false); setBundlePreselect(null); }} onSend={(itemIds, contact, helperKind) => delegateToHelper(itemIds, contact, helperKind)}/>}
-    </div>
-  );
-}
-
-function PortalTerms({ onNext, onBack }) {
-  const [accepted, setAccepted] = React.useState(false);
-  const [marketing, setMarketing] = React.useState(false);
-  return (
-    <div style={{ maxWidth: 560, margin: '0 auto' }}>
-      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 20 }}><I.ArrowLeft className="ic"/> {t('Gå tilbage')}</button>
-      <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '0 0 10px' }}>{t('Vilkår og betingelser')}</h1>
-      <p style={{ fontSize: 14.5, color: 'var(--c-text-2)', lineHeight: 1.65, marginBottom: 28 }}>
-        {t('For at sikre nem og sikker deling har vi indgået et partnerskab med Crediwire ApS.')}
-      </p>
-
-      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: '20px 22px', marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }} onClick={() => setAccepted(v => !v)}>
-          <div style={{ width: 20, height: 20, borderRadius: 4, border: '1.5px solid ' + (accepted ? 'var(--c-primary)' : 'var(--c-line-strong)'), background: accepted ? 'var(--c-primary)' : '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
-            {accepted && <I.Check size={12} style={{ color: '#fff' }}/>}
-          </div>
-          <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.6 }}>
-            {t("Jeg accepterer Crediwire ApS's")} <span style={{ color: 'var(--c-primary)', textDecoration: 'underline' }}>{t('Vilkår og betingelser')}</span> {t('og')} <span style={{ color: 'var(--c-primary)', textDecoration: 'underline' }}>{t('Databehandleraftale')}</span>. <span style={{ color: '#e53935' }}>*</span>
-          </div>
-        </label>
-        <div style={{ height: 1, background: 'var(--c-line-2)' }}/>
-        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer' }} onClick={() => setMarketing(v => !v)}>
-          <div style={{ width: 20, height: 20, borderRadius: 4, border: '1.5px solid ' + (marketing ? 'var(--c-primary)' : 'var(--c-line-strong)'), background: marketing ? 'var(--c-primary)' : '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
-            {marketing && <I.Check size={12} style={{ color: '#fff' }}/>}
-          </div>
-          <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.6 }}>
-            {t('Ja, jeg vil gerne modtage markedsføringsmateriale fra Crediwire ApS om produktopdateringer, arrangementer og serviceopdateringer via e-mail')}
-          </div>
-        </label>
-      </div>
-
-      <p style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginBottom: 28, lineHeight: 1.6 }}>
-        {t('Vi behandler dine personoplysninger i overensstemmelse med vores Privatlivspolitik.')}
-      </p>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button onClick={onNext} disabled={!accepted} className="btn btn-primary"
-          style={accepted ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.4, cursor: 'not-allowed' }}>
-          {t('Næste')} <I.ArrowRight className="ic"/>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function PortalAgreement({ onBack, onNext }) {
-  const [showFaq, setShowFaq] = React.useState(false);
-  return (
-    <div style={{ maxWidth: 560, margin: '0 auto' }}>
-      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 20 }}><I.ArrowLeft className="ic"/> {t('Gå tilbage')}</button>
-      <h1 style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '0 0 10px' }}>{t('Din aftale med EIFO')}</h1>
-
-      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: '22px 24px', marginBottom: 24 }}>
-        <p style={{ fontSize: 14.5, color: 'var(--c-text-2)', lineHeight: 1.65, margin: '0 0 16px' }}>
-          {t('Ved at tilslutte din virksomhed accepterer du at dele råbalancetal og debitordata med EIFO.')}
-        </p>
-        <p style={{ fontSize: 14.5, color: 'var(--c-text-2)', lineHeight: 1.65, margin: '0 0 20px' }}>
-          {t('Disse data kan opbevares og bruges til at styrke kundedialogen, identificere finansielle behov og gennemføre løbende kreditvurderinger.')}
-        </p>
-        <span onClick={() => setShowFaq(true)} style={{ color: 'var(--c-primary)', fontSize: 13.5, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-          <I.Help size={13}/> {t('FAQ: Hvilke data deler du?')}
-        </span>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-        <button onClick={onBack} className="btn">{t('Tilbage')}</button>
-        <button onClick={onNext} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
-          {t('Næste')} <I.ArrowRight className="ic"/>
-        </button>
-      </div>
-
-      {showFaq && (
-        <div className="scrim" onClick={() => setShowFaq(false)}>
-          <div className="modal" style={{ width: 420 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-head">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(59,130,246,0.1)', color: 'var(--c-primary)', display: 'grid', placeItems: 'center' }}>
-                  <I.Help size={14}/>
+              <div className="grid g-2" style={{ gap: 14 }}>
+                <div className="field">
+                  <label htmlFor="nc-email">{t('Email')}</label>
+                  <input id="nc-email" className="input" type="email" value={contact.email} placeholder="navn@virksomhed.dk"
+                    aria-invalid={invalid('email') ? 'true' : undefined} aria-describedby={invalid('email') ? 'nc-email-err' : undefined}
+                    style={invalid('email') ? { borderColor: 'var(--c-danger)' } : undefined}
+                    onChange={e => setContact({ ...contact, email: e.target.value })}/>
+                  {invalid('email') && <NcFieldError id="nc-email-err">{t('Mailadressen ser ikke rigtig ud.')}</NcFieldError>}
                 </div>
-                <div className="modal-title">{t('FAQ: Hvilke data deler du?')}</div>
+                <div className="field">
+                  <label htmlFor="nc-deadline">{t('Svarfrist')} <span style={{ color: 'var(--c-danger)' }} aria-hidden="true">*</span></label>
+                  <input id="nc-deadline" className="input mono" type="date" value={deadline} min={CW.workdaysFromNow(1)} aria-required="true"
+                    aria-invalid={invalid('deadline') || invalid('deadlinePast') ? 'true' : undefined}
+                    aria-describedby={invalid('deadline') || invalid('deadlinePast') ? 'nc-deadline-err' : 'nc-deadline-hint'}
+                    style={invalid('deadline') || invalid('deadlinePast') ? { borderColor: 'var(--c-danger)' } : undefined}
+                    onChange={e => setDeadline(e.target.value)}/>
+                  {invalid('deadline') || invalid('deadlinePast')
+                    ? <NcFieldError id="nc-deadline-err">{invalid('deadline') ? t('Vælg en svarfrist.') : t('Svarfristen ligger i fortiden. Vælg en dato fra i dag og frem.')}</NcFieldError>
+                    : <div id="nc-deadline-hint" className="muted" style={{ fontSize: 12 }}>{deadline ? ncFill(t('{n} hverdage fra i dag'), { n: CW.workdaysBetween(new Date().toISOString(), deadline + 'T12:00:00') }) : ''}</div>}
+                </div>
               </div>
-              <button className="icon-btn" onClick={() => setShowFaq(false)}><I.X size={16}/></button>
-            </div>
-            <div className="modal-body" style={{ paddingTop: 4 }}>
-              <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.65, margin: '0 0 20px' }}>
-                {t('EIFO modtager generelt de samme data som tidligere er sendt på email, nu bare digitalt og på en nemmere og mere sikker måde.')}
-              </p>
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>{t('Vi modtager følgende:')}</div>
-                <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {["Råbalancetal", "Debitordata"].map(item => (
-                    <li key={item} style={{ fontSize: 13.5, color: 'var(--c-text-2)' }}>{t(item)}</li>
-                  ))}
-                </ul>
-              </div>
-              <div style={{ marginBottom: 4 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>{t('Vi modtager IKKE:')}</div>
-                <ul style={{ margin: 0, padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {["Posteringer", "Bilag"].map(item => (
-                    <li key={item} style={{ fontSize: 13.5, color: 'var(--c-text-2)' }}>{t(item)}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <div className="modal-foot" style={{ justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowFaq(false)} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>{t('Okay')}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
 
-function PortalWelcome({ onStart }) {
-  return (
-    <div style={{ maxWidth: 560, margin: '40px auto 0', textAlign: 'left' }}>
-      <div style={{ display: 'inline-block', padding: '4px 10px', background: 'var(--c-surface-2)', borderRadius: 999, fontSize: 11, color: 'var(--c-text-2)', fontWeight: 500 }}>{t('MAJ 2026')}</div>
-      <h1 style={{ fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '18px 0 10px', lineHeight: 1.15 }}>{t('Kære')} Anders,</h1>
-      <p style={{ fontSize: 15, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 24 }}>
-        {t('Tak for din ansøgning hos EIFO. For at vi kan behandle din ansøgning, har vi samlet alt det vi har brug for i ét sted, så I slipper for at lede i mails og dokumenter.')}
-      </p>
-
-      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
-        <div className="label-mini" style={{ marginBottom: 10 }}>{t('Sådan foregår det')}</div>
-        {[
-          { ic: <I.Clock size={14}/>, t: "Ca. 10 minutter samlet - det meste er upload" },
-          { ic: <I.Refresh size={14}/>, t: "Vend tilbage senere - fremgang er gemt automatisk" },
-          { ic: <I.Lock size={14}/>, t: "Krypteret forbindelse · ingen login krævet" },
-          { ic: <I.Spark size={14}/>, t: "Vi henter data fra dit økonomisystem og CVR automatisk hvor vi kan" },
-        ].map((x, i) => (
-          <div key={i} style={{ display: 'flex', gap: 12, padding: '8px 0', alignItems: 'center', fontSize: 13.5 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 7, background: 'var(--c-surface-2)', display: 'grid', placeItems: 'center', color: 'var(--c-text-2)', flexShrink: 0 }}>{x.ic}</div>
-            <div>{t(x.t)}</div>
-          </div>
-        ))}
-      </div>
-
-      <button onClick={onStart} className="btn btn-primary btn-lg" style={{ padding: '0 22px', background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
-        {t('Lad os komme i gang')} <I.ArrowRight className="ic"/>
-      </button>
-      <div style={{ marginTop: 12, fontSize: 12, color: 'var(--c-text-3)' }}>
-        {t('Eller skriv direkte til Mette på')} <b style={{ color: 'var(--c-ink)' }}>mette.larsen@eifo.dk</b>
-      </div>
-    </div>
-  );
-}
-
-function PortalHub({ items, pct, done, total, accountant, onOpen, onReopen, onTakeBack, onOpenBundle, onSubmit, onClose, onBack, onFollowup, followupAnswered }) {
-  const allDone = items.every(x => x.st === "done" || x.st === "skipped");
-  const hasFollowup = items.some(x => x.hasFollowup);
-  const canDelegate = items.some(x => x.st === "open");
-  return (
-    <div style={{ maxWidth: 760, margin: '0 auto' }}>
-      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 16 }}><I.ArrowLeft className="ic"/> {t('Gå tilbage')}</button>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.015em', flex: 1 }}>{t('Materiale til kreditafdelingen')}</div>
-        {canDelegate && (
-          <button onClick={() => onOpenBundle(null)} className="btn btn-sm btn-ghost" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <I.User size={13}/> {t('Anmod bank eller revisor om hjælp')}
-          </button>
-        )}
-      </div>
-
-      {/* Followup card */}
-      {hasFollowup && (
-        <div style={{ marginTop: 18, padding: '14px 16px', background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10, borderLeft: '3px solid var(--c-warn)', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <I.AlertCircle size={16} style={{ color: 'var(--c-warn)', flexShrink: 0 }}/>
-          <div style={{ flex: 1, fontSize: 13 }}>
-            <b>{t('Mette har et opfølgende spørgsmål')}</b> {t('til budgettet - kan du bekræfte stigningen i juli 2026?')}
-          </div>
-          <button onClick={onFollowup} className="btn btn-sm btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>{t('Svar')}</button>
-        </div>
-      )}
-      {followupAnswered && !hasFollowup && (
-        <div style={{ marginTop: 18, padding: '10px 14px', background: 'var(--c-success-bg)', border: '1px solid transparent', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10, color: 'var(--c-success)', fontSize: 12.5 }}>
-          <I.Check size={14}/> {t('Spørgsmål besvaret · Mette har fået din kommentar.')}
-        </div>
-      )}
-
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', marginTop: 18, overflow: 'hidden' }}>
-        {items.map((x, i) => (
-          <PortalHubRow key={x.id} x={x} isFirst={i === 0} onOpen={onOpen} onReopen={onReopen} onTakeBack={onTakeBack} onOpenBundle={onOpenBundle}/>
-        ))}
-      </div>
-
-      {accountant > 0 && (
-        <div style={{ marginTop: 14, padding: '12px 16px', background: 'var(--c-warn-bg)', borderRadius: 10, fontSize: 12.5, color: 'var(--c-text)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <I.Clock size={14} style={{ color: 'var(--c-warn)', flexShrink: 0 }}/>
-          <div style={{ flex: 1 }}>
-            <b>{accountant}</b> {accountant === 1 ? t('element afventer') : t('elementer afventer')} {t('jeres bank eller revisor. Kreditafdelingen ser status og kan kontakte dem direkte hvis nødvendigt.')}
-          </div>
-          <button onClick={() => onOpenBundle(null)} className="btn btn-sm btn-ghost" style={{ fontSize: 11.5 }}>{t('Rediger')}</button>
-        </div>
-      )}
-
-      <div style={{ marginTop: 22, padding: 18, background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', display: 'flex', alignItems: 'center', gap: 14 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>{allDone ? t("Klar til at indsende") : t("Fortsæt senere")}</div>
-          <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 2 }}>{allDone ? t("Mette får besked automatisk når du indsender") : t("Vi gemmer automatisk · du kan vende tilbage via det samme link")}</div>
-        </div>
-        {allDone && (
-          <button onClick={onSubmit} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>{t('Indsend til kreditafdelingen')} <I.ArrowRight className="ic"/></button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function PortalHubRow({ x, isFirst, onOpen, onReopen, onTakeBack, onOpenBundle }) {
-  const [menu, setMenu] = React.useState(false);
-  const interactive = x.st !== 'done' && x.st !== 'accountant';
-  return (
-    <div style={{ position: 'relative', padding: '14px 18px', borderTop: !isFirst ? '1px solid var(--c-line-2)' : 'none', display: 'flex', alignItems: 'center', gap: 14, cursor: interactive ? 'pointer' : 'default' }}
-      onClick={() => interactive && onOpen(x)}>
-      {x.st === 'done'
-        ? <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', display: 'grid', placeItems: 'center' }}><I.Check size={12}/></div>
-        : x.st === 'skipped'
-        ? <I.X size={20} style={{ color: 'var(--c-text-4)' }}/>
-        : x.st === 'accountant'
-        ? <div style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--c-warn-bg)', color: 'var(--c-warn)', display: 'grid', placeItems: 'center', border: '1.5px solid var(--c-warn)' }}><I.Clock size={11}/></div>
-        : <span style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid var(--c-line-strong)' }}/>}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 14.5, fontWeight: 500, color: x.st === 'done' || x.st === 'skipped' ? 'var(--c-text-3)' : 'var(--c-ink)' }}>
-          {t(x.l)}
-          {x.optional && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-3)' }}>{t('Valgfri')}</span>}
-          {x.auto && <span className="tag" style={{ fontSize: 10, marginLeft: 7, color: 'var(--c-text-2)' }}>{t('Auto')}</span>}
-          {x.st === 'accountant' && <span className="tag" style={{ fontSize: 10, marginLeft: 7, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>{x.helperKind === 'bank' ? t('Afventer bank') : t('Afventer revisor')}</span>}
-        </div>
-      </div>
-      {x.st === 'open' && (
-        <I.ChevronRight size={16} style={{ color: 'var(--c-text-3)' }}/>
-      )}
-      {x.st === 'accountant' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <button onClick={(e) => { e.stopPropagation(); onTakeBack(x); }} className="btn btn-sm">{t('Tag tilbage')}</button>
-        </div>
-      )}
-      {x.st === 'done' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 11.5, color: 'var(--c-success)', display: 'inline-flex', alignItems: 'center', gap: 5 }}><I.Check size={12}/> {t('Færdig')}</span>
-          <button onClick={(e) => { e.stopPropagation(); setMenu(!menu); }} className="btn btn-sm btn-ghost" style={{ padding: '0 6px' }}>
-            <I.MoreH className="ic"/>
-          </button>
-          {menu && (
-            <div onMouseLeave={() => setMenu(false)} style={{ position: 'absolute', top: 'calc(100% - 4px)', right: 14, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 8, boxShadow: 'var(--shadow-lg)', zIndex: 20, padding: 4, minWidth: 200 }}>
-              <button onClick={(e) => { e.stopPropagation(); setMenu(false); onReopen(x); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
-                <I.Refresh size={13}/> {x.kind === 'upload' ? t('Upload igen') : x.kind === 'pep' ? t('Underskriv igen') : x.kind === 'trade' ? t('Rediger svar') : t('Genåbn')}
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setMenu(false); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
-                <I.Eye size={13}/> {t('Se hvad kreditafdelingen modtog')}
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); setMenu(false); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--c-text)', borderRadius: 5, textAlign: 'left' }}>
-                <I.Download size={13}/> {t('Download')}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      {x.st === 'skipped' && <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); onOpen(x); }}>{t('Tilføj alligevel')}</button>}
-    </div>
-  );
-}
-
-function PortalUpload({ item, onBack, onDone, onSkip }) {
-  const [drag, setDrag] = React.useState(false);
-  const [files, setFiles] = React.useState([]);
-  const [completing, setCompleting] = React.useState(false);
-  const doneRef = React.useRef(false);
-
-  const fakeFiles = {
-    loans: [
-      { name: "Laaneaftale_Nordea_2022.pdf", size: "412 KB", type: "Låneaftale" },
-      { name: "Laaneaftale_Jyske_2024.pdf",  size: "287 KB", type: "Låneaftale" },
-    ],
-    security: [
-      { name: "Pantebrev_maskiner.pdf",        size: "156 KB", type: "Pantebrev" },
-      { name: "Selskabskaution_AH.pdf",         size: "98 KB",  type: "Kautionserklæring" },
-    ],
-  };
-
-  const handleDrop = () => {
-    setDrag(false);
-    setFiles(prev => {
-      const pool = fakeFiles[item.id] || [{ name: item.l.replace(/\s+/g, '_') + ".pdf", size: "210 KB", type: "Dokument" }];
-      const next = [...prev, pool[prev.length % pool.length]];
-      const min = item.min || 1;
-      if (next.length >= min && !doneRef.current) {
-        doneRef.current = true;
-        setCompleting(true);
-        setTimeout(() => onDone(next.length + " dokumenter uploadet"), 900);
-      }
-      return next;
-    });
-  };
-
-  const uploadDescs = {
-    loans: "Træk PDF'er ind med jeres nuværende låneaftaler. Vi har brug for at se renter, hovedstol, afdragsprofil og evt. covenants.",
-    security: "Pantebreve, kautionserklæringer og andre dokumenter som beskriver sikkerhederne i sagen.",
-    pitchdeck: "Upload jeres pitch deck - en præsentation af virksomheden, forretningsmodellen og vækstplanen.",
-  };
-
-  return (
-    <div style={{ maxWidth: 640, margin: '0 auto' }}>
-      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 14 }}><I.ArrowLeft className="ic"/> {t('Tilbage til oversigten')}</button>
-
-      <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{t('UPLOAD')}</div>
-      <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '6px 0 6px' }}>{t(item.l)}</h1>
-      {uploadDescs[item.id] && (
-        <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 22 }}>{t(uploadDescs[item.id])}</p>
-      )}
-
-      {completing ? (
-        <div style={{ textAlign: 'center', padding: '36px 0' }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--c-success-bg)', color: 'var(--c-success)', display: 'grid', placeItems: 'center', margin: '0 auto 14px' }}>
-            <I.Check size={24}/>
-          </div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Uploadet!')}</div>
-          <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{t('Går tilbage til oversigten...')}</div>
-        </div>
-      ) : (
-        <>
-          <div
-            onDragOver={e => { e.preventDefault(); setDrag(true); }}
-            onDragLeave={() => setDrag(false)}
-            onDrop={e => { e.preventDefault(); handleDrop(); }}
-            onClick={handleDrop}
-            style={{
-              border: '2px dashed ' + (drag ? 'var(--c-primary)' : 'var(--c-line-strong)'),
-              background: drag ? 'rgba(29,6,216,0.06)' : '#fff',
-              borderRadius: 14, padding: '42px 24px',
-              textAlign: 'center', cursor: 'pointer',
-              transition: 'all 150ms',
-            }}>
-            <div style={{ width: 52, height: 52, borderRadius: 12, background: 'var(--c-surface-2)', margin: '0 auto 14px', display: 'grid', placeItems: 'center', color: 'var(--c-text-2)' }}>
-              <I.Upload size={22}/>
-            </div>
-            <div style={{ fontSize: 15.5, fontWeight: 500, color: 'var(--c-ink)' }}>{t('Træk filer hertil - eller klik for at vælge')}</div>
-            <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 6 }}>{t('PDF, Excel, Word, billeder · max 50 MB pr. fil')}</div>
-          </div>
-
-          {files.length > 0 && (
-            <div style={{ marginTop: 18, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden' }}>
-              {files.map((f, i) => (
-                <div key={i} style={{ padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div className="doc-ic" style={{ width: 30, height: 36 }}/>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{f.name}</div>
-                    <div className="muted" style={{ fontSize: 11.5 }}>{t(f.type)} · {f.size}</div>
+              {mail && (
+                <CWFold label={t('Se mailen, kunden får')} id="nc-mail">
+                  <div className="muted" style={{ fontSize: 12.5, marginBottom: 8 }}>{t('Den sendes først, når du sender anmodningen fra sagen.')}</div>
+                  <div style={{ border: '1px solid var(--c-line)', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
+                    <div style={{ padding: '10px 14px', background: 'var(--c-surface-2)', borderBottom: '1px solid var(--c-line)', fontSize: 12.5, display: 'grid', gridTemplateColumns: '52px 1fr', rowGap: 2 }}>
+                      <span className="muted">{t('Til')}</span><span>{to.name || to.email ? (to.name ? to.name + (to.email ? ' <' + to.email + '>' : '') : to.email) : <span className="muted">{t('Kontaktperson ikke angivet endnu')}</span>}</span>
+                      <span className="muted">{t('Emne')}</span><b style={{ fontWeight: 600 }}>{t('Materiale til kreditvurdering af') + ' ' + company.name}</b>
+                    </div>
+                    <div style={{ padding: '14px 16px', fontSize: 13, lineHeight: 1.55, color: 'var(--c-text)' }}>
+                      <p style={{ margin: '0 0 8px' }}>{mail.greeting}</p>
+                      <p style={{ margin: '0 0 8px' }}>{mail.intro}</p>
+                      <ul style={{ margin: '0 0 10px', paddingLeft: 18 }}>
+                        {mail.items.map(x => (
+                          <li key={x.id} style={{ marginBottom: 3 }}>
+                            <b style={{ fontWeight: 600 }}>{x.label}</b>{x.optional ? ' (' + t('valgfri') + ')' : ''}
+                            <span className="muted"> · {x.why}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      {mail.deadlineLine && <p style={{ margin: '0 0 12px' }}>{mail.deadlineLine}</p>}
+                      <span className="btn btn-primary" style={{ pointerEvents: 'none' }} aria-hidden="true">{mail.buttonLabel} <I.ArrowRight className="ic"/></span>
+                      <div className="mono muted" style={{ fontSize: 12, marginTop: 6 }}>{link}</div>
+                      <p className="muted" style={{ fontSize: 12, margin: '10px 0 10px' }}>{mail.trustLine}</p>
+                      <div style={{ fontSize: 12.5 }}>{mail.signature.map((l, i) => <div key={i} style={i ? { color: 'var(--c-text-2)' } : { fontWeight: 600 }}>{l}</div>)}</div>
+                      <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>{t('Sagsnr.')} {caseNr}</div>
+                    </div>
                   </div>
-                  <span style={{ color: 'var(--c-success)', fontSize: 11.5, display: 'inline-flex', gap: 5, alignItems: 'center' }}><I.Check size={12}/> {t('Uploadet')}</span>
-                </div>
-              ))}
-              {item.min > 1 && files.length < item.min && (
-                <div style={{ padding: '10px 16px', borderTop: '1px solid var(--c-line-2)', fontSize: 12, color: 'var(--c-text-3)' }}>
-                  {t('Tilføj')} {item.min - files.length} {t('fil mere for at fortsætte')}
-                </div>
+                </CWFold>
               )}
             </div>
           )}
 
-          <div style={{ marginTop: 22, display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
-            <button className="btn btn-ghost" onClick={onSkip}><I.X className="ic"/> {t('Ikke relevant - spring over')}</button>
+          {/* Guiden lukker normalt, så snart sagen er oprettet; dette ses kun et øjeblik */}
+          {done && <div role="status" style={{ fontSize: 13, color: 'var(--c-text-2)' }}>{t('Sagen er oprettet som kladde. Der er ikke sendt noget til kunden.')}</div>}
+        </div>
+
+        {!done && (
+          <div className="modal-foot" style={{ alignItems: 'center' }}>
+            {confirmClose ? (
+              <>
+                <div role="alert" style={{ flex: 1, fontSize: 13, color: 'var(--c-text)' }}>{t('Kassér det, du har indtastet?')}</div>
+                <button className="btn" onClick={() => setConfirmClose(false)} autoFocus>{t('Fortsæt med sagen')}</button>
+                <button className="btn btn-danger" onClick={close}>{t('Kassér')}</button>
+              </>
+            ) : (
+              <>
+                {step > 1 && <button className="btn" onClick={back}><I.ChevronLeft className="ic"/> {t('Tilbage')}</button>}
+                <div style={{ flex: 1 }}/>
+                <button className="btn btn-ghost" onClick={requestClose}>{t('Annullér')}</button>
+                {step < 3
+                  ? <button className="btn btn-primary" onClick={next}>{t('Næste')} <I.ArrowRight className="ic"/></button>
+                  : <button className="btn btn-primary" onClick={create}>{t('Opret sag')}</button>}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ── Kundeportalen ──────────────────────────────────────────────────────── */
+
+// Portalens egen hukommelse (hvor kunden var, accepterede vilkår og genkendt
+// enhed). Ligger i localStorage under kabul:, så den overlever genindlæsning
+// og sprogskift og nulstilles sammen med resten af demoen.
+const PORTAL_KEY = 'kabul:portal:nordhavn';
+const PORTAL_SESSION_KEY = 'kabul:portal-session';
+const PORTAL_DEFAULTS = { screen: 'welcome', itemId: null, accepted: false, trustedUntil: null };
+function portalMem() {
+  try { return Object.assign({}, PORTAL_DEFAULTS, JSON.parse(localStorage.getItem(PORTAL_KEY) || '{}')); }
+  catch (e) { return Object.assign({}, PORTAL_DEFAULTS); }
+}
+function setPortalMem(patch) {
+  try { localStorage.setItem(PORTAL_KEY, JSON.stringify(Object.assign(portalMem(), patch))); } catch (e) {}
+}
+function portalTrusted() {
+  const m = portalMem();
+  if (m.trustedUntil && m.trustedUntil > new Date().toISOString()) return true;
+  try { return sessionStorage.getItem(PORTAL_SESSION_KEY) === '1'; } catch (e) { return false; }
+}
+
+// Rådgiveren på sagen. Samme kilde og reserve som kundens statusside og sagen.
+const PORTAL_CONTACT = (() => {
+  const co = (window.DATA && DATA.COMPANY) || {};
+  const a = Object.assign({ name: 'Mette Larsen', title: 'Kreditrådgiver', org: 'EIFO', phone: '+45 35 29 86 42', email: 'mette.larsen@eifo.dk' },
+    (window.DATA && DATA.ADVISOR) || (co.advisor && typeof co.advisor === 'object' ? co.advisor : {}));
+  a.initials = a.initials || a.name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  a.first = ncFirstName(a.name);
+  return a;
+})();
+
+// Punktets tilstand set fra kunden: pending | received | noted | delegated | approved | rejected
+function portalStatus(id) {
+  const s = CW.itemState(id);
+  return s ? s.status : 'pending';
+}
+function portalRecipient() {
+  const req = CW.request();
+  const r = DATA.REQUEST_RECIPIENT || {};
+  return { name: (req && req.to && req.to.name) || r.name || '', email: (req && req.to && req.to.email) || r.email || '' };
+}
+// "sp@nordhavncomposite.dk" -> "s…@nordhavncomposite.dk"
+function portalMaskEmail(email) {
+  const at = String(email || '').indexOf('@');
+  return at > 0 ? email[0] + '…' + email.slice(at) : email;
+}
+const portalYmd = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+
+function downloadFiles(files) {
+  const ok = (files || []).filter(f => CW.fileUrl(f.id));
+  if (!ok.length) { CW.notInDemo(t('Download')); return; }
+  ok.forEach(f => {
+    const a = document.createElement('a');
+    a.href = CW.fileUrl(f.id); a.download = f.name;
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+}
+
+// Til "Udfyld alt (demo)": sagens egne demofiler med indhold (CW.demoUploadFile:
+// periodetal, budget, forudsætninger, lån, ejerbog og kontrakt). Øvrige punkter
+// får en lille, rigtig PDF-fil med én linje tekst, så filen kan åbnes fra
+// Dokumenter som alle andre uploads.
+function demoPdf(name, title) {
+  const ascii = String(title).replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa').replace(/Æ/g, 'Ae').replace(/Ø/g, 'Oe').replace(/Å/g, 'Aa').replace(/[^\x20-\x7e]/g, '').replace(/[()\\]/g, '');
+  const stream = 'BT /F1 16 Tf 72 770 Td (' + ascii + ') Tj 0 -24 Td /F1 10 Tf (Demodokument fra kundeportalen) Tj ET';
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    '<< /Length ' + stream.length + ' >>\nstream\n' + stream + '\nendstream',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offs = [];
+  objs.forEach((o, i) => { offs.push(pdf.length); pdf += (i + 1) + ' 0 obj\n' + o + '\nendobj\n'; });
+  const xref = pdf.length;
+  pdf += 'xref\n0 ' + (objs.length + 1) + '\n0000000000 65535 f \n' + offs.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+  pdf += 'trailer\n<< /Size ' + (objs.length + 1) + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF';
+  return new File([pdf], name, { type: 'application/pdf' });
+}
+const DEMO_FILE_NAMES = { 'm-annual': 'Intern_aarsrapport_2025.pdf', 'm-pitch': 'Virksomhedspraesentation.pdf', 'm-security': 'Pantebreve_og_kautioner.pdf', 'm-ownership': 'Ejeraftale.pdf', 'm-fx': 'Valutapolitik_og_terminsforretninger.pdf', 'm-group': 'Koncernsammenstilling_2025.pdf', 'm-tech': 'SaaS_noegletal_2026.pdf', 'm-lowcase': 'Foelsomhedsanalyse_budget.pdf', 'm-protocol': 'Revisionsprotokollat_2025.pdf', 'm-capital': 'Kapitalplan_og_stoetteerklaering.pdf', 'm-bizplan': 'Forretningsplan.pdf', 'm-agri': 'Effektivitetsnoegletal.pdf', 'm-pub-cvr': 'Vedtaegter.pdf', 'm-pub-market': 'Marked_og_konkurrenter.pdf', 'm-pub-product': 'Produktbeskrivelse.pdf' };
+// Filnavn til et punkt uden fast navn (fx en årsrapport for et bestemt år eller materiale, rådgiveren selv har skrevet ind)
+function demoFileName(it) {
+  if (DEMO_FILE_NAMES[it.id]) return DEMO_FILE_NAMES[it.id];
+  const base = String(t(it.label)).replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa').replace(/Æ/g, 'Ae').replace(/Ø/g, 'Oe').replace(/Å/g, 'Aa')
+    .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
+  return (base || 'Dokument') + '.pdf';
+}
+
+/* ── Regnskabssystemet (demo): samtykke, hentning og saldobalance ─────────── */
+
+const ERP_SOURCES = [
+  { id: 'ec', name: 'e-conomic', accounts: 412, agreement: '1284573' }, // demo-aftalenummer
+  { id: 'bi', name: 'Billy', accounts: 186 },
+  { id: 'di', name: 'Dinero', accounts: 203 },
+  { id: 'md', name: 'Microsoft Dynamics', accounts: 538 },
+  { id: 'xe', name: 'Xena', accounts: 241 },
+  { id: 'un', name: 'Uniconta', accounts: 297 },
+];
+// Perioden for "år til dato": januar til og med seneste afsluttede måned, eller til
+// og med den måned, kunden har valgt ved begrænset datadeling (end: 'yyyy-mm-dd')
+function portalPeriodEnd(end) {
+  if (end && /^\d{4}-\d{2}/.test(end)) return { y: Number(end.slice(0, 4)), m: Number(end.slice(5, 7)) - 1 };
+  const d = new Date();
+  let y = d.getFullYear(), m = d.getMonth() - 1;
+  if (m < 0) { m = 11; y--; }
+  return { y, m };
+}
+function portalPeriod(lang, end) {
+  const { y, m } = portalPeriodEnd(end);
+  const M = (lang || window.CW_LANG) === 'en'
+    ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    : ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+  return (m === 0 ? M[0] : M[0] + '-' + M[m]) + ' ' + y;
+}
+// En rigtig saldobalance som CSV (semikolon, dansk Excel). Tallene passer til sagens
+// niveau (omsætning ca. 29 mio. for årets første otte måneder), og balancen stemmer.
+function portalTrialBalanceCsv(src, end) {
+  const rows = [
+    ['1010', 'Salg af varer, eksport', -21480000], ['1020', 'Salg af varer, Danmark', -7760000],
+    ['1310', 'Vareforbrug', 15890000], ['1410', 'Fragt og told', 1120000],
+    ['2210', 'Lønninger', 7940000], ['2250', 'Pension', 690000],
+    ['2800', 'Lokaleomkostninger', 820000], ['2900', 'Administrationsomkostninger', 610000],
+    ['3010', 'Afskrivninger', 1180000], ['3510', 'Renteudgifter, bank', 410000], ['3520', 'Renteudgifter, anpartshaverlån', 14000],
+    ['5510', 'Grunde og bygninger', 9800000], ['5610', 'Produktionsanlæg og maskiner', 11200000],
+    ['5810', 'Varelager', 8450000], ['5910', 'Tilgodehavender fra salg', 9920000], ['6010', 'Bank', 1140000],
+    ['6810', 'Selskabskapital', -1000000],
+    ['7010', 'Gæld til kreditinstitutter', -12600000], ['7110', 'Kassekredit', -3950000],
+    ['7210', 'Leverandører af varer og tjenesteydelser', -5870000], ['7310', 'Anden gæld', -2310000],
+    ['7410', 'Anpartshaverlån', -500000],
+  ];
+  const rest = rows.reduce((a, r) => a + r[2], 0);
+  rows.splice(17, 0, ['6820', 'Overført resultat', -rest]);
+  const now = new Date();
+  const when = portalYmd(now) + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  const lines = [
+    'Saldobalance;' + portalPeriod('da', end),
+    'Virksomhed;' + DATA.COMPANY.name + ' (CVR ' + DATA.COMPANY.cvr + ')',
+    'Kilde;' + src + ', hentet ' + when + ' med læseadgang via Crediwire',
+    '',
+    'Konto;Kontonavn;Saldo (DKK)',
+  ].concat(rows.map(r => r[0] + ';' + r[1] + ';' + r[2])).concat(['', 'I alt;;' + rows.reduce((a, r) => a + r[2], 0)]);
+  const name = 'Saldobalance_' + portalPeriod('da', end).replace(' ', '_') + '_' + src.replace(/\s+/g, '-') + '.csv';
+  return new File(['﻿' + lines.join('\r\n') + '\r\n'], name, { type: 'text/csv' });
+}
+// Debitorlisten fra regnskabssystemet. Summen er kontoen Tilgodehavender fra salg
+// (5910) i saldobalancen, og de tre største kunder passer med sagens faktaark.
+function portalDebtorCsv(src, end) {
+  const rows = [
+    ['GE Vernova', 3770000, 410000, 38], ['Vestas Wind Systems', 1640000, 0, 0], ['Siemens Gamesa', 940000, 120000, 21],
+    ['Hanse Rotor GmbH', 820000, 0, 0], ['Baltic Blade Service AB', 610000, 95000, 47], ['Fyns Kompositværksted ApS', 340000, 0, 0],
+    ['Øvrige kunder (24)', 1800000, 260000, 64],
+  ];
+  const now = new Date();
+  const when = portalYmd(now) + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  const lines = [
+    'Debitorliste;' + portalPeriod('da', end),
+    'Virksomhed;' + DATA.COMPANY.name + ' (CVR ' + DATA.COMPANY.cvr + ')',
+    'Kilde;' + src + ', hentet ' + when + ' med læseadgang via Crediwire',
+    '',
+    'Kunde;Saldo (DKK);Heraf forfaldent (DKK);Ældste forfald (dage)',
+  ].concat(rows.map(r => r.join(';'))).concat(['', 'I alt;' + rows.reduce((a, r) => a + r[1], 0) + ';' + rows.reduce((a, r) => a + r[2], 0) + ';']);
+  const name = 'Debitorliste_' + portalPeriod('da', end).replace(' ', '_') + '_' + src.replace(/\s+/g, '-') + '.csv';
+  return new File(['﻿' + lines.join('\r\n') + '\r\n'], name, { type: 'text/csv' });
+}
+/**
+ * Kunden har givet læseadgang i regnskabssystemet. sharing er kundens valg fra
+ * opstarten: { mode: 'ongoing' } (løbende) eller { mode: 'until', dataUntil } (tal
+ * til og med en dato). Returnerer false, hvis det blev afvist (forhåndsvisning).
+ */
+function portalConsentNow(srcName, sharing, company) {
+  const ongoing = !sharing || sharing.mode === 'ongoing';
+  // Givet af en revisor eller rådgiver på kundens vegne: det står i samtykket og i historikken
+  const by = company && company.advisor && company.person ? { name: company.person, role: 'helper' } : null;
+  return CW.setConsent({ system: srcName, scope: ['kontoplan', 'saldobalance', 'periodetal', 'debitordata'],
+    mode: ongoing ? 'ongoing' : 'until', until: ongoing ? 'løbende' : sharing.dataUntil, dataUntil: ongoing ? null : sharing.dataUntil, by });
+}
+/**
+ * Hentningen: saldobalance og debitorliste som filer. Er Periodetal med i
+ * anmodningen, markeres punktet som sendt med kilden som note (ikke som kundens
+ * bemærkning). Ellers lægges filerne som andre filer fra kunden.
+ */
+function portalConnectNow(srcName, sharing) {
+  const end = sharing && sharing.mode === 'until' ? sharing.dataUntil : null;
+  const itemId = CW.requestedItems().some(it => it.id === 'm-interim') ? 'm-interim' : null;
+  const metas = CW.putFiles([portalTrialBalanceCsv(srcName, end), portalDebtorCsv(srcName, end)], { by: 'kunde', itemId });
+  if (!metas.length) return null;
+  if (itemId) CW.markReceived(itemId, { by: 'kunde', files: metas, note: 'Hentet fra ' + srcName, noteKind: 'system' });
+  else CW.addLooseUploads(metas);
+  return metas[0];
+}
+const portalConsentUntil = (c) => !c ? '' : c.until === 'løbende'
+  ? t('Løbende adgang, indtil I trækker den tilbage.')
+  : c.mode === 'until'
+    ? ncFill(t('EIFO har tal til og med {date} og henter ikke nyere tal. Adgangen lukker, når sagen er afgjort.'), { date: CW.fmtDate(c.until + 'T12:00:00') })
+    : ncFill(t('Adgangen lukker efter kreditbeslutningen og senest {date}.'), { date: CW.fmtDate(c.until + 'T12:00:00') });
+
+const PORTAL_CSS = `
+.cwp .cwp-linkbtn { background: none; border: 0; padding: 2px 0; min-height: 24px; color: var(--color-link); text-decoration: none; cursor: pointer; font: inherit; }
+.cwp .cwp-linkbtn:hover { color: var(--color-link-hover); }
+.cwp .cwp-linkbtn:disabled { color: var(--c-text-3); text-decoration: none; cursor: default; }
+.cwp .cwp-rowbtn { background: none; border: 0; padding: 0; margin: 0; text-align: left; font: inherit; color: inherit; cursor: pointer; flex: 1; min-width: 0; display: flex; gap: 14px; align-items: flex-start; }
+.cwp .cwp-rowbtn:focus-visible, .cwp .cwp-drop:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 3px; border-radius: 6px; }
+.cwp input[type=checkbox], .cwp input[type=radio] { accent-color: var(--c-primary); width: 16px; height: 16px; flex-shrink: 0; }
+.cwp .cwp-menuitem { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 8px 10px; border: none; background: transparent; cursor: pointer; font-size: 13px; color: var(--c-text); border-radius: 5px; text-align: left; font-family: inherit; }
+.cwp .cwp-menuitem:hover, .cwp .cwp-menuitem:focus-visible { background: var(--c-surface-2); outline: none; }
+.cwp [tabindex="-1"]:focus { outline: none; }
+.cwp .cwp-contact a { color: var(--c-text-2); white-space: nowrap; }
+.cwp .cwp-contact a:hover { color: var(--c-ink); }
+.cwp .cwp-lang button { min-height: 24px !important; min-width: 32px !important; font-size: 11.5px !important; }
+.cwp .cwp-row-meta { font-size: 12.5px; color: var(--c-text-2); margin-top: 2px; line-height: 1.45; }
+.cwp .cwp-row-cat { font-size: 12px; color: var(--c-text-3); white-space: nowrap; margin-top: 3px; }
+.cwp .cwp-demo { position: fixed; left: 18px; right: 18px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; pointer-events: none; z-index: 50; }
+.cwp .cwp-demo > * { pointer-events: auto; }
+.cwp .cwp-demo-back { background: var(--c-primary); color: #fff; border: none; padding: 8px 12px; min-height: 32px; border-radius: 999px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-lg); font-family: inherit; }
+.cwp .cwp-demo-fill { background: transparent; color: var(--c-text-4); border: none; padding: 4px 8px; min-height: 28px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; }
+@keyframes cwp-spin { to { transform: rotate(360deg); } }
+@media (max-width: 600px) {
+  .cwp .cwp-main { padding: 18px 16px 24px !important; }
+  .cwp .cwp-head-inner { padding: 10px 16px !important; gap: 10px !important; }
+  .cwp .cwp-hide-sm { display: none !important; }
+  .cwp .cwp-stack { flex-direction: column !important; align-items: stretch !important; }
+  .cwp .grid.g-2 { grid-template-columns: 1fr !important; }
+  .cwp h1 { font-size: 22px !important; }
+  .cwp .cwp-row { padding: 14px !important; flex-wrap: wrap; }
+  .cwp .cwp-row-side { margin-left: auto; }
+  .cwp .cwp-row-side.wide { width: 100%; margin: -14px 0 -10px 28px; }
+  .cwp .cwp-receipt { margin: 0 14px 14px !important; }
+  .cwp .modal { max-width: calc(100vw - 24px) !important; }
+  .cwp .btn, .cwp .btn-ghost-sm { min-height: 44px; }
+  .cwp .cw-fold { min-height: 44px; }
+  .cwp .cwp-menuitem { min-height: 44px; }
+  .cwp .cwp-lang button { min-height: 44px !important; min-width: 44px !important; }
+  .cwp .cwp-demo { position: static; padding: 8px 16px 24px; flex-wrap: wrap; }
+  .cwp .cwp-demo-back, .cwp .cwp-demo-fill { min-height: 44px; }
+}
+`;
+
+// External customer-facing upload portal - multi-screen flow
+//
+// Kunden: opret bruger eller log ind (PortalAuth), opstarten (PortalOnboarding:
+// vilkår, virksomhed, aftalen med EIFO, datadeling, regnskabssystem), derefter
+// velkomsten, oversigten og punkterne.
+//
+// Forhåndsvisningen (preview, rådgiverens "Kundeside"): rådgiveren kan gå mellem
+// alle kundens skærme med bjælken øverst og knapperne under kortet, men intet
+// gemmes. Alt mærket data-cust-act stoppes her og forklares i PortalPvNote, og
+// CW afviser selv kundehandlinger, så længe forhåndsvisningen er åben.
+// To spor i forhåndsvisningen: Kundeside (flow = false) åbner altid på kundens
+// oversigt med en statusboks øverst, hvis kunden ikke er færdig med opstarten.
+// Kundeflow (flow = true, demo) viser de skærme, kunden kommer igennem, fra
+// "Opret bruger" (eller flowStart) med skærmrækken øverst.
+function CustomerPortal({ back, preview = false, flow = false, flowStart = null, onOpenFlow = null }) {
+  CW.useCase();
+  const rootRef = React.useRef(null);
+  const req = CW.request();
+  const hasReq = !!req || preview;
+  const ob = CW.onboarding();
+  // Gemte demotilstande fra før opstarten fandtes: vilkår accepteret på velkomsten = opstarten er gjort
+  const legacy = !ob.account && !!portalMem().accepted;
+  const [authed, setAuthed] = React.useState(() => portalTrusted());
+  const loggedIn = !preview && authed && (!!ob.account || legacy);
+  const [authMode, setAuthMode] = React.useState(() => ob.account ? 'login' : 'signup');
+  // Afslået eller indstillet sag: kunden kan ikke længere sende noget
+  const lock = CW.customerLock();
+  // Opstarten: det trin, kunden mangler, eller et tidligere, kunden er gået tilbage til
+  const [obView, setObView] = React.useState(null);
+  const obNext = legacy || lock ? null : CW.onboardingStep(ob);
+  const obStep = !preview && loggedIn ? (obView || obNext) : null;
+
+  // Forhåndsvisningen starter, hvor kunden er: ingen bruger endnu, et trin i opstarten, eller oversigten
+  const [pvOb, setPvOb] = React.useState(() => {
+    if (!preview || !flow || lock === 'declined') return null;
+    const k = flowStart || 'signup';
+    if (k === 'account') return ob.account ? 'login' : 'signup';
+    return ['welcome', 'hub', 'material'].includes(k) ? null : k;
+  });
+  const [pvNote, setPvNote] = React.useState(null);
+  // Spærren sættes, før noget i portalen tegnes (fx dialogen, der ellers markerer beskeder som læst af kunden)
+  React.useState(() => { if (preview) CW.setPreview(true); return true; });
+
+  // Startskærm: kundens egen (overlever genindlæsning). Forhåndsvisningen følger
+  // kunden, men husker ikke selv noget.
+  const initial = React.useMemo(() => {
+    const m = portalMem();
+    const itemScreens = ['upload', 'connect', 'trade', 'erp'];
+    let s = ['welcome', 'hub', 'status'].concat(itemScreens).includes(m.screen) ? m.screen : 'welcome';
+    let id = null;
+    if (itemScreens.includes(s) && s !== 'erp') {
+      if (!preview && m.itemId && CW.requestedItems().some(it => it.id === m.itemId)) id = m.itemId; else s = 'hub';
+    }
+    if (preview && !['welcome', 'hub', 'status'].includes(s)) s = 'hub';
+    // Kundeside åbner altid på oversigten; Kundeflow på velkomsten, hvis det starter dér
+    if (preview && !flow) s = 'hub';
+    if (preview && flow && flowStart === 'welcome') s = 'welcome';
+    return { s, id };
+  }, []);
+  const [screen, setScreenRaw] = React.useState(initial.s);
+  const [activeId, setActiveId] = React.useState(initial.id);
+  const [bundle, setBundle] = React.useState(null); // null | { preselect }
+  const [otherOpen, setOtherOpen] = React.useState(false);
+  const [justSubmitted, setJustSubmitted] = React.useState(false);
+  const returnTo = React.useRef(null);
+
+  // visited: kunden har selv været videre end velkomsten. Først derefter hedder det
+  // "Velkommen tilbage" (at rådgiveren har uploadet noget, tæller ikke som et besøg).
+  const go = (s, itemId = null, backTo = null) => {
+    returnTo.current = backTo;
+    if (!preview) setPortalMem(Object.assign({ screen: s, itemId }, s !== 'welcome' ? { visited: true } : {}));
+    setActiveId(itemId);
+    setScreenRaw(s);
+  };
+
+  // Forhåndsvisningen: kundehandlinger afvises, og rådgiverens egne beskeder
+  // (toasts) skjules, så længe kundens side vises.
+  React.useEffect(() => {
+    if (!preview) return;
+    CW.setPreview(true);
+    const onBlocked = (e) => setPvNote({ what: e.detail || '', n: Date.now() });
+    window.addEventListener('cw-preview-blocked', onBlocked);
+    return () => { window.removeEventListener('cw-preview-blocked', onBlocked); CW.setPreview(false); };
+  }, [preview]);
+  // Stopper klik, slip og formularer på alt, der er kundens handling (data-cust-act)
+  const pvStop = (e, fallback) => {
+    // Links i teksten (fx "brugsvilkår") er ikke kundens handling, selv om de står i en afkrydsning
+    const link = e.type === 'click' && e.target && e.target.closest && e.target.closest('.cwp-linkbtn');
+    if (link && !link.hasAttribute('data-cust-act')) return;
+    const el = (e.target && e.target.closest && e.target.closest('[data-cust-act]'))
+      || (e.type === 'submit' && e.target.querySelector && e.target.querySelector('[data-cust-act]'));
+    if (!el && !fallback) return;
+    e.preventDefault(); e.stopPropagation();
+    setPvNote({ what: el ? el.getAttribute('data-cust-act') : fallback, n: Date.now() });
+  };
+  const pvHandlers = preview ? {
+    onClickCapture: (e) => pvStop(e),
+    onDropCapture: (e) => pvStop(e, 'upload'),
+    onSubmitCapture: (e) => pvStop(e, 'send'),
+  } : {};
+
+  // Portalen er kundens side og skal kunne bruges på en telefon. index.html låser
+  // viewporten til 1280 px for rådgiverværktøjet; her slås det fra, så længe portalen vises.
+  React.useEffect(() => {
+    if (preview) return;
+    const m = document.querySelector('meta[name=viewport]');
+    if (!m) return;
+    const prev = m.getAttribute('content');
+    m.setAttribute('content', 'width=device-width, initial-scale=1');
+    return () => m.setAttribute('content', prev);
+  }, []);
+
+  const requested = CW.requestedItems();
+  const view = screen;
+  const active = activeId ? CW.itemById(activeId) : null;
+  // "Nyt" og "1 nyt svar" gælder den visning, hvor kunden så dem første gang
+  const fresh = useCsFreshThreads(preview, view + ':' + (activeId || ''));
+
+  // Sidetitel pr. trin, fx "Intern årsrapport · Materiale til EIFO"
+  const pageName = !hasReq && lock !== 'declined' ? t('Ingen aktiv anmodning')
+    : !loggedIn ? (authMode === 'signup' ? t('Opret jeres bruger') : t('Log ind'))
+    : lock === 'declined' ? t('Sagen er afsluttet')
+    : obStep ? ncFill(t('Opstart: {step}'), { step: pvScreenLabel(obStep) })
+    : view === 'welcome' ? t('Velkommen') : view === 'hub' ? t('Oversigt')
+    : view === 'status' ? t('Status') : view === 'erp' ? t('Regnskabssystem') : active ? t(active.label) : t('Oversigt');
+  // Titlen sættes ikke tilbage, når portalen lukkes: appen sætter selv titlen for den nye rute
+  // (en tilbagesætning her kom efter appens og gav fx "Kundeportal" på en sag)
+  React.useEffect(() => { if (!preview) document.title = pageName + ' · ' + t('Materiale til EIFO'); }, [pageName]);
+
+  // Fokus ved skift af visning: til overskriften, eller tilbage til punktet man kom fra
+  const firstRun = React.useRef(true);
+  React.useEffect(() => {
+    if (firstRun.current) { firstRun.current = false; return; }
+    const backTo = returnTo.current; returnTo.current = null;
+    const root = rootRef.current;
+    if (!root) return;
+    if (!backTo) { if (preview) root.scrollIntoView({ block: 'start' }); else window.scrollTo(0, 0); }
+    const id = setTimeout(() => {
+      const el = backTo ? root.querySelector('[data-row="' + backTo + '"] button') : root.querySelector('.cwp-main h1');
+      if (!el) return;
+      if (!el.matches('button,a,input,textarea,select')) el.setAttribute('tabindex', '-1');
+      try { el.focus({ preventScroll: !backTo }); } catch (e) {}
+      if (backTo) el.scrollIntoView({ block: 'center' });
+    }, 40);
+    return () => clearTimeout(id);
+  }, [view, activeId, loggedIn, obStep, pvOb, authMode]);
+
+  const openItem = (id) => go(portalKind(id), id);
+  const toHub = (fromId) => go('hub', null, fromId || null);
+
+  // Kunden afslutter et uploadpunkt: filerne registreres i CW og punktet markeres som sendt
+  const finish = (id, files, note) => {
+    const prev = CW.itemState(id);
+    const metas = (files || []).map(f => (f instanceof File ? CW.putFiles([f], { by: 'kunde', itemId: id })[0] : f));
+    csClearDraft(id);
+    const changed = metas.length || (prev && prev.status === 'received' && (note || '') !== (prev.note || ''));
+    if (changed) {
+      const stale = prev && (prev.status === 'noted' || prev.status === 'rejected' || prev.status === 'delegated');
+      CW.markReceived(id, { by: 'kunde', files: metas, note: note != null ? note : (stale ? '' : undefined) });
+      CW.toast(ncFill(t('{item} er sendt til {name}'), { item: t(CW.itemById(id).label), name: PORTAL_CONTACT.first }));
+    }
+    toHub(id);
+  };
+
+  const fillAll = () => {
+    requested.forEach(it => {
+      const st = portalStatus(it.id);
+      if (st === 'received' || st === 'approved' || st === 'noted') return;
+      if (it.form === 'countries') {
+        CW.markReceived(it.id, { by: 'kunde', files: [], note: '', answers: { countries: [{ code: 'DK', name: 'Danmark', pct: 39 }, { code: 'DE', name: 'Tyskland', pct: 26 }, { code: 'GB', name: 'Storbritannien', pct: 20 }, { code: 'US', name: 'USA', pct: 15 }] } });
+        return;
+      }
+      // Periodetallene kan stadig hentes fra regnskabssystemet i punktet; demoen uploader filen
+      const file = CW.demoUploadFile(it.id) || demoPdf(demoFileName(it), t(it.label) + ' - ' + DATA.COMPANY.name);
+      CW.markReceived(it.id, { by: 'kunde', files: CW.putFiles([file], { by: 'kunde', itemId: it.id }), note: '' });
+    });
+    toHub();
+  };
+
+  // Dobbeltklik på "Vi er færdige" må ikke færdigmelde to gange
+  const submitting = React.useRef(false);
+  const submit = () => {
+    if (submitting.current) return;
+    submitting.current = true;
+    CW.customerSubmit();
+    setJustSubmitted(true);
+    go('status');
+    setTimeout(() => { submitting.current = false; }, 600);
+  };
+
+  const delegate = (ids, contact, kind) => {
+    CW.markDelegated(ids, { name: contact.name, email: contact.email, role: kind === 'bank' ? 'bank' : 'revisor' });
+    setBundle(null);
+    CW.toast(ncFill(t('Sendt til {name}. I kan følge med her på oversigten.'), { name: contact.name }));
+  };
+
+  // Logget ind: "Husk mig" husker enheden i 30 dage, ellers gælder det fanen
+  const onAuthed = (remember) => {
+    if (remember) setPortalMem({ trustedUntil: new Date(Date.now() + 30 * 864e5).toISOString() });
+    else { try { sessionStorage.setItem(PORTAL_SESSION_KEY, '1'); } catch (e) {} }
+    setObView(null);
+    setAuthed(true);
+  };
+  const logout = () => {
+    setPortalMem({ trustedUntil: null });
+    try { sessionStorage.removeItem(PORTAL_SESSION_KEY); } catch (e) {}
+    setAuthMode('login');
+    setAuthed(false);
+  };
+  // Opstarten er færdig (eller kunden sendte tallene selv): velkomsten med materialet
+  const onboardingDone = () => { setObView(null); go('welcome'); };
+  // Demo (præsentatoren er kunden): log ind og spring opstarten over
+  const demoSkip = () => {
+    if (!ob.doneAt && !legacy) obDemoSkip();
+    try { sessionStorage.setItem(PORTAL_SESSION_KEY, '1'); } catch (e) {}
+    setObView(null);
+    setAuthed(true);
+    go('welcome');
+  };
+
+  // Forhåndsvisningens navigation: opstartens skærme eller portalens egne
+  const pvGo = (k) => {
+    setPvNote(null);
+    if (k === 'account') k = ob.account ? 'login' : 'signup';
+    if (k === 'material') k = 'welcome';
+    if (['welcome', 'hub'].includes(k)) { setPvOb(null); go(k); }
+    else setPvOb(k);
+  };
+  const pvCurrent = pvOb || (['welcome', 'hub'].includes(view) ? view : null);
+
+  const mem = portalMem();
+  const trustedUntil = !preview && mem.trustedUntil && mem.trustedUntil > new Date().toISOString() ? mem.trustedUntil : null;
+  const Main = preview ? 'div' : 'main';
+  const Header = preview ? 'div' : 'header';
+  // Sagsnummer, produkt og beløb står først i toppen, når kunden er logget ind (eller i forhåndsvisningen)
+  const showMeta = preview ? !pvOb : loggedIn && !obStep;
+  const pvNav = null;   // forrige/næste-bjælken (PortalPvStepNav) er fjernet; sæt den tilbage her, hvis den skal bruges igen
+
+  let content;
+  if (!hasReq && lock !== 'declined') content = <PortalNoRequest/>;
+  else if (preview && pvOb && lock !== 'declined' && (pvOb === 'signup' || pvOb === 'login')) content = <>
+    <PortalAuth key={pvOb} mode={pvOb} setMode={pvGo} preview onAuthed={() => {}}/>
+    <div style={{ maxWidth: 440, margin: '0 auto' }}>{pvNav}</div>
+  </>;
+  else if (preview && pvOb && lock !== 'declined') content = <PortalOnboarding step={pvOb} setStep={pvGo} preview onFinished={() => pvGo('welcome')} footer={pvNav} onJump={pvGo}/>;
+  else if (lock === 'declined') content = <PortalClosed/>;
+  else if (!preview && !loggedIn) content = <PortalAuth key={authMode} mode={authMode} setMode={setAuthMode} onAuthed={onAuthed}/>;
+  else if (obStep) content = <PortalOnboarding step={obStep} setStep={setObView} onFinished={onboardingDone}/>;
+  else if (view === 'welcome') content = <PortalWelcome trustedUntil={trustedUntil} onStart={() => go('hub')} onStatus={() => go('status')}/>;
+  else if (view === 'upload' && active && !lock) content = <PortalUpload item={active} onBack={() => toHub(active.id)} onFinish={(files, note) => finish(active.id, files, note)} onNoted={() => toHub(active.id)}/>;
+  else if (view === 'connect' && active && !lock) content = <PortalConnect item={active} onBack={() => toHub(active.id)} onFinish={(files) => finish(active.id, files)} onNoted={() => toHub(active.id)}/>;
+  else if (view === 'erp' && !lock && !CW.consent()) content = <PortalErpSetup onBack={() => toHub()} onDone={() => toHub()}/>;
+  else if (view === 'trade' && active && !lock) content = <PortalTradeScreen item={active} onBack={() => toHub(active.id)} onDone={() => toHub(active.id)}/>;
+  else if (view === 'status') content = <PortalStatus justSubmitted={justSubmitted} onBack={() => go('hub')}/>;
+  else content = <PortalHub requested={requested} fresh={fresh} lock={lock} onOpen={openItem} onOpenBundle={(preselect) => setBundle({ preselect: preselect || null })} onOther={() => setOtherOpen(true)} onSubmit={submit} onStatus={() => { setJustSubmitted(false); go('status'); }} onErp={() => go('erp')}/>;
+  if (preview && !pvOb && pvNav && ['welcome', 'hub'].includes(view)) content = <>{content}<div style={{ maxWidth: 760, margin: '0 auto' }}>{pvNav}</div></>;
+  // Kundeside: hvor kunden er i opstarten, øverst på oversigten
+  if (preview && !flow && req && !lock && view === 'hub') content = <><PortalPvObStatus onOpenFlow={onOpenFlow}/>{content}</>;
+
+  const demoSkipLabel = !loggedIn && (ob.doneAt || legacy) ? t('Log ind (demo)') : t('Spring opstarten over (demo)');
+
+  return (
+    <div className={'cwp' + (preview ? ' cwp-preview' : '')} ref={rootRef} {...pvHandlers} style={{ background: '#faf8f4', minHeight: preview ? '100%' : '100vh', display: 'flex', flexDirection: 'column' }}>
+      <style>{PORTAL_CSS}</style>
+      <style>{PORTAL_OB_CSS}</style>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+        {preview && (
+          <div role="note" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 20px', background: '#1a1d22', color: '#fff', fontSize: 12.5, flexWrap: 'wrap' }}>
+            <I.Eye size={13}/>
+            <b style={{ fontWeight: 600 }}>{flow ? t('Kundeflow (demo)') : t('Forhåndsvisning af kundens side')}</b>
+            <span style={{ color: 'rgba(255,255,255,0.75)' }}>
+              {flow ? t('De skærme, kunden kommer igennem. Du kan klikke rundt, men intet gemmes.')
+                : req ? t('Du kan se og klikke rundt, men intet gemmes, og du kan ikke handle for kunden.') : t('Anmodningen er ikke sendt endnu. Sådan ser siden ud, når den er sendt.')}
+            </span>
+            <div style={{ flex: 1 }}/>
+            <button type="button" onClick={back} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', minHeight: 28, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 12.5, fontFamily: 'inherit' }}>
+              <I.X size={12}/> {t('Luk')}
+            </button>
+          </div>
+        )}
+        {preview && flow && lock !== 'declined' && (
+          <div className="cwp-pv-jump" role="group" aria-label={t('Kundens skærme')}>
+            <span style={{ marginRight: 4 }}>{t('Kundens skærme:')}</span>
+            {PV_SCREENS.map(k => (
+              <button key={k} type="button" aria-current={pvCurrent === k ? 'true' : undefined} onClick={() => pvGo(k)}>{pvScreenLabel(k)}</button>
+            ))}
+          </div>
+        )}
+        {/* K9: kun afsender og firmanavn; ingen "sikker"-mærker */}
+        <Header style={{ borderBottom: '1px solid var(--c-line)', background: '#fff' }}>
+          <div className="cwp-head-inner" style={{ maxWidth: 760, margin: '0 auto', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div className="brand-mark" aria-hidden="true" style={{ background: 'var(--c-primary)' }}>cw</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Materiale til EIFO')}</div>
+              {/* Efter login (eller i rådgiverens forhåndsvisning): sagsnummer, produkt og beløb og den ansvarlige */}
+              <div className="muted cwp-head-meta" style={{ fontSize: 12, display: 'flex', flexWrap: 'wrap', gap: '0 6px' }}>
+                {[DATA.COMPANY.name].concat(showMeta ? portalCaseMeta() : []).map((x, i) => (<React.Fragment key={i}>{i > 0 && <span aria-hidden="true">·</span>}<span title={x.title || undefined}>{x.text || x}</span></React.Fragment>))}
+              </div>
+            </div>
+            {!preview && loggedIn && <button type="button" className="cwp-head-logout" onClick={logout}>{t('Log ud')}</button>}
+            {!preview && <div className="cwp-lang"><LanguageSwitcher compact/></div>}
+          </div>
+        </Header>
+      </div>
+
+      <Main id={preview ? undefined : 'cwp-main'} className="cwp-main" tabIndex={preview ? undefined : -1} style={{ flex: 1, padding: '32px 24px 96px', outline: 'none' }}>
+        {content}
+      </Main>
+
+      {!preview && (
+        <div className="cwp-demo">
+          <button type="button" className="cwp-demo-back" onClick={back}><I.ArrowLeft size={12}/> {t('Tilbage til rådgiver-visning')}</button>
+          {hasReq && !lock && (!loggedIn || obStep) && <button type="button" className="cwp-demo-fill" onClick={demoSkip}>{demoSkipLabel}</button>}
+          {hasReq && loggedIn && !obStep && !lock && <button type="button" className="cwp-demo-fill" onClick={fillAll}>{t('Udfyld alt (demo)')}</button>}
+        </div>
+      )}
+
+      {preview && <PortalPvNote what={pvNote && pvNote.what} n={pvNote && pvNote.n} onClose={() => setPvNote(null)}/>}
+      {bundle && !lock && <DelegateBundleModal requested={requested} preselect={bundle.preselect} onClose={() => setBundle(null)} onSend={delegate}/>}
+      {otherOpen && !lock && <PortalOtherFilesModal onClose={() => setOtherOpen(false)}/>}
+    </div>
+  );
+}
+
+// Knappen tilbage ligger i en nav, så skærmlæsere finder vejen rundt
+function PortalBackNav({ onBack, label }) {
+  return (
+    <nav aria-label={t('Navigation i portalen')} style={{ marginBottom: 14 }}>
+      <button type="button" onClick={onBack} className="btn btn-sm btn-ghost"><I.ArrowLeft className="ic"/> {label || t('Tilbage til oversigten')}</button>
+    </nav>
+  );
+}
+
+// Rådgiverens kontaktoplysninger som én grå linje
+function PortalContactLine({ style }) {
+  return (
+    <div className="cwp-contact" style={Object.assign({ fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.6 }, style)}>
+      {PORTAL_CONTACT.name}, {t(PORTAL_CONTACT.title)}, {PORTAL_CONTACT.org}
+      {' · '}<a href={'tel:' + PORTAL_CONTACT.phone.replace(/\s/g, '')}>{PORTAL_CONTACT.phone}</a>
+      {' · '}<a href={'mailto:' + PORTAL_CONTACT.email}>{PORTAL_CONTACT.email}</a>
+    </div>
+  );
+}
+
+/* ── Ingen aktiv anmodning ─────────────────────────────────────────────── */
+
+function PortalNoRequest() {
+  return (
+    <div style={{ maxWidth: 560, margin: '24px auto 0' }}>
+      <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '0 0 10px', lineHeight: 1.2 }}>{t('Der er ingen aktiv anmodning endnu')}</h1>
+      <p style={{ fontSize: 15, color: 'var(--c-text-2)', lineHeight: 1.55, margin: '0 0 14px' }}>
+        {ncFill(t('Når {name} fra EIFO beder om materiale til jeres ansøgning, får I en mail med et link hertil. Indtil da skal I ikke gøre noget.'), { name: PORTAL_CONTACT.name })}
+      </p>
+      <PortalContactLine/>
+    </div>
+  );
+}
+
+// Afslået sag: en rolig side uden upload. Kunden får ikke afslagets årsag her;
+// den kommer fra rådgiveren.
+function PortalClosed() {
+  return (
+    <div style={{ maxWidth: 560, margin: '24px auto 0' }}>
+      <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '0 0 10px', lineHeight: 1.2 }}>{t('Sagen er afsluttet')}</h1>
+      <p style={{ fontSize: 15, color: 'var(--c-text-2)', lineHeight: 1.55, margin: '0 0 14px' }}>
+        {ncFill(t('Kontakt {name}, hvis I har spørgsmål. I skal ikke sende mere materiale.'), { name: PORTAL_CONTACT.name })}
+      </p>
+      <PortalConsentBox/>
+      <PortalContactLine style={{ marginTop: 14 }}/>
+    </div>
+  );
+}
+
+// Kunden kan altid trække adgangen til regnskabssystemet tilbage, også når sagen er lukket
+function portalRevoke(consent) {
+  if (!consent) return Promise.resolve(false);
+  return CW.confirm({
+    title: t('Træk adgangen tilbage?'),
+    text: ncFill(t('EIFO kan ikke længere hente tal fra {src}. De tal, EIFO allerede har hentet, bliver i sagen.'), { src: consent.system }),
+    confirmLabel: t('Træk adgangen tilbage'), danger: true,
+  }).then(r => {
+    if (!r.ok) return false;
+    CW.setConsent(null);
+    CW.toast(ncFill(t('Adgangen til {src} er trukket tilbage. {adv} kan se det i sagen.'), { src: consent.system, adv: PORTAL_CONTACT.first }));
+    return true;
+  });
+}
+
+/**
+ * Forbindelsen til regnskabssystemet på en lukket sag: aktiv (med "Træk adgangen
+ * tilbage"), lukket ved afgørelsen, eller trukket tilbage. Vises kun, hvis kunden
+ * har givet adgang på et tidspunkt.
+ */
+function PortalConsentBox() {
+  CW.useCase();
+  const consent = CW.consent();
+  const log = CW.activity();
+  const given = log.filter(e => e.type === 'consent').pop();
+  if (!consent && !given) return null;
+  const closed = log.filter(e => e.type === 'consent-revoked').pop();
+  const s = CW.itemState('m-interim');
+  // Systemets navn: fra samtykket, ellers fra loglinjen "Kunden gav læseadgang til <system>"
+  const fromLog = given && /(læseadgang til|read access to) (.+)$/.exec(given.text || '');
+  const src = consent ? consent.system : (fromLog && fromLog[2]) || (s && s.noteKind === 'system' && String(s.note || '').replace(/^Hentet fra /, '')) || t('regnskabssystemet');
+  const byCase = !consent && closed && closed.who === 'system';
+  return (
+    <div className="cwp-consent-box" style={{ marginTop: 16, padding: '12px 16px', background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10, fontSize: 13, color: 'var(--c-text)', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+      <div style={{ flex: 1, minWidth: 200 }}>
+        {consent ? (
+          <>
+            <b style={{ fontWeight: 600 }}>{ncFill(t('Forbundet til {src} (kun læseadgang)'), { src })}</b>
+            <div className="muted" style={{ fontSize: 12.5, marginTop: 2 }}>{portalConsentUntil(consent)}</div>
+          </>
+        ) : <span style={{ color: 'var(--c-text-2)' }}>{byCase
+          ? ncFill(t('Adgangen til {src} er lukket, fordi sagen er afgjort. EIFO kan ikke hente flere tal.'), { src })
+          : ncFill(t('Adgangen til {src} er trukket tilbage. De tal, EIFO allerede har hentet, bliver i sagen.'), { src })}</span>}
+      </div>
+      {consent && <button type="button" className="btn btn-sm" data-cust-act="consent" onClick={() => portalRevoke(consent)}>{t('Træk adgangen tilbage')}</button>}
+    </div>
+  );
+}
+
+/**
+ * Velkomsten skifter efter, hvor kunden er: første besøg, i gang, afvist, klar,
+ * færdigmeldt, hos kreditkomitéen. Første besøg afgøres af, om kunden selv har
+ * været inde (portalens hukommelse), ikke af, om rådgiveren har tilføjet noget.
+ * K4: én titel, én sætning, én knap. Brugsvilkårene accepteres i opstarten
+ * (portal_onboarding.jsx), før kunden kommer hertil.
+ */
+function PortalWelcome({ onStart, onStatus, trustedUntil }) {
+  const req = CW.request();
+  const draft = CW.draft();
+  const rcp = portalRecipient();
+  const first = ncFirstName(rcp.name);
+  const prog = CW.progress();
+  const cs = CW.caseState() || {};
+  const lock = CW.customerLock();
+  const requested = CW.requestedItems();
+  const adv = PORTAL_CONTACT.first;
+  const deadline = (req && req.deadline) || (!req && draft && draft.deadline) || null;
+  const rejectedItems = requested.filter(it => portalStatus(it.id) === 'rejected');
+  const missingItems = requested.filter(it => ['pending', 'rejected', 'delegated'].includes(portalStatus(it.id)));
+  // "Mangler" tæller kun påkrævede punkter; valgfrie nævnes for sig (L68)
+  const missingReq = missingItems.filter(it => it.tag !== 'Valgfri' || portalStatus(it.id) !== 'pending');
+  const missingOpt = missingItems.filter(it => !missingReq.includes(it));
+  // Hentet fra regnskabssystemet i opstarten tæller ikke som et besøg, men nævnes på velkomsten
+  const bySystem = requested.filter(it => { const s = CW.itemState(it.id); return s && s.by === 'kunde' && s.noteKind === 'system' && ['received', 'approved'].includes(s.status); });
+  const byCustomer = requested.some(it => { const s = CW.itemState(it.id); return s && s.by === 'kunde' && !bySystem.includes(it); });
+  const byAdvisor = requested.filter(it => { const s = CW.itemState(it.id); return s && s.by === 'rådgiver' && ['received', 'approved'].includes(s.status); });
+  const mem = portalMem();
+  // Accept af vilkårene sker nu på velkomsten selv og tæller derfor ikke som et besøg
+  const visited = !!(mem.visited || byCustomer || cs.customerSubmittedAt);
+  const variant = lock === 'submitted' ? 'committee'
+    : !visited ? 'first'
+    : cs.customerSubmittedAt && !rejectedItems.length && prog.requiredMissing === 0 ? 'submitted'
+    : rejectedItems.length ? 'rejected'
+    : prog.total > 0 && prog.requiredMissing === 0 ? 'ready'
+    : 'progress';
+  const dlDate = deadline ? CW.fmtDate(deadline + 'T12:00:00') : '';
+  const dl = deadline ? <> <b style={{ color: 'var(--c-ink)' }}>{ncFill(t('Frist: {date}.'), { date: dlDate })}</b></> : null;
+  // Samme punkter i tal og navne; valgfrie punkter nævnes med "(valgfri)"
+  const names = (list) => list.map(it => t(it.label) + (it.tag === 'Valgfri' ? ' (' + t('valgfri') + ')' : '')).join(', ');
+  const advFiles = byAdvisor.reduce((n, it) => n + ((CW.itemState(it.id).files || []).length || 1), 0);
+  const advNote = byAdvisor.length ? ' ' + ncFill(advFiles === 1 ? t('{adv} har allerede tilføjet 1 fil for jer: {items}.') : t('{adv} har allerede tilføjet {n} filer for jer: {items}.'), { adv, n: advFiles, items: names(byAdvisor) }) : '';
+
+  // Samme tal som oversigtens "{n} mangler": de påkrævede punkter (valgfrie står som valgfri i listen)
+  const n = Math.max(0, (prog.required || requested.length) - bySystem.length);
+  const consentNow = CW.consent();
+  const obNow = CW.onboarding();
+  const sysNote = bySystem.length ? ' ' + ncFill(t('{items} er allerede hentet fra {src}.'), { items: names(bySystem), src: (consentNow && consentNow.system) || t('regnskabssystemet') }) + (consentNow && consentNow.mode === 'until' ? ' ' + t('Adgangen lukker, når sagen er afgjort.') : '')
+    : obNow.erp && obNow.erp.waiting && !consentNow ? ' ' + t('I venter på jeres revisor med regnskabssystemet. Brug "Få hjælp fra revisor eller bank" på oversigten for at sende revisoren et link.') : '';
+  const title = variant === 'committee' ? t('Materialet er hos kreditkomitéen')
+    : variant === 'first' ? ncFill(n === 1 ? t('EIFO har brug for 1 dokument fra {company}') : t('EIFO har brug for {n} dokumenter fra {company}'), { n, company: DATA.COMPANY.name })
+    : variant === 'ready' ? (first ? ncFill(t('Alt er på plads, {name}'), { name: first }) : t('Alt er på plads'))
+    : variant === 'submitted' ? (first ? ncFill(t('Tak, {name}'), { name: first }) : t('Tak'))
+    : (first ? ncFill(t('Velkommen tilbage, {name}'), { name: first }) : t('Velkommen tilbage'));
+
+  const lead = variant === 'committee'
+    ? ncFill(t('{adv} har sendt jeres ansøgning videre til kreditkomitéen hos EIFO. I skal ikke sende mere, og I hører fra {adv}, når der er en afgørelse.'), { adv })
+    : variant === 'first'
+    ? (deadline ? ncFill(t('Frist {date}. Det tager ca. 10 minutter, og det, I sender, bliver gemt undervejs.'), { date: dlDate }) : t('Det tager ca. 10 minutter, og det, I sender, bliver gemt undervejs.')) + sysNote + advNote
+    : variant === 'rejected'
+      ? <>{ncFill(rejectedItems.length === 1 ? t('{adv} har bedt jer sende 1 punkt igen: {items}.') : t('{adv} har bedt jer sende {n} punkter igen: {items}.'), { adv, n: rejectedItems.length, items: names(rejectedItems) })}{dl}</>
+      : variant === 'ready'
+        ? ncFill(t('Alt, EIFO har bedt om, er sendt, og {adv} kan se det. Sig til {adv}, når I er færdige.'), { adv })
+        : variant === 'submitted'
+          ? ncFill(t('I sagde {date}, at I var færdige. {adv} gennemgår materialet og vender tilbage senest {date2}.'), { date: CW.fmtDate(cs.customerSubmittedAt), adv, date2: CW.fmtDate(csAddWorkdays(new Date(cs.customerSubmittedAt), 2)) })
+          : <>{ncFill(missingReq.length === 1 ? t('I mangler 1 af {m} påkrævede punkter: {items}.') : t('I mangler {n} af {m} påkrævede punkter: {items}.'), { n: missingReq.length, m: prog.required, items: names(missingReq) })}{missingOpt.length ? ' ' + ncFill(t('Valgfrit og ikke sendt: {items}.'), { items: names(missingOpt) }) : ''}{byCustomer ? ' ' + t('Det, I har sendt, er gemt.') : ''}{dl}</>;
+
+  const cta = variant === 'first' ? t('Kom i gang') : variant === 'rejected' ? t('Send det igen') : variant === 'submitted' ? t('Se status') : variant === 'committee' ? t('Se oversigten') : variant === 'ready' ? t('Gå til oversigten') : t('Fortsæt, hvor I slap');
+
+  const doc = (name) => (e) => { e.preventDefault(); e.stopPropagation(); CW.notInDemo(name); };
+  const go = (fn) => () => fn();
+
+  return (
+    <div style={{ maxWidth: 560, margin: '24px auto 0', textAlign: 'left' }}>
+      <h1 style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '0 0 10px', lineHeight: 1.2 }}>{title}</h1>
+      <p style={{ fontSize: 15, color: 'var(--c-text-2)', lineHeight: 1.55, margin: '0 0 22px' }}>{lead}</p>
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" onClick={go(variant === 'submitted' ? onStatus : onStart)} className="btn btn-primary btn-lg" style={{ padding: '0 22px', background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
+          {cta} <I.ArrowRight className="ic"/>
+        </button>
+        {variant === 'submitted' && <button type="button" onClick={go(onStart)} className="btn btn-lg btn-ghost">{t('Gå til oversigten')}</button>}
+      </div>
+
+      {variant === 'first' && (
+        <CWFold label={t('Hvorfor ligger siden på crediwire.app?')} id="cwp-why" style={{ marginTop: 22 }}>
+          <p style={{ fontSize: 13.5, color: 'var(--c-text-2)', lineHeight: 1.6, margin: 0 }}>
+            {ncFill(t('EIFO bruger Crediwire til at indsamle materialet, derfor ligger siden på crediwire.app. Kun {adv} og hendes kolleger hos EIFO ser det, I sender.'), { adv })}{' '}
+            {t('EIFO er dataansvarlig, og Crediwire behandler oplysningerne på vegne af EIFO og kun til jeres ansøgning.')}{' '}
+            {t('Læs hvordan personoplysninger behandles i')} <button type="button" className="cwp-linkbtn" onClick={doc(t('Privatlivspolitik'))}>{t('Crediwires privatlivspolitik')}</button>.
+          </p>
+        </CWFold>
+      )}
+
+      <div style={{ marginTop: variant === 'first' ? 14 : 18, fontSize: 12.5, color: 'var(--c-text-3)', lineHeight: 1.6 }}>
+        {ncFill(t('Spørgsmål? Skriv til {name} på'), { name: PORTAL_CONTACT.first })} <a href={'mailto:' + PORTAL_CONTACT.email} style={{ color: 'var(--c-ink)', fontWeight: 600 }}>{PORTAL_CONTACT.email}</a> {t('eller ring på')} <a href={'tel:' + PORTAL_CONTACT.phone.replace(/\s/g, '')} style={{ color: 'var(--c-ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>{PORTAL_CONTACT.phone}</a>
+      </div>
+      {trustedUntil && (
+        <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--c-text-3)' }}>
+          {ncFill(t('Genkendt enhed. I bliver ikke bedt om at logge ind igen før {date}.'), { date: CW.fmtDate(trustedUntil) })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Oversigten (K1): listen står lige under titlen. Under listen: næste skridt, når
+ * der er et (K12), hjælp fra revisor eller bank og andre filer som ghost-knapper
+ * (K11), og til sidst folde med det, der ligger hos EIFO (K10), og beskederne.
+ */
+/* Kundeside: hvor kunden er i opstarten (opret bruger, vilkår, virksomhed, aftale,
+   datadeling, regnskabssystem). Står øverst på oversigten, indtil kunden er færdig,
+   med trinene som en kort række og et link til Kundeflow på det trin, kunden er på. */
+function PortalPvObStatus({ onOpenFlow }) {
+  CW.useCase();
+  const ob = CW.onboarding();
+  const legacy = !ob.account && !!portalMem().accepted;
+  const current = !ob.account ? 'account' : CW.onboardingStep(ob);
+  if (legacy || !current) return null;
+  const steps = OB_ORDER.filter(k => k !== 'material');
+  const n = steps.indexOf(current) + 1;
+  return (
+    <section aria-labelledby="cwp-pvob-h" style={{ maxWidth: 760, margin: '0 auto 16px', padding: '14px 18px', borderRadius: 12, border: '1px solid var(--c-warn)', background: 'var(--c-warn-bg)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 320px', minWidth: 0 }}>
+          <h2 id="cwp-pvob-h" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>
+            {ncFill(t('Kunden er ikke færdig med opstarten: trin {n} af {m}, {step}'), { n, m: steps.length, step: obLabel(current) })}
+          </h2>
+          <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 2 }}>{pvCustomerWhere()} {t('Materialet herunder kan kunden først sende, når opstarten er gjort.')}</div>
+        </div>
+        {onOpenFlow && <button type="button" className="btn btn-sm" onClick={() => onOpenFlow(current)}>{t('Se trinnet i Kundeflow')} <I.ArrowRight size={12}/></button>}
+      </div>
+      <ol aria-label={t('Trin i opstarten')} style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexWrap: 'wrap', gap: '6px 14px', fontSize: 12.5 }}>
+        {steps.map(k => {
+          const done = obDone(ob, k), cur = k === current;
+          return (
+            <li key={k} aria-current={cur ? 'step' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 5, color: done || cur ? 'var(--c-ink)' : 'var(--c-text-3)', fontWeight: cur ? 600 : 400 }}>
+              <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: '50%', display: 'grid', placeItems: 'center', boxSizing: 'border-box', background: done ? 'var(--c-ink)' : '#fff', border: done ? 'none' : cur ? '2px solid var(--c-ink)' : '1.5px solid var(--c-text-4)', color: '#fff' }}>
+                {done ? <I.Check size={7}/> : null}
+              </span>
+              {obLabel(k)}
+              <span style={ncHidden}>{done ? ': ' + t('færdig') : cur ? ': ' + t('kunden er her') : ''}</span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+/* Sagens linje i portalens topbjælke (efter bekræftelse): sagsnummer, produkt og
+   beløb (samme som rådgiverens sagshoved) og den ansvarlige rådgiver. */
+function portalCaseMeta() {
+  const co = (window.DATA && DATA.COMPANY) || {};
+  const facility = [co.caseType, co.amount].filter(Boolean).join(', ');
+  return [
+    co.caseNr ? t('Sagsnr.') + ' ' + co.caseNr : null,
+    facility ? { text: facility, title: co.amountNote || '' } : null,
+    t('Ansvarlig') + ': ' + PORTAL_CONTACT.name,
+  ].filter(Boolean);
+}
+
+/* Behandlingen i tre korte trin: materialet, EIFO's vurdering og afgørelsen.
+   Bygger på csTimeline (customer_status.jsx). Indstillingen er en del af
+   vurderingen her: kunden skal kun vide, hvor sagen er, og hvornår der kommer svar. */
+function PortalSteps() {
+  CW.useCase();
+  const all = csTimeline(CW.progress(), CW.request(), CW.draft(), CW.caseState() || {});
+  const by = {}; all.forEach(s => { by[s.k] = s; });
+  const mat = by.materiale, afg = by.afgorelse;
+  const vurdState = mat.state !== 'done' ? 'upcoming' : afg.state === 'done' ? 'done' : 'active';
+  const steps = [
+    { k: 'mat', label: t('Materiale'), state: mat.state, sub: mat.state === 'done' ? t('Afsluttet') : mat.state === 'active' ? mat.sub : '' },
+    { k: 'vurd', label: t('EIFO vurderer sagen'), state: vurdState, sub: vurdState === 'active' ? t('I gang') : vurdState === 'done' ? t('Afsluttet') : '' },
+    { k: 'afg', label: t('Afgørelse'), state: afg.state, sub: afg.state === 'done' ? afg.sub : afg.date ? ncFill(t('senest {date}'), { date: CW.fmtDate(afg.date) }) : '' },
+  ];
+  const word = (s) => s === 'done' ? t('afsluttet') : s === 'active' ? t('i gang') : t('kommer senere');
+  // Egen boks under kortene: prik over teksten, en linje imellem, højst én kort linje pr. trin.
+  // Under 600 px står trinene under hinanden.
+  return (
+    <section className="card cwp-steps-card" aria-labelledby="cwp-steps-h" style={{ padding: '18px 22px 20px', marginBottom: 16 }}>
+      <style>{`@media (max-width: 600px) {
+        .cwp-steps-card .cwp-steps { flex-direction: column !important; gap: 12px; }
+        .cwp-steps-card .cwp-steps > li { flex-direction: row !important; align-items: center !important; gap: 10px; text-align: left !important; }
+        .cwp-steps-card .cwp-step-line { display: none; }
+        .cwp-steps-card .cwp-step-text { margin-top: 0 !important; }
+      }`}</style>
+      <h2 id="cwp-steps-h" className="label-mini" style={{ margin: '0 0 16px' }}>{t('Behandlingsstatus')}</h2>
+      <ol className="cwp-steps" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', alignItems: 'flex-start' }}>
+        {steps.map((s, i) => {
+          const done = s.state === 'done', active = s.state === 'active';
+          return (
+            <li key={s.k} aria-current={active ? 'step' : undefined} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative' }}>
+              {i < steps.length - 1 && (
+                <span aria-hidden="true" className="cwp-step-line" style={{ position: 'absolute', top: 10, left: '50%', width: '100%', height: 2, background: done ? 'var(--c-ink)' : 'var(--c-line-strong)' }}/>
+              )}
+              <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center', boxSizing: 'border-box', flexShrink: 0, position: 'relative', zIndex: 1,
+                background: done ? 'var(--c-ink)' : '#fff', border: done ? 'none' : active ? '2px solid var(--c-primary)' : '2px solid var(--c-text-4)', color: '#fff' }}>
+                {done ? <I.Check size={11}/> : active ? <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--c-primary)' }}/> : null}
+              </span>
+              <span className="cwp-step-text" style={{ marginTop: 8, padding: '0 6px' }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: active ? 600 : 500, color: done || active ? 'var(--c-ink)' : 'var(--c-text-2)' }}>
+                  {s.label}<span style={ncHidden}>{': ' + word(s.state)}</span>
+                </span>
+                {s.sub && <span style={{ display: 'block', fontSize: 12, color: 'var(--c-text-3)', marginTop: 2 }}>{s.sub}</span>}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+/* "Det mangler vi": én stor linje, fristen og én sætning om, hvad der sker nu */
+function PortalNeedCard({ locked, deadline, submittedAt }) {
+  const prog = CW.progress();
+  const adv = PORTAL_CONTACT.first;
+  const big = locked ? t('Hos EIFO')
+    : prog.requiredMissing > 0 ? ncFill(t('{n} mangler'), { n: prog.requiredMissing })
+    : prog.optionalPending > 0 ? t('Alt påkrævet er sendt') : t('Alt er sendt');
+  const line = locked ? ncFill(t('{adv} har sendt jeres ansøgning videre. I hører fra EIFO, når der er en afgørelse.'), { adv })
+    : submittedAt ? ncFill(t('I sagde {date}, at I var færdige. {adv} gennemgår materialet og vender tilbage senest {date2}.'), { date: CW.fmtDate(submittedAt), adv, date2: CW.fmtDate(csAddWorkdays(new Date(submittedAt), 2)) })
+    : prog.requiredMissing > 0 ? t('Upload det, der mangler, på listen nedenfor.')
+    : ncFill(t('{navn} gennemgår det, I har sendt.'), { navn: adv });
+  return (
+    <section className="card" aria-labelledby="cwp-need-h" style={{ padding: '16px 18px' }}>
+      <h2 id="cwp-need-h" className="label-mini" style={{ margin: 0 }}>{t('Det mangler vi')}</h2>
+      <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--c-ink)', letterSpacing: '-0.01em', marginTop: 6 }}>{big}</div>
+      {deadline && !locked && (
+        <div style={{ fontSize: 13, color: 'var(--c-text)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <I.Calendar size={13} aria-hidden="true" style={{ color: 'var(--c-text-3)' }}/> {ncFill(t('Frist {date}'), { date: CW.fmtDate(deadline + 'T12:00:00') })}
+        </div>
+      )}
+      <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 6, lineHeight: 1.5 }}>{line}</div>
+    </section>
+  );
+}
+
+/* "Jeres kontakt": rådgiveren med telefon, mail og svartid */
+function PortalContactCard() {
+  const c = PORTAL_CONTACT;
+  return (
+    <section className="card cwp-contact" aria-labelledby="cwp-contact-h" style={{ padding: '16px 18px' }}>
+      <h2 id="cwp-contact-h" className="label-mini" style={{ margin: 0 }}>{t('Jeres kontakt')}</h2>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 10 }}>
+        <div className="avatar" aria-hidden="true" style={{ width: 36, height: 36, fontSize: 12, flexShrink: 0 }}>{c.initials}</div>
+        <div style={{ minWidth: 0, fontSize: 13, lineHeight: 1.6 }}>
+          <div><span style={{ fontWeight: 600, color: 'var(--c-ink)' }}>{c.name}</span><span style={{ color: 'var(--c-text-2)' }}> · {t(c.title)}, {c.org}</span></div>
+          <div><a href={'tel:' + c.phone.replace(/\s/g, '')}>{c.phone}</a></div>
+          <div><a href={'mailto:' + c.email} style={{ color: 'var(--color-link, var(--c-primary))' }}>{c.email}</a></div>
+          <div style={{ fontSize: 12.5, color: 'var(--c-text-3)' }}>{ncFill(t('{navn} svarer typisk inden for 1 arbejdsdag'), { navn: c.first })}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Det, EIFO selv har hentet: årsrapporterne fra CVR (sagens dokumentregister)
+function portalAutoDocs() {
+  const years = ((window.DATA && DATA.DOCS) || []).filter(d => d.type === 'Årsrapport' && d.origin === 'public' && !d.superseded)
+    .map(d => String(d.year)).filter(y => /^\d{4}$/.test(y)).sort();
+  return Array.from(new Set(years));
+}
+
+function PortalHub({ requested, fresh, lock, onOpen, onOpenBundle, onOther, onSubmit, onStatus, onErp }) {
+  const prog = CW.progress();
+  const req = CW.request();
+  const draft = CW.draft();
+  const cs = CW.caseState() || {};
+  const deadline = (req && req.deadline) || (!req && draft && draft.deadline) || null;
+  const canDelegate = requested.some(it => ['pending', 'rejected', 'delegated'].includes(portalStatus(it.id)));
+  const locked = !!lock;
+  const submittedAt = cs.customerSubmittedAt || null;
+  const changedSince = submittedAt && requested.some(it => { const s = CW.itemState(it.id); return s && s.by === 'kunde' && s.at && s.at > submittedAt; });
+  const ready = prog.total > 0 && prog.requiredMissing === 0 && !locked;
+  const showSubmit = ready && (!submittedAt || changedSince);
+  const adv = PORTAL_CONTACT.first;
+  const loose = CW.allUploads().filter(f => !f.itemId && f.by === 'kunde');
+  const years = portalAutoDocs();
+  const yearsText = years.length > 1 ? years.slice(0, -1).join(', ') + ' ' + t('og') + ' ' + years[years.length - 1] : years.join('');
+  // Regnskabssystemet: forbindelsen står for sig, når den findes. Er Periodetal ikke
+  // bedt om, og har kunden ikke sagt nej til datadeling, kan den forbindes herfra.
+  const consent = CW.consent();
+  const ob = CW.onboarding();
+  const erpOffer = !consent && onErp && !requested.some(it => it.id === 'm-interim') && !(ob.agreement && ob.agreement.declined);
+
+  // Banneret om nye beskeder ruller til dialogen, som altid står nederst på siden
+  const openDialog = () => {
+    setTimeout(() => {
+      const card = document.getElementById('cwp-dialog');
+      if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      CW.focusSoon('#cwp-dialog-h');
+    }, 40);
+  };
+
+  return (
+    <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      <h1 style={ncHidden}>{t('Status for jeres ansøgning')}</h1>
+      <div className="grid g-2" style={{ gap: 12, marginBottom: 12 }}>
+        <PortalNeedCard locked={locked} deadline={deadline} submittedAt={submittedAt}/>
+        <PortalContactCard/>
+      </div>
+      <PortalSteps/>
+
+      <CWCustomerBanner fresh={fresh} onDialog={openDialog}/>
+      {locked && <div style={{ marginBottom: 16 }}><PortalConsentBox/></div>}
+
+      <section aria-labelledby="cwp-items-h" style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', overflow: 'hidden' }}>
+        <h2 id="cwp-items-h" style={ncHidden}>{t('Det har vi bedt om')}</h2>
+        {requested.map((it, i) => (
+          <PortalHubRow key={it.id} it={it} first={i === 0} status={portalStatus(it.id)} onOpen={onOpen} readOnly={locked}/>
+        ))}
+      </section>
+
+      {consent && !locked && (
+        <div className="cw-row" style={{ marginTop: 12, padding: '12px 16px', background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, alignItems: 'center' }}>
+          <div className="cw-row-main">
+            <span className="cw-row-title" style={{ fontSize: 13.5 }}>{ncFill(t('Forbundet til {src} (kun læseadgang)'), { src: consent.system })}</span>
+            <span className="cw-row-meta" style={{ fontSize: 12.5 }}>{portalConsentUntil(consent)}</span>
+          </div>
+          <button type="button" className="btn btn-sm" data-cust-act="consent" onClick={() => portalRevoke(consent)}>{t('Træk adgangen tilbage')}</button>
+        </div>
+      )}
+
+      {showSubmit && (
+        <div className="cwp-stack" style={{ marginTop: 16, padding: '16px 18px', background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>
+            {submittedAt ? t('I har sendt mere, siden I sagde, I var færdige') : ncFill(t('Alt er sendt. Sig til {adv}, når I er færdige.'), { adv })}
+          </div>
+          <button type="button" onClick={onSubmit} data-cust-act="submit" className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>{submittedAt ? ncFill(t('Giv {adv} besked'), { adv }) : t('Vi er færdige')}</button>
+        </div>
+      )}
+
+      {!locked && (
+        <div style={{ marginTop: 12, display: 'flex', gap: 4, flexWrap: 'wrap', marginLeft: -8 }}>
+          {canDelegate && <button type="button" className="btn-ghost-sm" data-cust-act="delegate" onClick={() => onOpenBundle(null)}>{t('Få hjælp fra revisor eller bank')}</button>}
+          {erpOffer && <button type="button" className="btn-ghost-sm" data-cust-act="erp" onClick={onErp}>{t('Forbind regnskabssystem')}</button>}
+          <button type="button" className="btn-ghost-sm" data-cust-act={loose.length ? undefined : 'upload'} onClick={onOther}>{loose.length ? ncFill(t('Andre filer ({n})'), { n: loose.length }) : t('Send en anden fil')}</button>
+        </div>
+      )}
+
+      {years.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <CWFold label={ncFill(t('Ligger allerede hos EIFO ({n})'), { n: years.length })} id="cwp-auto">
+            <div className="cw-row" style={{ padding: '4px 0 6px' }}>
+              <div className="cw-row-main">
+                <span className="cw-row-title">{(years.length > 1 ? t('Årsrapporter') : t('Årsrapport')) + ' ' + yearsText}</span>
+                <span className="cw-row-meta">{t('Hentet automatisk fra CVR-registret. I skal ikke gøre noget.')}</span>
+              </div>
+            </div>
+          </CWFold>
+        </div>
+      )}
+
+      {/* Dialogen med rådgiveren står altid synlig som en chat */}
+      <div style={{ marginTop: 16 }}>
+        <CWDialogCard idPrefix="cwp" readOnly={locked || CW.isPreview()}/>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * K2: én række pr. punkt med fed titel og højst én grå linje. Mangler: beskrivelsen
+ * ("Hvorfor" står på punktets egen side). Leveret: "Sendt 30. sep. · 1 fil" og kun
+ * "⋯" til højre. K5: et afvist punkt har rådgiverens note som linjen og en ghost-knap.
+ */
+function PortalHubRow({ it, first, status: realStatus, onOpen, readOnly }) {
+  // Skrivebeskyttet (sagen er hos kreditkomitéen): det, der ikke er sendt, står
+  // neutralt som "Ikke sendt", og der er ingen handlinger ud over kvitteringen.
+  const status = readOnly && ['pending', 'rejected', 'delegated'].includes(realStatus) ? 'closed' : realStatus;
+  const [menu, setMenu] = React.useState(false);
+  const [receipt, setReceipt] = React.useState(false);
+  const menuRef = React.useRef(null);
+  const s = CW.itemState(it.id);
+  const files = (s && s.files) || [];
+  const delivered = status === 'received' || status === 'approved' || status === 'noted';
+  const clickable = status === 'pending';
+  const kind = portalKind(it.id);
+  const draft = status === 'pending' ? csDraft(it.id) : null;
+  // Har rådgiveren tilføjet alle filerne for kunden? Så siger rækken det
+  const advFiles = files.filter(f => (f.by || (s && s.by)) === 'rådgiver');
+  const byAdvisor = !!s && (files.length ? advFiles.length === files.length : s.by === 'rådgiver');
+  const consent = CW.consent();
+  const sourceText = csSourceText(s);
+  const answers = csAnswersText(s);
+  const adv = PORTAL_CONTACT.first;
+
+  React.useEffect(() => {
+    if (!menu) return;
+    const onDoc = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenu(false); };
+    const onKey = (e) => {
+      if (e.key === 'Escape') { setMenu(false); const b = menuRef.current && menuRef.current.querySelector('[aria-haspopup]'); if (b) b.focus(); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const items = Array.from(menuRef.current ? menuRef.current.querySelectorAll('[role=menuitem]') : []);
+        const i = items.indexOf(document.activeElement);
+        const n = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+        if (items[n]) { e.preventDefault(); items[n].focus(); }
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    const id = setTimeout(() => { const f = menuRef.current && menuRef.current.querySelector('[role=menuitem]'); if (f) f.focus(); }, 10);
+    return () => { clearTimeout(id); document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [menu]);
+
+  // Leveret i forhåndsvisningen af kundesiden: det var rådgiveren (D11, samme som loggen)
+  const viaPreview = !!(s && s.viaPreview);
+  const previewBy = ncFill(t('Tilføjet i forhåndsvisning af {name}'), { name: PORTAL_CONTACT.name });
+  const source = !s ? '' : sourceText ? sourceText + (consent ? ' (' + t('kun læseadgang') + ')' : '')
+    : viaPreview ? previewBy
+    : s.by === 'rådgiver' ? ncFill(t('Tilføjet af {adv} for jer'), { adv })
+    : status === 'noted' ? t('Bemærkning fra jer')
+    : answers ? t('Besvaret i spørgeskemaet')
+    : files.length ? t('Uploadet af jer') : t('Sendt af jer');
+
+  // Statusikonet bærer informationen; kun et afvist punkt er rødt
+  const circle = (bg, color, border, icon) => <div aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', background: bg, color, border, display: 'grid', placeItems: 'center', flexShrink: 0, boxSizing: 'border-box' }}>{icon}</div>;
+  const icon = delivered ? circle('var(--c-primary)', '#fff', 'none', <I.Check size={12}/>)
+    : status === 'rejected' ? circle('#fff', 'var(--c-danger)', '1.5px solid var(--c-danger)', <I.AlertCircle size={12}/>)
+    : status === 'delegated' ? circle('#fff', 'var(--c-text-3)', '1.5px solid var(--c-text-4)', <I.Clock size={11}/>)
+    : <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid var(--c-text-4)', flexShrink: 0, boxSizing: 'border-box' }}/>;
+  const statusWord = { pending: t('Mangler'), received: byAdvisor ? ncFill(t('Tilføjet af {adv}'), { adv }) : t('Sendt'), noted: t('Bemærkning sendt'), delegated: s && s.delegate && s.delegate.role === 'bank' ? t('Hos jeres bank') : t('Hos jeres revisor'), approved: t('Godkendt'), rejected: t('Skal sendes igen'), closed: t('Ikke sendt') }[status];
+  const day = (iso) => <span title={CW.fmtWhen(iso)}>{csShortDate(iso)}</span>;
+  const nFiles = (n) => ncFill(n === 1 ? t('1 fil') : t('{n} filer'), { n });
+
+  // Den ene grå linje
+  const meta = status === 'pending' ? (draft
+      ? <span className="cwp-row-draft">{ncFill(t('Kladde gemt kl. {tid}'), { tid: csHHMM(draft.at) })}{draft.files && draft.files.length ? ' · ' + nFiles(draft.files.length) : ''} · {t('ikke sendt endnu')}</span>
+      : t(it.desc))
+    : status === 'closed' ? t('Ikke sendt')
+    : status === 'received' && byAdvisor ? <>{ncFill(advFiles.length === 1 ? t('{adv} har tilføjet 1 fil for jer') : t('{adv} har tilføjet {n} filer for jer'), { adv, n: advFiles.length })} · {day(s.at)}</>
+    : status === 'received' ? <>{viaPreview ? <>{previewBy} · {day(s.at)}</> : <span title={CW.fmtWhen(s.at)}>{ncFill(t('Sendt {when}'), { when: csShortDate(s.at) })}</span>}{sourceText ? ' · ' + sourceText : answers ? ' · ' + answers : files.length ? ' · ' + nFiles(files.length) : ''}{advFiles.length > 0 && ' · ' + ncFill(advFiles.length === 1 ? t('1 tilføjet af {adv}') : t('{n} tilføjet af {adv}'), { adv, n: advFiles.length })}</>
+    : status === 'noted' ? <>{ncFill(t('Bemærkning sendt {when}'), { when: csShortDate(s.at) })}{viaPreview ? ' (' + previewBy.charAt(0).toLowerCase() + previewBy.slice(1) + ')' : ''}: "{s.note}"</>
+    : status === 'approved' ? ncFill(t('Godkendt af {adv} {when}'), { adv, when: csShortDate(s.reviewedAt) })
+    : status === 'rejected' ? adv + ': ' + (s.reviewNote || t('Send venligst en ny version.'))
+    : status === 'delegated' && s.delegate ? <>{ncFill(s.delegate.role === 'bank' ? t('Hos jeres bank: {name}') : t('Hos jeres revisor: {name}'), { name: s.delegate.name })} · {day(s.delegate.at || s.at)}{s.reviewNote ? ' · ' + adv + ': ' + s.reviewNote : ''}</>
+    : null;
+
+  const body = (
+    <>
+      {icon}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 14.5, fontWeight: 600, color: delivered ? 'var(--c-text-2)' : 'var(--c-ink)' }}>
+          {t(it.label)}
+          <span style={ncHidden}>{': ' + statusWord}</span>
+        </div>
+        {meta && <div className="cwp-row-meta">{meta}</div>}
+      </div>
+      {it.tag === 'Valgfri' && (status === 'pending' || status === 'closed') && <span className="cwp-row-cat">{t('Valgfri')}</span>}
+      {clickable && <I.ChevronRight size={16} style={{ color: 'var(--c-text-3)', flexShrink: 0, marginTop: 3 }}/>}
+    </>
+  );
+
+  const editLabel = status === 'noted' ? t('Send en fil i stedet') : kind === 'trade' ? t('Ret svaret') : kind === 'connect' ? t('Se forbindelsen eller upload') : t('Tilføj eller fjern filer');
+  return (
+    <div data-row={it.id} style={{ borderTop: first ? 'none' : '1px solid var(--c-line-2)' }}>
+      <div className="cwp-row" style={{ position: 'relative', padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+        {clickable
+          ? <button type="button" className="cwp-rowbtn" onClick={() => onOpen(it.id)}>{body}</button>
+          : <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 14, alignItems: 'flex-start' }}>{body}</div>}
+        {!clickable && (status === 'rejected' || status === 'delegated' || delivered) && (
+          <div className={'cwp-row-side' + (delivered ? '' : ' wide')} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {status === 'rejected' && <button type="button" className="btn-ghost-sm" onClick={() => onOpen(it.id)} aria-label={(kind === 'trade' ? t('Udfyld igen') : t('Send igen')) + ': ' + t(it.label)}>{kind === 'trade' ? t('Udfyld igen') : t('Send igen')}</button>}
+            {status === 'delegated' && (
+              <>
+                <button type="button" onClick={() => onOpen(it.id)} className="btn-ghost-sm" aria-label={t('Send selv') + ': ' + t(it.label)}>{t('Send selv')}</button>
+                <button type="button" onClick={() => csConfirmUndo(it.id)} data-cust-act="undo" className="btn-ghost-sm" aria-label={t('Tag tilbage') + ': ' + t(it.label)}>{t('Tag tilbage')}</button>
+              </>
+            )}
+            {delivered && (
+              <div ref={menuRef} style={{ position: 'relative' }}>
+                <button type="button" onClick={() => setMenu(!menu)} className="btn-ghost-sm" style={{ padding: '0 6px', minWidth: 28 }} aria-haspopup="menu" aria-expanded={menu} aria-label={ncFill(t('Flere handlinger for {item}'), { item: t(it.label) })}>
+                  <I.MoreH size={14}/>
+                </button>
+                {menu && (
+                  <div role="menu" aria-label={ncFill(t('Flere handlinger for {item}'), { item: t(it.label) })} style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 8, boxShadow: 'var(--shadow-lg)', zIndex: 20, padding: 4, minWidth: 230 }}>
+                    {status !== 'approved' && !readOnly && (
+                      <button type="button" role="menuitem" className="cwp-menuitem" data-act={status === 'received' && kind !== 'trade' ? 'add-file' : undefined} onClick={() => { setMenu(false); onOpen(it.id); }}>
+                        {editLabel}
+                      </button>
+                    )}
+                    <button type="button" role="menuitem" className="cwp-menuitem" onClick={() => { setMenu(false); setReceipt(true); CW.focusSoon('[data-row="' + it.id + '"] .cwp-receipt'); }}>
+                      {ncFill(t('Se hvad {adv} modtog'), { adv })}
+                    </button>
+                    {files.length > 0 && (
+                      <button type="button" role="menuitem" className="cwp-menuitem" onClick={() => { setMenu(false); downloadFiles(files); }}>
+                        {t('Download')}
+                      </button>
+                    )}
+                    {readOnly && kind === 'connect' && consent && (
+                      <button type="button" role="menuitem" className="cwp-menuitem" data-cust-act="consent" onClick={() => { setMenu(false); portalRevoke(consent); }}>
+                        {t('Træk adgangen tilbage')}
+                      </button>
+                    )}
+                    {csCanUndo(s) && !readOnly && (
+                      <button type="button" role="menuitem" className="cwp-menuitem" data-cust-act="undo" onClick={() => { setMenu(false); csConfirmUndo(it.id); }}>
+                        {status === 'noted' ? t('Fortryd bemærkning') : t('Fortryd')}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {receipt && s && (
+        <div className="cwp-receipt" role="region" tabIndex={-1} aria-label={ncFill(t('Kvittering for {item}'), { item: t(it.label) })} style={{ margin: '0 18px 14px 54px', padding: '12px 14px', background: 'var(--c-surface-2)', borderRadius: 8, fontSize: 12.5, color: 'var(--c-text)', outline: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+            <div style={{ flex: 1 }}>
+              <b>{t('Kvittering')}</b> · {ncFill(t('Modtaget af EIFO {when}'), { when: CW.fmtWhen(s.at) })}
+              <div className="muted" style={{ marginTop: 2 }}>{t('Kilde')}: {source}</div>
+              {sourceText && consent && <div className="muted" style={{ marginTop: 2 }}>{portalConsentUntil(consent)}</div>}
+            </div>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setReceipt(false)} aria-label={t('Luk kvitteringen')}><I.X className="ic"/></button>
+          </div>
+          {files.length > 0 && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {files.map(f => (
+                <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 500, wordBreak: 'break-all' }}>{f.name}</span>
+                  <span className="muted">{f.sizeLabel} · {CW.fmtWhen(f.at)}{(f.by || s.by) === 'rådgiver' ? ' · ' + ncFill(t('tilføjet af {adv}'), { adv }) : ''}</span>
+                  <button type="button" className="cwp-linkbtn" onClick={() => csOpenFile(f)}>{t('Åbn')}</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {answers && <div style={{ marginTop: 6 }}><span className="muted">{t('Jeres svar:')}</span> {answers}</div>}
+          {!files.length && !answers && status !== 'noted' && <div style={{ marginTop: 6 }} className="muted">{t('Ingen filer')}</div>}
+          {s.note && !sourceText && <div style={{ marginTop: 6 }}><span className="muted">{t('Jeres bemærkning:')}</span> {s.note}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Filvælger med træk-og-slip og liste over valgte filer (endnu ikke sendt)
+// Gemmer punktets kladde løbende (CF1) og returnerer tidspunktet for seneste gem
+function usePortalDraft(itemId, value) {
+  const [at, setAt] = React.useState(() => { const d = csDraft(itemId); return d ? d.at : null; });
+  const first = React.useRef(true);
+  const key = JSON.stringify([(value.files || []).map(f => f.id), value.note || '']);
+  React.useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const d = csSaveDraft(itemId, value);
+    setAt(d ? d.at : null);
+  }, [key]);
+  return at;
+}
+
+function PortalFilePicker({ staged, setStaged, accept = CS_ACCEPT, title, hint, compact, itemId }) {
+  const inputRef = React.useRef(null);
+  const [drag, setDrag] = React.useState(false);
+  const [err, setErr] = React.useState('');       // forkert filtype eller for stor
+  const [said, setSaid] = React.useState('');     // til skærmlæsere: "<fil> er klar til at sende"
+  const add = (list) => {
+    const arr = csAcceptFiles(list, accept, setErr);
+    if (arr.length) {
+      setStaged(prev => prev.concat(csStageFiles(arr, itemId)));
+      setSaid(arr.length === 1 ? ncFill(t('{file} er klar til at sende'), { file: arr[0].name }) : ncFill(t('{n} filer er klar til at sende'), { n: arr.length }));
+    }
+  };
+  const pickFiles = () => inputRef.current && inputRef.current.click();
+  return (
+    <>
+      <div className="cwp-drop" role="button" tabIndex={0} data-cust-act="upload" aria-label={(title || t('Træk filer hertil, eller vælg filer')) + '. ' + t('Vælg filer')}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickFiles(); } }}
+        onDragOver={e => { e.preventDefault(); setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={e => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files); }}
+        onClick={pickFiles}
+        style={{ border: '2px dashed ' + (drag ? 'var(--c-primary)' : 'var(--c-line-strong)'), background: drag ? 'rgba(29,78,216,0.06)' : '#fff', borderRadius: compact ? 10 : 14, padding: compact ? '20px 18px' : '30px 24px', textAlign: 'center', cursor: 'pointer', transition: 'all 150ms' }}>
+        <div style={{ fontSize: compact ? 13.5 : 15, fontWeight: 500, color: 'var(--c-ink)' }}>{title || t('Træk filer hertil, eller vælg filer')}</div>
+        <div style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 4 }}>{hint || t('PDF, Excel, Word eller billeder · højst 50 MB pr. fil')}</div>
+        <span aria-hidden="true" className="btn btn-sm" style={{ marginTop: 12, pointerEvents: 'none' }}>{t('Vælg filer')}</span>
+        <input ref={inputRef} type="file" multiple accept={accept} style={{ display: 'none' }} onChange={e => { add(e.target.files); e.target.value = ''; }} data-testid="portal-file-input"/>
+      </div>
+      <div role="status" className="cwp-file-status" style={ncHidden}>{said}</div>
+      {err && <div role="alert" className="cwp-file-err" style={{ marginTop: 8, fontSize: 13, color: 'var(--c-danger)' }}>{err}</div>}
+      {staged.length > 0 && (
+        <div style={{ marginTop: 12, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden' }}>
+          <div style={{ padding: '10px 16px 0', fontSize: 12.5, fontWeight: 500, color: 'var(--c-text-2)' }}>{t('Klar til at sende')}</div>
+          {staged.map((f, i) => (
+            <div key={i + f.name} style={{ padding: '10px 16px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, wordBreak: 'break-all' }}>{f.name}</div>
+                <div className="muted" style={{ fontSize: 12 }}>{CW.fmtSize(f.size)}</div>
+              </div>
+              <button type="button" className="btn-ghost-sm" onClick={() => cwConfirmRemove(f.name, t('Filen er ikke sendt endnu.')).then(ok => { if (ok) setStaged(prev => prev.filter((_, j) => j !== i)); })} aria-label={ncFill(t('Fjern {file}'), { file: f.name })}>{t('Fjern')}</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+// Punktets side: titel, beskrivelse og "Hvorfor" (K2 flyttede den hertil). K5: en
+// afvisning står som én grå linje "Mette skriver: …". Ingen versal-overskrift (K6).
+function PortalItemHead({ item }) {
+  const s = CW.itemState(item.id);
+  const adv = PORTAL_CONTACT.first;
+  const note = s && (s.status === 'rejected' ? (s.reviewNote || t('Send venligst en ny version.')) : s.status === 'delegated' && s.reviewNote ? s.reviewNote : '');
+  return (
+    <>
+      <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '0 0 6px' }}>{t(item.label)}</h1>
+      <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.55, margin: '0 0 4px' }}>{t(item.desc)}</p>
+      <p style={{ fontSize: 13, color: 'var(--c-text-3)', lineHeight: 1.55, margin: note || (s && s.status === 'noted') ? '0 0 8px' : '0 0 18px' }}>{t('Hvorfor')}: {t(item.why)}</p>
+      {note && (
+        <p role="status" style={{ fontSize: 13.5, color: 'var(--c-text)', lineHeight: 1.55, margin: '0 0 18px' }}>
+          {ncFill(t('{adv} skriver:'), { adv })} <span style={{ color: 'var(--c-text-2)' }}>{note}</span>
+        </p>
+      )}
+      {s && s.status === 'noted' && (
+        <div style={{ margin: '0 0 18px', fontSize: 13.5, color: 'var(--c-text)', display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
+          <span style={{ flex: 1, minWidth: 220, lineHeight: 1.55 }}>
+            {ncFill(t('I har skrevet til {adv}'), { adv })}: <span style={{ color: 'var(--c-text-2)' }}>"{s.note}"</span>{' '}
+            <span className="muted">{t('Har I alligevel en fil, kan I sende den nedenfor.')}</span>
+          </span>
+          {csCanUndo(s) && <button type="button" className="btn-ghost-sm" data-cust-act="undo" onClick={() => csConfirmUndo(item.id)}>{t('Fortryd bemærkning')}</button>}
+        </div>
+      )}
+    </>
+  );
+}
+
+// "Har vi ikke / ikke relevant": samme formular som før. Når den er åben, skjuler
+// punktets side sin egen upload og "Færdig", så der kun er én primærknap (K6).
+function PortalNotedToggle({ item, open, setOpen, onDone }) {
+  if (!open) return <button type="button" className="btn btn-ghost" data-cust-act="send" onClick={() => setOpen(true)} aria-expanded={false}>{t('Har vi ikke / ikke relevant')}</button>;
+  return (
+    <div style={{ width: '100%' }}>
+      <CWNotedForm itemId={item.id} idPrefix="cwp" onDone={onDone} onCancel={() => setOpen(false)}/>
+    </div>
+  );
+}
+
+// Filer, der allerede er sendt til punktet, med "Åbn" og (for kundens egne) "Fjern"
+function PortalSentFiles({ item, files }) {
+  const adv = PORTAL_CONTACT.first;
+  if (!files.length) return null;
+  return (
+    <div style={{ marginBottom: 14, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ padding: '10px 16px 0', fontSize: 12.5, fontWeight: 500, color: 'var(--c-text-2)' }}>{ncFill(t('Allerede sendt til {adv}'), { adv })}</div>
+      {files.map((f, i) => {
+        const mine = CW.canRemoveFile(item.id, f.id, 'kunde');
+        return (
+          <div key={f.id} style={{ padding: '10px 16px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, wordBreak: 'break-all' }}>{f.name}</div>
+              <div className="muted" style={{ fontSize: 12 }}>{f.sizeLabel} · <span title={CW.fmtWhen(f.at)}>{csShortDate(f.at)}</span>{!mine ? ' · ' + ncFill(t('tilføjet af {adv}'), { adv }) : ''}</div>
+            </div>
+            <button type="button" className="btn-ghost-sm" onClick={() => csOpenFile(f)} aria-label={t('Åbn') + ' ' + f.name}>{t('Åbn')}</button>
+            {mine && <button type="button" className="btn-ghost-sm" data-cust-act="remove" onClick={() => csRemoveOwnFile(item.id, f)} aria-label={ncFill(t('Fjern {file}'), { file: f.name })}>{t('Fjern')}</button>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function PortalUpload({ item, onBack, onFinish, onNoted }) {
+  CW.useCase();
+  const s = CW.itemState(item.id);
+  // Afvist, eller afvist og derefter sendt til en hjælper: de gamle filer gælder ikke længere
+  const rejected = !!s && (s.status === 'rejected' || (s.status === 'delegated' && !!s.reviewedAt));
+  const existing = s && !rejected ? (s.files || []) : [];
+  const draft0 = React.useMemo(() => csDraft(item.id), [item.id]);
+  const [staged, setStaged] = React.useState(draft0 && draft0.files ? draft0.files : []);
+  const [note, setNote] = React.useState(draft0 && draft0.note != null ? draft0.note : s && s.status === 'received' && s.noteKind !== 'system' ? (s.note || '') : '');
+  const [noteOpen, setNoteOpen] = React.useState(!!note);
+  const [notedOpen, setNotedOpen] = React.useState(false);
+  const draftAt = usePortalDraft(item.id, { files: staged, note });
+  const total = existing.length + staged.length;
+  const adv = PORTAL_CONTACT.first;
+  const canNote = existing.length === 0 && (!s || s.status !== 'noted');
+
+  return (
+    <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      <PortalBackNav onBack={onBack}/>
+      <PortalItemHead item={item}/>
+
+      {notedOpen ? (
+        <PortalNotedToggle item={item} open setOpen={setNotedOpen} onDone={onNoted}/>
+      ) : (
+        <>
+          <PortalSentFiles item={item} files={existing}/>
+          <PortalFilePicker staged={staged} setStaged={setStaged} itemId={item.id}/>
+
+          {noteOpen ? (
+            <div className="field" style={{ marginTop: 16 }}>
+              <label htmlFor="cwp-note">{ncFill(t('Bemærkning til {adv} (valgfri)'), { adv })}</label>
+              <textarea id="cwp-note" className="input" rows={2} value={note} readOnly={CW.isPreview()} onChange={e => setNote(e.target.value)} placeholder={t('Fx hvilken version det er, eller hvad der mangler')} style={{ height: 'auto', padding: 10, resize: 'vertical' }}/>
+            </div>
+          ) : (
+            <button type="button" className="btn-ghost-sm" style={{ marginTop: 12, marginLeft: -8 }} onClick={() => { setNoteOpen(true); CW.focusSoon('#cwp-note'); }}>
+              <I.Plus size={12}/> {t('Tilføj en bemærkning')}
+            </button>
+          )}
+
+          <div className="cwp-stack" style={{ marginTop: 18, display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' }}>
+            {canNote ? <PortalNotedToggle item={item} open={false} setOpen={setNotedOpen} onDone={onNoted}/> : <span/>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', marginLeft: 'auto' }}>
+              {draftAt && <span className="muted cwp-draft-at" style={{ fontSize: 12.5 }}>{ncFill(t('Kladde gemt kl. {tid}'), { tid: csHHMM(draftAt) })}</span>}
+              {total === 0 && <span id="cwp-up-hint" className="muted" style={{ fontSize: 12.5 }}>{t('Vælg mindst én fil')}</span>}
+              <button type="button" className="btn btn-primary" data-cust-act="send" disabled={total === 0} onClick={() => onFinish(staged, note.trim())} aria-describedby={total === 0 ? 'cwp-up-hint' : undefined}
+                style={total > 0 ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
+                {t('Færdig med dette punkt')}
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -696,664 +1929,344 @@ function PortalUpload({ item, onBack, onDone, onSkip }) {
   );
 }
 
-function PortalConnect({ item, onBack, onDone }) {
-  const [connectingId, setConnectingId] = React.useState(null);
-  const [connectedId, setConnectedId] = React.useState(null);
-  const [showOauth, setShowOauth] = React.useState(null); // source being oauth'd
-  const [oauthStep, setOauthStep] = React.useState(0); // 0=creds, 1=loading, 2=done
-  const [uploadedFile, setUploadedFile] = React.useState(null);
-  const [drag, setDrag] = React.useState(false);
-  const [pendingConnect, setPendingConnect] = React.useState(null); // source awaiting agreement
+// Antal hele måneder i "år til dato" (samme periode som portalPeriod)
+function portalMonths(end) {
+  return portalPeriodEnd(end).m + 1;
+}
 
-  const sources = [
-    { id: "ec", name: "e-conomic" },
-    { id: "bi", name: "Billy" },
-    { id: "di", name: "Dinero" },
-    { id: "md", name: "Microsoft Dynamics" },
-    { id: "xe", name: "Xena" },
-  ];
+/**
+ * Punktet Periodetal: forbind regnskabssystemet (aftalen, datadelingen og valget
+ * af system ligger i PortalErpSetup, de samme skærme som i opstarten), eller
+ * upload en saldobalance selv.
+ */
+function PortalConnect({ item, onBack, onFinish, onNoted }) {
+  CW.useCase();
+  const [setup, setSetup] = React.useState(false);
+  const [staged, setStaged] = React.useState(() => { const d = csDraft(item.id); return d && d.files ? d.files : []; });
+  const [notedOpen, setNotedOpen] = React.useState(false);
+  const connDraftAt = usePortalDraft(item.id, { files: staged });
+  const consent = CW.consent();
+  const ob = CW.onboarding();
+  const s = CW.itemState(item.id);
+  // Afvist, eller afvist og derefter sendt til en hjælper: de gamle filer gælder ikke længere
+  const rejected = !!s && (s.status === 'rejected' || (s.status === 'delegated' && !!s.reviewedAt));
+  const existing = s && !rejected ? (s.files || []) : [];
+  const fromSystem = !!(s && s.noteKind === 'system' && !rejected);
+  const revoke = () => portalRevoke(consent);
 
-  const startConnect = (s) => {
-    setShowOauth(s);
-    setOauthStep(0);
-  };
+  if (setup) return <PortalErpSetup backLabel={ncFill(t('Tilbage til {item}'), { item: t(item.label) })} onBack={() => { setSetup(false); CW.focusSoon('.cwp-main h1'); }} onDone={() => { setSetup(false); onBack(); }}/>;
 
-  const doConnect = () => {
-    const srcName = showOauth.name;
-    setOauthStep(1);
-    setTimeout(() => {
-      setOauthStep(2);
-      setTimeout(() => {
-        onDone("Periodetal hentet automatisk fra " + srcName);
-      }, 1100);
-    }, 1400);
-  };
-
-  const handleDrop = () => {
-    setDrag(false);
-    const f = { name: "Råbalance_Q1_2026.xlsx", size: "84 KB" };
-    setUploadedFile(f);
-    setTimeout(() => onDone("Råbalance uploadet manuelt · " + f.name), 800);
-  };
-
-  if (pendingConnect) {
-    return <PortalAgreement onBack={() => setPendingConnect(null)} onNext={() => { startConnect(pendingConnect); setPendingConnect(null); }}/>;
-  }
+  const total = existing.length + staged.length;
+  const canNote = existing.length === 0 && (!s || s.status !== 'noted');
+  const waiting = ob.erp && ob.erp.waiting;
+  const sentSelf = ob.agreement && ob.agreement.declined;
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
-      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 14 }}><I.ArrowLeft className="ic"/> {t('Tilbage')}</button>
-      <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{t('FORBIND DATA')}</div>
-      <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '6px 0 6px' }}>{t(item.l)}</h1>
-      <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 18 }}>
-        {t('Forbind jeres bogføringssystem direkte, eller upload en råbalance manuelt.')}
-      </p>
+      <PortalBackNav onBack={onBack}/>
+      <PortalItemHead item={item}/>
 
-      {/* ERP list */}
-      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden' }}>
-        {sources.map((s, i) => (
-          <div key={s.id} style={{ padding: '14px 18px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: connectedId === s.id ? 'var(--c-success-bg)' : 'var(--c-surface-2)', border: '1px solid ' + (connectedId === s.id ? 'var(--c-success)' : 'var(--c-line)'), display: 'grid', placeItems: 'center', fontWeight: 600, fontSize: 11, color: connectedId === s.id ? 'var(--c-success)' : 'var(--c-text-2)', flexShrink: 0 }}>
-              {connectedId === s.id ? <I.Check size={16}/> : s.name.slice(0, 2).toUpperCase()}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 500 }}>{s.name}</div>
-            </div>
-            {connectedId === s.id
-              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: 'var(--c-success)', fontSize: 12.5, fontWeight: 500 }}><I.Check size={13}/> {t('Forbundet')}</span>
-              : connectedId
-              ? null
-              : <button className="btn btn-sm" onClick={() => setPendingConnect(s)}>{t('Forbind')}</button>}
+      {notedOpen ? (
+        <PortalNotedToggle item={item} open setOpen={setNotedOpen} onDone={onNoted}/>
+      ) : (
+      <>
+      {consent && (
+        <div role="status" className="cw-row" style={{ marginBottom: 16, padding: '12px 16px', background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10, alignItems: 'center' }}>
+          <div className="cw-row-main">
+            <span className="cw-row-title" style={{ fontSize: 13.5 }}>{ncFill(t('Forbundet til {src} (kun læseadgang)'), { src: consent.system })}</span>
+            <span className="cw-row-meta" style={{ fontSize: 12.5 }}>{portalConsentUntil(consent)}</span>
           </div>
-        ))}
-      </div>
+          <button type="button" className="btn btn-sm" data-cust-act="consent" onClick={revoke}>{t('Træk adgangen tilbage')}</button>
+        </div>
+      )}
+      {!consent && fromSystem && (
+        <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.55 }}>
+          {ncFill(t('Tallene blev hentet {when}, og EIFO har dem stadig. Adgangen til regnskabssystemet er trukket tilbage.'), { when: csShortDate(s.at) })}
+        </p>
+      )}
+      {!consent && (
+        <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)', margin: 0 }}>{t('Hent tallene fra jeres regnskabssystem')}</h2>
+            <div style={{ fontSize: 12.5, color: 'var(--c-text-2)', marginTop: 2, lineHeight: 1.5 }}>
+              {waiting ? t('I ventede på jeres revisor. Har I fået adgangen, kan I forbinde nu.')
+                : sentSelf ? t('I valgte at sende tallene selv. I kan stadig forbinde, hvis det er nemmere.')
+                : t('Med læseadgang henter EIFO saldobalance, periodetal og debitordata. I logger ind i jeres eget system.')}
+            </div>
+          </div>
+          <button type="button" className="btn btn-primary" data-cust-act="erp" onClick={() => { setSetup(true); CW.focusSoon('.cwp-main h1'); }} style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>{t('Forbind regnskabssystem')}</button>
+        </div>
+      )}
 
-      {/* Divider */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
         <div style={{ flex: 1, height: 1, background: 'var(--c-line-2)' }}/>
-        <span style={{ fontSize: 12, color: 'var(--c-text-3)', fontWeight: 500 }}>{t('eller')}</span>
+        <span style={{ fontSize: 12.5, color: 'var(--c-text-3)', fontWeight: 500 }}>{consent || fromSystem ? t('supplér eventuelt') : t('eller')}</span>
         <div style={{ flex: 1, height: 1, background: 'var(--c-line-2)' }}/>
       </div>
 
-      {/* Manual upload */}
-      <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', marginBottom: 8 }}>{t('Upload råbalance manuelt')}</div>
-      {uploadedFile ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10 }}>
-          <div className="doc-ic" style={{ width: 28, height: 34 }}/>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 500 }}>{uploadedFile.name}</div>
-            <div className="muted" style={{ fontSize: 11.5 }}>{uploadedFile.size}</div>
-          </div>
-          <span style={{ color: 'var(--c-success)', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 5 }}><I.Check size={12}/> {t('Uploadet')}</span>
-          <button className="btn btn-sm btn-ghost" onClick={() => setUploadedFile(null)}><I.X className="ic"/></button>
+      <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)', margin: '0 0 8px' }}>{t('Upload en saldobalance selv')}</h2>
+      <PortalSentFiles item={item} files={existing}/>
+      <PortalFilePicker compact staged={staged} setStaged={setStaged} itemId={item.id} accept=".xlsx,.xls,.csv,.pdf"
+        title={t('Træk saldobalancen hertil, eller vælg filen')} hint={t('Excel, CSV eller PDF · eksportér den fra jeres bogføringssystem')}/>
+      <div className="cwp-stack" style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {canNote ? <PortalNotedToggle item={item} open={false} setOpen={setNotedOpen} onDone={onNoted}/> : <span/>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', marginLeft: 'auto' }}>
+          {connDraftAt && <span className="muted cwp-draft-at" style={{ fontSize: 12.5 }}>{ncFill(t('Kladde gemt kl. {tid}'), { tid: csHHMM(connDraftAt) })}</span>}
+          {staged.length === 0 && <span id="cwp-conn-hint" className="muted" style={{ fontSize: 12.5 }}>{total === 0 ? t('Vælg mindst én fil') : t('Vælg en fil for at sende mere')}</span>}
+          <button type="button" className="btn btn-primary" data-cust-act="send" disabled={staged.length === 0} onClick={() => onFinish(staged)} aria-describedby={staged.length === 0 ? 'cwp-conn-hint' : undefined}
+            style={staged.length > 0 ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
+            {t('Færdig med dette punkt')}
+          </button>
         </div>
-      ) : (
-        <div
-          onDragOver={e => { e.preventDefault(); setDrag(true); }}
-          onDragLeave={() => setDrag(false)}
-          onDrop={e => { e.preventDefault(); handleDrop(); }}
-          onClick={handleDrop}
-          style={{ border: '2px dashed ' + (drag ? 'var(--c-primary)' : 'var(--c-line-strong)'), background: drag ? 'rgba(59,130,246,0.04)' : '#fff', borderRadius: 10, padding: '22px 18px', textAlign: 'center', cursor: 'pointer', transition: 'all 150ms' }}>
-          <I.Upload size={18} style={{ color: 'var(--c-text-3)', marginBottom: 6 }}/>
-          <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>{t('Træk råbalance hertil - eller klik')}</div>
-          <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 4 }}>{t('Excel eller CSV · eksportér fra jeres bogføringssystem')}</div>
-        </div>
-      )}
-
-      <div style={{ marginTop: 16, padding: 12, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 10, fontSize: 12, color: 'var(--c-text-2)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-        <I.Lock size={13} style={{ marginTop: 1, color: 'var(--c-text-3)', flexShrink: 0 }}/>
-        <div>{t('Kreditafdelingen ser kun de felter de har brug for.')}</div>
       </div>
+      </>
+      )}
+    </div>
+  );
+}
 
-      {/* OAuth modal */}
-      {showOauth && (
-        <div className="scrim" onClick={() => oauthStep === 0 && setShowOauth(null)}>
-          <div className="modal" style={{ width: 440 }} onClick={e => e.stopPropagation()}>
-            <div className="modal-head">
-              <div className="modal-title">{t('Forbind')} {showOauth.name}</div>
-              {oauthStep === 0 && <button className="icon-btn" onClick={() => setShowOauth(null)}><I.X size={16}/></button>}
-            </div>
-            <div className="modal-body">
-              {oauthStep === 0 && (
-                <OauthForm onConnect={doConnect} onCancel={() => setShowOauth(null)} srcName={showOauth.name}/>
-              )}
-              {oauthStep === 1 && (
-                <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid var(--c-line-2)', borderTopColor: 'var(--c-primary)', margin: '0 auto 14px', animation: 'spin 0.8s linear infinite' }}/>
-                  <div style={{ fontSize: 14, color: 'var(--c-text-2)' }}>{t('Forbinder til')} {showOauth.name}...</div>
-                  <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                </div>
-              )}
-              {oauthStep === 2 && (
-                <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--c-success-bg)', color: 'var(--c-success)', display: 'grid', placeItems: 'center', margin: '0 auto 12px' }}>
-                    <I.Check size={22}/>
-                  </div>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Forbundet!')}</div>
-                  <div className="muted" style={{ fontSize: 13, marginTop: 4 }}>{t('Periodetal hentes nu automatisk.')}</div>
-                </div>
-              )}
-            </div>
-          </div>
+// Salg fordelt på lande: samme skema som før. "Har vi ikke" skjuler skemaet (K6).
+function PortalTradeScreen({ item, onBack, onDone }) {
+  CW.useCase();
+  const s = CW.itemState(item.id);
+  const [notedOpen, setNotedOpen] = React.useState(false);
+  return (
+    <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      <PortalBackNav onBack={onBack}/>
+      <PortalItemHead item={item}/>
+      {notedOpen
+        ? <PortalNotedToggle item={item} open setOpen={setNotedOpen} onDone={onDone}/>
+        : <CWTradeForm itemId={item.id} idPrefix="cwp" onDone={onDone}/>}
+      {!notedOpen && (!s || s.status === 'rejected') && (
+        <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--c-line-2)' }}>
+          <PortalNotedToggle item={item} open={false} setOpen={setNotedOpen} onDone={onDone}/>
         </div>
       )}
     </div>
   );
 }
 
-function OauthForm({ onConnect, onCancel, srcName }) {
-  const [consentType, setConsentType] = React.useState("unlimited");
-  const defaultDate = (() => {
-    const d = new Date(); d.setFullYear(d.getFullYear() + 1);
-    return d.toISOString().slice(0, 10);
-  })();
-  const [expiryDate, setExpiryDate] = React.useState(defaultDate);
-
+// Statussiden (K3): kun kvitteringen og tidslinjen. Punkterne står på oversigten.
+function PortalStatus({ justSubmitted, onBack }) {
+  CW.useCase();
+  const rcp = portalRecipient();
+  const cs = CW.caseState() || {};
+  const prog = CW.progress();
+  const req = CW.request();
+  const lock = CW.customerLock();
+  const at = cs.customerSubmittedAt;
+  const adv = PORTAL_CONTACT.first;
+  const back = at ? CW.fmtDate(csAddWorkdays(new Date(at), 2)) : '';
+  const title = lock ? t('Materialet er hos kreditkomitéen')
+    : at ? ncFill(t('{adv} ved nu, at I er færdige'), { adv })
+    : t('Status for jeres ansøgning');
+  const lead = lock ? ncFill(t('{adv} har sendt jeres ansøgning videre. I hører fra EIFO, når der er en afgørelse.'), { adv })
+    : at ? (justSubmitted
+      ? ncFill(t('Hun vender tilbage senest {date}.'), { date: back }) + (rcp.email ? ' ' + ncFill(t('I får en kvittering på {email}.'), { email: rcp.email }) : '')
+      : ncFill(t('I sagde {date}, at I var færdige. {adv} gennemgår materialet og vender tilbage senest {date2}.'), { date: CW.fmtDate(at), adv, date2: back }))
+    : req && prog.requiredMissing > 0 ? ncFill(t('I mangler {n} af {m} påkrævede punkter. Se dem på oversigten.'), { n: prog.requiredMissing, m: prog.required })
+    : ncFill(t('{navn} gennemgår det, I har sendt.'), { navn: adv });
   return (
-    <div className="vstack" style={{ gap: 14 }}>
-      <div style={{ padding: '11px 14px', background: 'var(--c-surface-2)', borderRadius: 8, fontSize: 12.5, color: 'var(--c-text-2)', display: 'flex', gap: 10, alignItems: 'center' }}>
-        <I.Lock size={13} style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
-        <div>{t('Vi beder kun om')} <b>{t('læseadgang')}</b> {t('til kontoplan og periodetal - aldrig skriveadgang.')}</div>
-      </div>
-
-      <div className="field">
-        <label>{t('Brugernavn / Email')}</label>
-        <input className="input" defaultValue="anders@nordhavn-composite.dk"/>
-      </div>
-      <div className="field">
-        <label>{t('Adgangskode')}</label>
-        <input className="input" type="password" defaultValue="••••••••"/>
-      </div>
-
-      <div>
-        <div className="label-mini" style={{ marginBottom: 8 }}>{t('Samtykkets varighed')}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[
-            { v: "unlimited", l: "Ubegrænset", desc: "Kreditafdelingen kan hente data løbende - kan trækkes tilbage til enhver tid" },
-            { v: "expiry",    l: "Engangsadgang t.o.m. en dato", desc: null },
-          ].map(o => (
-            <label key={o.v} onClick={() => setConsentType(o.v)}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 13px', border: '1px solid ' + (consentType === o.v ? 'var(--c-primary)' : 'var(--c-line)'), borderRadius: 8, cursor: 'pointer', background: consentType === o.v ? 'rgba(59,130,246,0.04)' : '#fff' }}>
-              <span style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid ' + (consentType === o.v ? 'var(--c-primary)' : 'var(--c-line-strong)'), display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
-                {consentType === o.v && <span style={{ width: 8, height: 8, background: 'var(--c-primary)', borderRadius: '50%' }}/>}
-              </span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {t(o.l)}
-                  {o.v === 'unlimited' && <span className="tag" style={{ fontSize: 10, background: 'var(--c-primary)', color: '#fff', border: 'none' }}>{t('Anbefalet')}</span>}
-                </div>
-                {o.v === 'expiry' && consentType === 'expiry' ? (
-                  <div style={{ marginTop: 8 }}>
-                    <input type="date" value={expiryDate} onChange={e => setExpiryDate(e.target.value)}
-                      onClick={e => e.stopPropagation()}
-                      className="input mono" style={{ width: 160, fontSize: 13 }}/>
-                  </div>
-                ) : o.desc ? (
-                  <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 2 }}>{t(o.desc)}</div>
-                ) : null}
-              </div>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div className="modal-foot" style={{ margin: '4px -22px -22px', padding: '12px 22px', borderTop: '1px solid var(--c-line)', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button className="btn btn-ghost" onClick={onCancel}>{t('Annullér')}</button>
-        <button className="btn btn-primary" onClick={onConnect} style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
-          {t('Log ind og forbind')} <I.ArrowRight className="ic"/>
-        </button>
-      </div>
+    <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      <PortalBackNav onBack={onBack}/>
+      <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '0 0 6px' }}>{title}</h1>
+      <p role={justSubmitted ? 'status' : undefined} style={{ fontSize: 14.5, color: 'var(--c-text-2)', lineHeight: 1.55, margin: '0 0 22px' }}>{lead}</p>
+      <CWTimeline/>
     </div>
   );
 }
 
-function PortalPep({ item, onBack, onDone }) {
-  const [step, setStep] = React.useState(1);
-  const [pep, setPep] = React.useState("no");
-  return (
-    <div style={{ maxWidth: 580, margin: '0 auto' }}>
-      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 14 }}><I.ArrowLeft className="ic"/> {t('Tilbage')}</button>
-      <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{t('ERKLÆRING · MITID')}</div>
-      <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '6px 0 18px' }}>{t(item.l)}</h1>
-
-      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 22 }}>
-        {step === 1 && (
-          <>
-            <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.6 }}>
-              {t('Er du')} <b>{t('politisk eksponeret person (PEP)')}</b>{t(', eller står du i nær familie- eller forretningsforbindelse til en sådan?')}
-            </div>
-            <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[
-                { v: "no", l: "Nej - hverken jeg eller mine nærtstående er PEP" },
-                { v: "self", l: "Ja - jeg er selv PEP" },
-                { v: "rel", l: "Ja - en nærtstående er PEP" },
-              ].map(o => (
-                <label key={o.v} onClick={() => setPep(o.v)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', border: '1px solid ' + (pep === o.v ? 'var(--c-primary)' : 'var(--c-line)'), borderRadius: 8, cursor: 'pointer', background: pep === o.v ? 'var(--c-surface-2)' : '#fff' }}>
-                  <span style={{ width: 16, height: 16, borderRadius: '50%', border: '1.5px solid ' + (pep === o.v ? 'var(--c-primary)' : 'var(--c-line-strong)'), display: 'grid', placeItems: 'center' }}>
-                    {pep === o.v && <span style={{ width: 8, height: 8, background: 'var(--c-primary)', borderRadius: '50%' }}/>}
-                  </span>
-                  <span style={{ fontSize: 13.5 }}>{t(o.l)}</span>
-                </label>
-              ))}
-            </div>
-            <div style={{ marginTop: 16, fontSize: 11.5, color: 'var(--c-text-3)' }}>
-              <I.Help size={11} style={{ verticalAlign: -1, marginRight: 4 }}/>
-              {t('Hvad er PEP? En person der varetager eller har varetaget en højtstående offentlig stilling.')}
-            </div>
-          </>
-        )}
-        {step === 2 && (
-          <>
-            <div className="label-mini" style={{ marginBottom: 12 }}>{t('Bekræft og signér')}</div>
-            <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--c-text)', padding: 14, background: 'var(--c-surface-2)', borderRadius: 8 }}>
-              Jeg, <b>Anders Nielsen</b>, CFO i Nordhavn Composite A/S (CVR 38 42 71 56), erklærer hermed at hverken jeg eller mine nærtstående er PEP eller har nær tilknytning til en sådan.
-            </div>
-            <div style={{ marginTop: 18, padding: 16, border: '1.5px dashed var(--c-line-strong)', borderRadius: 8, textAlign: 'center' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: 'var(--c-primary)', color: '#fff', borderRadius: 8, fontWeight: 500, fontSize: 14, cursor: 'pointer' }}>
-                <I.Lock size={14}/> {t('Signér med MitID')}
-              </div>
-              <div style={{ marginTop: 10, fontSize: 11.5, color: 'var(--c-text-3)' }}>{t('Sikker signering · godkendt af digitaliserings­styrelsen')}</div>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div style={{ marginTop: 18, display: 'flex', gap: 10, justifyContent: 'space-between' }}>
-        {step === 1
-          ? <button onClick={() => setStep(2)} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)', marginLeft: 'auto' }}>{t('Næste')} <I.ArrowRight className="ic"/></button>
-          : <>
-              <button onClick={() => setStep(1)} className="btn"><I.ChevronLeft className="ic"/> {t('Tilbage')}</button>
-              <button onClick={() => onDone("Signeret 24. maj 2026 med MitID")} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>{t('Signér og afslut')} <I.Check className="ic"/></button>
-            </>}
-      </div>
-    </div>
-  );
-}
-
-const ALL_COUNTRIES = [
-  { c: "DK", n: "Danmark" }, { c: "SE", n: "Sverige" }, { c: "NO", n: "Norge" },
-  { c: "FI", n: "Finland" }, { c: "DE", n: "Tyskland" }, { c: "NL", n: "Holland" },
-  { c: "FR", n: "Frankrig" }, { c: "GB", n: "Storbritannien" }, { c: "US", n: "USA" },
-  { c: "ES", n: "Spanien" }, { c: "IT", n: "Italien" }, { c: "PL", n: "Polen" },
-  { c: "BE", n: "Belgien" }, { c: "AT", n: "Østrig" }, { c: "CH", n: "Schweiz" },
-  { c: "PT", n: "Portugal" }, { c: "CZ", n: "Tjekkiet" }, { c: "HU", n: "Ungarn" },
-  { c: "RO", n: "Rumænien" }, { c: "IE", n: "Irland" }, { c: "CA", n: "Canada" },
-  { c: "AU", n: "Australien" }, { c: "JP", n: "Japan" }, { c: "CN", n: "Kina" },
-  { c: "IN", n: "Indien" }, { c: "BR", n: "Brasilien" }, { c: "MX", n: "Mexico" },
-  { c: "ZA", n: "Sydafrika" }, { c: "AE", n: "UAE" }, { c: "SG", n: "Singapore" },
-  { c: "KR", n: "Sydkorea" }, { c: "TR", n: "Tyrkiet" }, { c: "SA", n: "Saudi-Arabien" },
-  { c: "NZ", n: "New Zealand" }, { c: "GR", n: "Grækenland" }, { c: "SK", n: "Slovakiet" },
-  { c: "HR", n: "Kroatien" }, { c: "RS", n: "Serbien" }, { c: "UA", n: "Ukraine" },
-  { c: "EE", n: "Estland" }, { c: "LV", n: "Letland" }, { c: "LT", n: "Litauen" },
-];
-
-function PortalTrade({ item, onBack, onDone }) {
-  const [selected, setSelected] = React.useState([{ c: "DK", n: "Danmark", v: "100" }]); // [{ c, n, v: "" }]
-  const [q, setQ] = React.useState("");
-  const [dropOpen, setDropOpen] = React.useState(false);
-  const [hover, setHover] = React.useState(0);
-  const wrapRef = React.useRef(null);
-  const inputRef = React.useRef(null);
-
-  React.useEffect(() => {
-    const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setDropOpen(false); };
-    document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, []);
-
-  const selectedCodes = selected.map(x => x.c);
-  const filtered = ALL_COUNTRIES.filter(c =>
-    !selectedCodes.includes(c.c) &&
-    (c.n.toLowerCase().includes(q.toLowerCase()) || c.c.toLowerCase().includes(q.toLowerCase()))
-  ).slice(0, 8);
-
-  const addCountry = (country) => {
-    setSelected(prev => [...prev, { ...country, v: "" }]);
-    setQ("");
-    setDropOpen(false);
-    setHover(0);
-    inputRef.current && inputRef.current.focus();
+// Filer, der ikke hører til et punkt ("Andet"). Før lå de kun på statussiden.
+function PortalOtherFilesModal({ onClose }) {
+  CW.useCase();
+  const ref = React.useRef(null);
+  const [staged, setStaged] = React.useState([]);
+  const sending = React.useRef(false);
+  CW.useDialog(ref, true, onClose);
+  const adv = PORTAL_CONTACT.first;
+  const loose = CW.allUploads().filter(f => !f.itemId && f.by === 'kunde');
+  const send = () => {
+    if (!staged.length || sending.current) return;
+    sending.current = true;
+    CW.addLooseUploads(staged);
+    CW.toast(ncFill(staged.length === 1 ? t('1 fil sendt til {navn}') : t('{n} filer sendt til {navn}'), { n: staged.length, navn: adv }));
+    onClose();
   };
-
-  const removeCountry = (code) => setSelected(prev => prev.filter(x => x.c !== code));
-
-  const updateVal = (code, v) => {
-    setSelected(prev => prev.map(x => x.c === code ? { ...x, v: v.replace(/[^0-9.,]/g, '') } : x));
+  const remove = (f) => {
+    CW.confirm({ title: ncFill(t('Fjern {navn}?'), { navn: f.name }), text: ncFill(t('{navn} har allerede fået filen. Hun kan se i sagens historik, at I har fjernet den.'), { navn: adv }), confirmLabel: t('Fjern filen'), danger: true })
+      .then(r => { if (r.ok) { CW.removeLooseUpload(f.id); CW.toast(ncFill(t('{navn} er fjernet'), { navn: f.name })); } });
   };
-
-  const sum = selected.reduce((s, x) => s + (parseFloat(x.v.replace(',', '.')) || 0), 0);
-  const sumOk = selected.length > 0 && Math.abs(sum - 100) < 0.5;
-  const sumWarn = sum > 0 && !sumOk;
-
-  const onKey = (e) => {
-    if (!dropOpen || filtered.length === 0) return;
-    if (e.key === 'ArrowDown') { e.preventDefault(); setHover(h => Math.min(h + 1, filtered.length - 1)); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setHover(h => Math.max(h - 1, 0)); }
-    else if (e.key === 'Enter') { e.preventDefault(); if (filtered[hover]) addCountry(filtered[hover]); }
-    else if (e.key === 'Escape') { setDropOpen(false); }
-  };
-
   return (
-    <div style={{ maxWidth: 620, margin: '0 auto' }}>
-      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 14 }}><I.ArrowLeft className="ic"/> {t('Tilbage')}</button>
-      <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{t('SPØRGESKEMA')}</div>
-      <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '6px 0 6px' }}>{t(item.l)}</h1>
-      <p style={{ fontSize: 14, color: 'var(--c-text-2)', marginBottom: 18 }}>
-        {t('Hvilke lande sælger I til i dag? Tilføj lande og angiv en omtrentlig andel af omsætningen. Summen skal være')} <b>100%</b>.
-      </p>
-
-      {/* Country search dropdown */}
-      <div ref={wrapRef} style={{ position: 'relative', marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px', height: 40, border: '1px solid ' + (dropOpen ? 'var(--c-primary)' : 'var(--c-line)'), borderRadius: 8, background: '#fff', cursor: 'text' }}
-          onClick={() => { inputRef.current && inputRef.current.focus(); setDropOpen(true); }}>
-          <I.Search size={13} style={{ color: 'var(--c-text-3)', flexShrink: 0 }}/>
-          <input
-            ref={inputRef}
-            value={q}
-            onChange={e => { setQ(e.target.value); setDropOpen(true); setHover(0); }}
-            onFocus={() => setDropOpen(true)}
-            onKeyDown={onKey}
-            placeholder={t('Tilføj et land...')}
-            style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13.5, background: 'transparent', color: 'var(--c-ink)' }}
-          />
-        </div>
-        {dropOpen && filtered.length > 0 && (
-          <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 8, boxShadow: 'var(--shadow-lg)', zIndex: 100, overflow: 'hidden' }}>
-            {filtered.map((c, i) => (
-              <button key={c.c}
-                onMouseEnter={() => setHover(i)}
-                onMouseDown={(e) => { e.preventDefault(); addCountry(c); }}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '9px 14px', border: 'none', borderBottom: i < filtered.length - 1 ? '1px solid var(--c-line-2)' : 'none', background: hover === i ? 'var(--c-surface-2)' : '#fff', cursor: 'pointer', textAlign: 'left' }}>
-                <div style={{ width: 26, height: 18, background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 3, display: 'grid', placeItems: 'center', fontSize: 9.5, fontWeight: 600, color: 'var(--c-text-2)', flexShrink: 0 }}>{c.c}</div>
-                <span style={{ fontSize: 13.5, color: 'var(--c-ink)' }}>{c.n}</span>
-              </button>
-            ))}
-          </div>
-        )}
-        {dropOpen && filtered.length === 0 && q.trim() !== "" && (
-          <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 8, boxShadow: 'var(--shadow-lg)', zIndex: 100, padding: '12px 14px', fontSize: 13, color: 'var(--c-text-3)' }}>
-            {t('Ingen lande matcher')} "{q}"
-          </div>
-        )}
-      </div>
-
-      {/* Selected countries list */}
-      {selected.length > 0 && (
-        <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, overflow: 'hidden', marginBottom: 12 }}>
-          {selected.map((x, i) => (
-            <div key={x.c} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none' }}>
-              <div style={{ width: 28, height: 20, background: 'var(--c-surface-2)', border: '1px solid var(--c-line)', borderRadius: 3, display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 600, color: 'var(--c-text-2)', flexShrink: 0 }}>{x.c}</div>
-              <div style={{ flex: 1, fontSize: 13.5, color: 'var(--c-ink)', fontWeight: 500 }}>{x.n}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <input
-                  type="text"
-                  value={x.v}
-                  onChange={e => updateVal(x.c, e.target.value)}
-                  placeholder="0"
-                  className="mono"
-                  style={{ width: 60, padding: '5px 8px', border: '1px solid var(--c-line)', borderRadius: 5, fontSize: 13, textAlign: 'right' }}
-                />
-                <span className="mono" style={{ fontSize: 12, color: 'var(--c-text-3)', width: 14 }}>%</span>
-              </div>
-              <button onClick={() => removeCountry(x.c)} style={{ width: 24, height: 24, borderRadius: 5, border: 'none', background: 'transparent', cursor: 'pointer', display: 'grid', placeItems: 'center', color: 'var(--c-text-3)' }}>
-                <I.X size={13}/>
-              </button>
-            </div>
-          ))}
-
-          {/* Sum row */}
-          <div style={{ padding: '11px 14px', borderTop: '1px solid var(--c-line)', background: sumOk ? 'var(--c-success-bg)' : sumWarn ? 'var(--c-warn-bg)' : 'var(--c-surface-2)', display: 'flex', alignItems: 'center', gap: 12 }}>
-            {sumOk ? <I.Check size={15} style={{ color: 'var(--c-success)' }}/>
-              : sumWarn ? <I.AlertCircle size={15} style={{ color: 'var(--c-warn)' }}/>
-              : <I.Circle size={15} style={{ color: 'var(--c-text-3)' }}/>}
-            <div style={{ flex: 1, fontSize: 13, fontWeight: 500, color: sumOk ? 'var(--c-success)' : sumWarn ? 'var(--c-warn)' : 'var(--c-text-2)' }}>
-              {sumOk ? t("Summen passer · 100%") : sumWarn ? (sum < 100 ? t('Mangler') + ' ' + (100 - sum).toFixed(1) + ' ' + t('procentpoint') : (sum - 100).toFixed(1) + ' ' + t('procentpoint for meget')) : t("Angiv andele for hvert land")}
-            </div>
-            <div className="mono num" style={{ fontSize: 15, fontWeight: 600, color: sumOk ? 'var(--c-success)' : sumWarn ? 'var(--c-warn)' : 'var(--c-text-3)', marginRight: 38 }}>
-              {sum.toFixed(1)}%
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selected.length === 0 && (
-        <div style={{ padding: '28px 0', textAlign: 'center', color: 'var(--c-text-3)', fontSize: 13 }}>
-          {t('Søg og tilføj lande ovenfor')}
-        </div>
-      )}
-
-      <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-        <button onClick={() => onDone(selected.length + " lande angivet")}
-          disabled={!sumOk}
-          className="btn btn-primary"
-          style={sumOk ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
-          {t('Færdig')} <I.Check className="ic"/>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// Followup question - customer answers Mette's question inline
-function PortalFollowup({ onBack, onSubmit }) {
-  const [answer, setAnswer] = React.useState("");
-  const [files, setFiles] = React.useState([]);
-  const canSubmit = answer.trim().length > 10;
-
-  return (
-    <div style={{ maxWidth: 620, margin: '0 auto' }}>
-      <button onClick={onBack} className="btn btn-sm btn-ghost" style={{ marginBottom: 14 }}><I.ArrowLeft className="ic"/> {t('Tilbage')}</button>
-      <div style={{ fontSize: 11, color: 'var(--c-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{t('OPFØLGENDE SPØRGSMÅL · FRA METTE')}</div>
-      <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '6px 0 18px' }}>{t('Stigning i juli-budgettet')}</h1>
-
-      {/* Question card */}
-      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 20, marginBottom: 18 }}>
-        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-          <div className="avatar" style={{ width: 32, height: 32, fontSize: 12, flexShrink: 0 }}>ML</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, fontWeight: 500 }}>Mette Larsen <span className="muted" style={{ fontWeight: 400 }}>· {t('Kreditafdeling')}</span></div>
-            <div style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>{t('i dag')}, 09:14</div>
-          </div>
-        </div>
-        <div style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.6 }}>
-          Hej Anders, tak for budgettet. Jeg ser at I har en stigning fra <b className="mono">2,0M</b> i juni til <b className="mono">2,5M</b> i juli - en stigning på <b>25,0%</b> som ikke følger jeres normale sæsonmønster. Kan I bekræfte hvad der ligger bag? Er det Block-Island leverancen til GE Vernova der slår igennem her?
-        </div>
-        <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--c-surface-2)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--c-text-2)' }}>
-          <I.File size={12}/> {t('Refererer til')} <b style={{ color: 'var(--c-ink)' }}>Budget_2026-28_v3.xlsx</b> · {t('linje')} 197
-        </div>
-      </div>
-
-      {/* Answer area */}
-      <div style={{ background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, padding: 20 }}>
-        <div className="label-mini" style={{ marginBottom: 8 }}>{t('Dit svar')}</div>
-        <textarea
-          value={answer}
-          onChange={e => setAnswer(e.target.value)}
-          rows={5}
-          placeholder={t('Skriv her - du kan også vedhæfte et dokument hvis det hjælper...')}
-          style={{ width: '100%', padding: 12, border: '1px solid var(--c-line)', borderRadius: 8, fontSize: 13.5, fontFamily: 'inherit', resize: 'vertical', lineHeight: 1.55, color: 'var(--c-text)' }}
-        />
-
-        {/* Quick-fill suggestions */}
-        {answer.length === 0 && (
-          <div style={{ marginTop: 10 }}>
-            <div className="label-mini" style={{ marginBottom: 6, fontSize: 10.5 }}>{t('Forslag til svar')}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[
-                "Ja, korrekt - Block-Island leverancen til GE Vernova faktureres i juli 2026. Ordreværdi DKK 5,2M.",
-                "Det er rigtigt observeret - det er Block-Island ordren. Vi vedhæfter ordrebekræftelsen.",
-              ].map((s, i) => (
-                <button key={i} onClick={() => setAnswer(s)}
-                  style={{ textAlign: 'left', padding: '8px 10px', border: '1px solid var(--c-line)', background: 'var(--c-surface-2)', borderRadius: 6, cursor: 'pointer', fontSize: 12.5, color: 'var(--c-text-2)' }}>
-                  <I.Spark size={10} style={{ verticalAlign: -1, marginRight: 5, color: 'var(--c-text-3)' }}/>
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Attach file */}
-        <div style={{ marginTop: 14, padding: '10px 12px', border: '1px dashed var(--c-line-strong)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'var(--c-text-2)', cursor: 'pointer' }}
-          onClick={() => setFiles([{ name: "Ordrebekraeftelse_GE_Vernova_Block-Island.pdf", size: "284 KB" }])}>
-          <I.Upload size={14}/> {files.length === 0 ? t("Vedhæft dokument (valgfri)") : t("Tilføj flere")}
-        </div>
-        {files.map((f, i) => (
-          <div key={i} style={{ marginTop: 8, padding: '8px 12px', background: 'var(--c-surface-2)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5 }}>
-            <div className="doc-ic" style={{ width: 22, height: 28 }}/>
-            <span style={{ flex: 1, fontWeight: 500 }}>{f.name}</span>
-            <span className="muted">{f.size}</span>
-            <button onClick={() => setFiles([])} className="btn btn-sm btn-ghost"><I.X className="ic"/></button>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: 18, display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-        <div style={{ fontSize: 11.5, color: 'var(--c-text-3)' }}>
-          <I.Lock size={11} style={{ verticalAlign: -1, marginRight: 4 }}/> {t('Kun Mette og hendes team ser dit svar')}
-        </div>
-        <button onClick={onSubmit} disabled={!canSubmit} className="btn btn-primary" style={canSubmit ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
-          {t('Send svar')} <I.Send className="ic"/>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function PortalDone({ onBack, onStatus }) {
-  return (
-    <div style={{ maxWidth: 560, margin: '60px auto 0', textAlign: 'center' }}>
-      <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', margin: '0 auto 18px', display: 'grid', placeItems: 'center' }}>
-        <I.Check size={28}/>
-      </div>
-      <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '0 0 8px' }}>{t('Tak')}, Anders.</h1>
-      <p style={{ fontSize: 15, color: 'var(--c-text-2)', lineHeight: 1.55, marginBottom: 22 }}>
-        {t('Materialet er indsendt til kreditafdelingen. Mette får besked nu og vender tilbage senest')} <b style={{ color: 'var(--c-ink)' }}>29. maj</b>.
-      </p>
-
-<div style={{ fontSize: 12.5, color: 'var(--c-text-3)' }}>{t('I modtager en kvittering på')} <b style={{ color: 'var(--c-ink)' }}>an@nordhavn-composite.dk</b></div>
-      <div style={{ marginTop: 18, display: 'flex', justifyContent: 'center', gap: 8 }}>
-        <button onClick={onBack} className="btn btn-ghost">{t('Se oversigt igen')}</button>
-        <button onClick={onStatus} className="btn btn-primary" style={{ background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
-          {t('Se status på ansøgningen')} <I.ArrowRight className="ic"/>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function DelegateBundleModal({ items, preselect, onClose, onSend }) {
-  const eligible = items.filter(x => x.st === 'open' || x.st === 'accountant');
-  const [selected, setSelected] = React.useState(
-    preselect ? [preselect] : eligible.filter(x => x.st === 'open').map(x => x.id)
-  );
-  const PRESETS = {
-    accountant: { name: "Jan Holmgaard", email: "jan@revisor-nordkysten.dk", greeting: "Jan" },
-    bank: { name: "Henrik Skov", email: "henrik.skov@nordeabank.dk", greeting: "Henrik" },
-  };
-  const [helperKind, setHelperKind] = React.useState('accountant');
-  const [name, setName] = React.useState(PRESETS.accountant.name);
-  const [email, setEmail] = React.useState(PRESETS.accountant.email);
-  const buildMsg = (greeting) => "Hej " + greeting + ",\n\nKan du sende nedenstående dokumentation direkte til kreditafdelingen via det vedhæftede link? Det er en del af vores ansøgning om kreditfacilitet.\n\nMvh Anders";
-  const [msg, setMsg] = React.useState(buildMsg(PRESETS.accountant.greeting));
-  const [touched, setTouched] = React.useState({ name: false, email: false, msg: false });
-
-  const switchKind = (kind) => {
-    setHelperKind(kind);
-    const p = PRESETS[kind];
-    if (!touched.name) setName(p.name);
-    if (!touched.email) setEmail(p.email);
-    if (!touched.msg) setMsg(buildMsg(p.greeting));
-  };
-
-  const label = helperKind === 'bank' ? t('banken') : t('revisoren');
-  const labelCap = helperKind === 'bank' ? t('Banken') : t('Revisoren');
-  const sendLabel = helperKind === 'bank' ? t('Send til bank') : t('Send til revisor');
-
-  const toggle = (id) => setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]);
-  const allChecked = eligible.length > 0 && eligible.every(x => selected.includes(x.id));
-  const toggleAll = () => setSelected(allChecked ? [] : eligible.map(x => x.id));
-
-  return (
-    <div className="scrim" onClick={onClose}>
-      <div className="modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
+    <div className="scrim">
+      <div className="modal" ref={ref} role="dialog" aria-modal="true" aria-labelledby="cwp-o-title" style={{ width: 520 }}>
         <div className="modal-head">
           <div>
-            <div className="modal-title">{t('Anmod bank eller revisor om hjælp')}</div>
-            <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{labelCap} {t('får ét samlet link til de valgte punkter')}</div>
+            <div className="modal-title" id="cwp-o-title">{t('Send en anden fil')}</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>{ncFill(t('Til filer, der ikke hører til et af punkterne. {adv} får dem med det samme.'), { adv })}</div>
           </div>
-          <button className="icon-btn" onClick={onClose}><I.X size={16}/></button>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t('Luk')}><I.X size={16}/></button>
         </div>
         <div className="modal-body">
-          <div className="label-mini" style={{ marginBottom: 6 }}>{t('Hvem skal hjælpe?')}</div>
-          <div style={{ display: 'flex', gap: 0, marginBottom: 16, border: '1px solid var(--c-line)', borderRadius: 8, padding: 3, background: 'var(--c-surface-2)' }}>
-            {[{ k: 'accountant', l: 'Revisor', ic: <I.User size={13}/> }, { k: 'bank', l: 'Bank', ic: <I.Lock size={13}/> }].map(opt => (
-              <button key={opt.k} onClick={() => switchKind(opt.k)}
-                style={{
-                  flex: 1, padding: '8px 12px', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13, fontWeight: 500,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  background: helperKind === opt.k ? '#fff' : 'transparent',
-                  color: helperKind === opt.k ? 'var(--c-ink)' : 'var(--c-text-2)',
-                  boxShadow: helperKind === opt.k ? 'var(--shadow-sm)' : 'none'
-                }}>
-                {opt.ic} {t(opt.l)}
-              </button>
-            ))}
-          </div>
-          <div className="label-mini" style={{ marginBottom: 6 }}>{t('Vælg punkter')} {label} {t('skal hjælpe med')}</div>
-          <div style={{ border: '1px solid var(--c-line)', borderRadius: 8, overflow: 'hidden', marginBottom: 16 }}>
-            {eligible.length === 0 && (
-              <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--c-text-3)' }}>{t('Ingen åbne punkter at delegere')}</div>
-            )}
-            {eligible.length > 1 && (
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', background: 'var(--c-surface-2)', borderBottom: '1px solid var(--c-line)' }}
-                onClick={toggleAll}>
-                <input type="checkbox" checked={allChecked} readOnly style={{ width: 15, height: 15 }}/>
-                <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-text-2)' }}>{t('Vælg alle')}</span>
-              </label>
-            )}
-            {eligible.map((x, i) => (
-              <label key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: i > 0 || eligible.length > 1 ? '1px solid var(--c-line-2)' : 'none', cursor: 'pointer', background: selected.includes(x.id) ? 'rgba(59,130,246,0.04)' : '#fff' }}
-                onClick={() => toggle(x.id)}>
-                <input type="checkbox" checked={selected.includes(x.id)} readOnly style={{ width: 15, height: 15 }}/>
-                <div style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>{t(x.l)}</div>
-                {x.st === 'accountant' && <span className="tag" style={{ fontSize: 10, background: 'var(--c-warn-bg)', color: 'var(--c-warn)', border: 'none' }}>{t('Afventer allerede')}</span>}
-              </label>
-            ))}
-          </div>
-
-          <div className="vstack" style={{ gap: 12 }}>
-            <div className="grid g-2" style={{ gap: 10 }}>
-              <div className="field">
-                <label>{t('Navn')}</label>
-                <input className="input" value={name} onChange={e => { setName(e.target.value); setTouched(t => ({ ...t, name: true })); }}/>
-              </div>
-              <div className="field">
-                <label>{t('Email')}</label>
-                <input className="input" value={email} onChange={e => { setEmail(e.target.value); setTouched(t => ({ ...t, email: true })); }}/>
-              </div>
+          {loose.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--c-text-2)', marginBottom: 2 }}>{t('Andre filer, I har sendt')}</div>
+              {loose.map(f => (
+                <div key={f.id} className="cw-row" style={{ alignItems: 'center', padding: '6px 0' }}>
+                  <div className="cw-row-main">
+                    <span style={{ fontWeight: 500, wordBreak: 'break-all' }}>{f.name}</span>
+                    <span className="cw-row-meta">{f.sizeLabel} · <span title={CW.fmtWhen(f.at)}>{csShortDate(f.at)}</span></span>
+                  </div>
+                  <button type="button" className="btn-ghost-sm" data-cust-act="remove" onClick={() => remove(f)} aria-label={ncFill(t('Fjern {navn}'), { navn: f.name })}>{t('Fjern')}</button>
+                </div>
+              ))}
             </div>
-            <div className="field">
-              <label>{t('Besked til')} {label}</label>
-              <textarea className="input" rows={4} value={msg} onChange={e => { setMsg(e.target.value); setTouched(t => ({ ...t, msg: true })); }} style={{ height: 'auto', padding: 10, resize: 'vertical' }}/>
-            </div>
-            <div style={{ background: 'var(--c-surface-2)', padding: '10px 14px', borderRadius: 8 }}>
-              <div className="label-mini" style={{ marginBottom: 3 }}>{labelCap} {t('modtager ét samlet link')}</div>
-              <div className="mono" style={{ fontSize: 12.5, color: 'var(--c-text)' }}>crediwire.app/r/nh-{helperKind === 'bank' ? 'bank' : 'rev'}-4Kp2</div>
-              <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>{t('Giver kun adgang til de')} {selected.length} {t('valgte punkter · udløber om 14 dage')}</div>
-            </div>
-            <div style={{ fontSize: 11.5, color: 'var(--c-text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <I.Lock size={11}/> {labelCap} {t('ser kun de valgte punkter, ikke resten af ansøgningen.')}
-            </div>
-          </div>
+          )}
+          <PortalFilePicker compact staged={staged} setStaged={setStaged}/>
         </div>
         <div className="modal-foot">
           <div style={{ flex: 1 }}/>
-          <button className="btn btn-ghost" onClick={onClose}>{t('Annullér')}</button>
-          <button className="btn btn-primary" disabled={selected.length === 0} onClick={() => onSend(selected, { name, email }, helperKind)}
-            style={selected.length === 0 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>
-            <I.Send className="ic"/> {sendLabel}
-          </button>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>{t('Annullér')}</button>
+          <button type="button" className="btn btn-primary" data-cust-act="send" disabled={!staged.length} onClick={send} style={!staged.length ? { opacity: 0.5, cursor: 'not-allowed' } : null}>{ncFill(t('Send til {name}'), { name: adv })}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// K11: hjælp fra revisor eller bank. Almindelige labels, beskeden foldet og
+// bekræftelsen som én sætning.
+function DelegateBundleModal({ requested, preselect, onClose, onSend }) {
+  const ref = React.useRef(null);
+  const eligible = requested.filter(it => ['pending', 'rejected', 'delegated'].includes(portalStatus(it.id)));
+  // En revisor hjælper typisk med regnskabstallene; resten vælger kunden selv til
+  const TYPICAL = ['m-annual', 'm-interim', 'm-budget'];
+  const initialFor = (kind) => preselect ? [preselect] : kind === 'accountant' ? eligible.filter(it => TYPICAL.includes(it.id)).map(it => it.id) : [];
+  const [kind, setKind] = React.useState('accountant');
+  const [selected, setSelected] = React.useState(() => initialFor('accountant'));
+  const [selTouched, setSelTouched] = React.useState(false);
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [msg, setMsg] = React.useState('');
+  const [msgTouched, setMsgTouched] = React.useState(false);
+  const [step, setStep] = React.useState('form');
+  const [tried, setTried] = React.useState(false);
+  const sent = React.useRef(false); // dobbeltklik på "Send" må ikke sende to gange
+  CW.useDialog(ref, true, onClose);
+
+  const sender = ncFirstName(portalRecipient().name);
+  const helperFirst = ncFirstName(name);
+  // Har rådgiveren afvist et punkt med en note, skal hjælperen også vide, hvad hun bad om
+  const notes = eligible.filter(it => selected.includes(it.id)).map(it => ({ it, note: (CW.itemState(it.id) || {}).reviewNote || '' })).filter(x => x.note);
+  const notesText = notes.length ? '\n\n' + ncFill(t('{adv} fra EIFO har bedt om:'), { adv: PORTAL_CONTACT.name }) + '\n' + notes.map(x => '- ' + t(x.it.label) + ': ' + x.note).join('\n') : '';
+  const defaultMsg = (helperFirst ? ncFill(t('Hej {name},'), { name: helperFirst }) : t('Hej,')) + '\n\n'
+    + t('Vil du hjælpe os med at sende punkterne nedenfor til EIFO? Det er til vores ansøgning. Du får et link, hvor du kan uploade dem direkte.')
+    + notesText + '\n\n'
+    + ncFill(t('Venlig hilsen\n{sender}\n{company}'), { sender, company: DATA.COMPANY.name });
+  const message = msgTouched ? msg : defaultMsg;
+
+  const switchKind = (k) => { setKind(k); if (!selTouched) setSelected(initialFor(k)); };
+  const toggle = (id) => { setSelTouched(true); setSelected(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id]); };
+  const emailOk = NC_EMAIL_RE.test(email.trim());
+  const err = !selected.length ? 'items' : !name.trim() ? 'name' : !emailOk ? 'email' : null;
+  const FIELD = { items: 'cwp-h-item-' + (eligible[0] && eligible[0].id), name: 'cwp-h-name', email: 'cwp-h-email' };
+  const label = kind === 'bank' ? t('banken') : t('revisoren');
+  // Hjælperens link følger kundens frist (ellers 14 dage)
+  const reqDeadline = (CW.request() || {}).deadline;
+  const expires = reqDeadline ? CW.fmtDate(reqDeadline + 'T12:00:00') : CW.fmtDate(new Date(Date.now() + 14 * 864e5));
+  const preselected = kind === 'accountant' && !selTouched && !preselect && selected.length > 0;
+  const chosen = eligible.filter(it => selected.includes(it.id));
+  const next = () => {
+    setTried(true);
+    if (err) { CW.focusSoon('#' + FIELD[err]); return; }
+    setStep('confirm');
+  };
+  const send = () => {
+    if (sent.current) return;
+    sent.current = true;
+    onSend(selected, { name: name.trim(), email: email.trim() }, kind);
+  };
+  const fieldLabel = { display: 'block', fontSize: 12.5, fontWeight: 500, color: 'var(--c-text-2)', marginBottom: 6, padding: 0 };
+
+  return (
+    <div className="scrim">
+      <div className="modal" ref={ref} role="dialog" aria-modal="true" aria-labelledby="cwp-h-title" style={{ width: 560 }}>
+        <div className="modal-head">
+          <div>
+            <div className="modal-title" id="cwp-h-title">{step === 'form' ? t('Få hjælp fra revisor eller bank') : t('Tjek før I sender')}</div>
+            <div className="muted" style={{ fontSize: 13, marginTop: 2 }}>{ncFill(t('{who} får et link, der kun gælder de valgte punkter'), { who: kind === 'bank' ? t('Banken') : t('Revisoren') })}</div>
+          </div>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label={t('Luk')}><I.X size={16}/></button>
+        </div>
+        {step === 'form' ? (
+          <div className="modal-body">
+            <div id="cwp-h-kind" style={fieldLabel}>{t('Hvem skal hjælpe?')}</div>
+            <div role="radiogroup" aria-labelledby="cwp-h-kind" className="cw-seg" style={{ marginBottom: 16 }}
+              onKeyDown={e => {
+                // Én radiogruppe: piletasterne skifter mellem Revisor og Bank (ét tabulatorstop)
+                if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+                e.preventDefault();
+                const k = kind === 'accountant' ? 'bank' : 'accountant';
+                switchKind(k);
+                CW.focusSoon('#cwp-h-kind-' + k);
+              }}>
+              {[{ k: 'accountant', l: 'Revisor' }, { k: 'bank', l: 'Bank' }].map(opt => (
+                <button type="button" key={opt.k} id={'cwp-h-kind-' + opt.k} role="radio" aria-checked={kind === opt.k} tabIndex={kind === opt.k ? 0 : -1} onClick={() => switchKind(opt.k)}
+                  style={{ minWidth: 88, height: 30, fontSize: 13, background: kind === opt.k ? '#fff' : 'transparent', color: kind === opt.k ? 'var(--c-ink)' : 'var(--c-text-2)', boxShadow: kind === opt.k ? '0 1px 2px rgba(15, 17, 20, 0.06)' : 'none' }}>
+                  {t(opt.l)}
+                </button>
+              ))}
+            </div>
+            <fieldset style={{ border: 0, margin: 0, padding: 0 }} aria-describedby={tried && err === 'items' ? 'cwp-h-items-err' : 'cwp-h-items-hint'}>
+              <legend style={fieldLabel}>{t('Vælg punkter')} {label} {t('skal hjælpe med')}</legend>
+              <div style={{ border: '1px solid var(--c-line)', borderRadius: 8, overflow: 'hidden', marginBottom: 6 }}>
+                {eligible.length === 0 && (
+                  <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--c-text-3)' }}>{t('Ingen åbne punkter at delegere')}</div>
+                )}
+                {eligible.map((x, i) => (
+                  <label key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderTop: i > 0 ? '1px solid var(--c-line-2)' : 'none', cursor: 'pointer', background: '#fff' }}>
+                    <input id={'cwp-h-item-' + x.id} type="checkbox" checked={selected.includes(x.id)} onChange={() => toggle(x.id)}/>
+                    <div style={{ flex: 1, fontSize: 13.5, fontWeight: 500, color: 'var(--c-ink)' }}>{t(x.label)}</div>
+                    {portalStatus(x.id) === 'delegated' && <span style={{ fontSize: 12, color: 'var(--c-text-3)' }}>{t('Afventer allerede')}</span>}
+                  </label>
+                ))}
+              </div>
+              <div id="cwp-h-items-hint" className="muted" style={{ fontSize: 12.5, marginBottom: 16 }}>{preselected ? t('Forvalgt: de regnskabspunkter, en revisor typisk hjælper med. Ejerforhold og aftaler bør I selv sende.') : kind === 'accountant' ? t('Vælg de punkter, revisoren skal hjælpe med. Ejerforhold og aftaler bør I selv sende.') : t('Vælg kun de punkter, banken skal hjælpe med.')}</div>
+              {tried && err === 'items' && <div style={{ marginTop: -10, marginBottom: 12 }}><NcFieldError id="cwp-h-items-err">{t('Vælg mindst ét punkt.')}</NcFieldError></div>}
+            </fieldset>
+
+            <div className="grid g-2" style={{ gap: 10 }}>
+              <div className="field">
+                <label htmlFor="cwp-h-name">{t('Navn')}</label>
+                <input id="cwp-h-name" className="input" value={name} placeholder={kind === 'bank' ? t('Jeres kontaktperson i banken') : t('Jeres revisor')}
+                  aria-invalid={tried && err === 'name' ? 'true' : undefined} aria-describedby={tried && err === 'name' ? 'cwp-h-name-err' : undefined} onChange={e => setName(e.target.value)}/>
+                {tried && err === 'name' && <NcFieldError id="cwp-h-name-err">{t('Skriv et navn.')}</NcFieldError>}
+              </div>
+              <div className="field">
+                <label htmlFor="cwp-h-email">{t('Email')}</label>
+                <input id="cwp-h-email" className="input" type="email" value={email} placeholder={t('navn@firma.dk')}
+                  aria-invalid={tried && err === 'email' ? 'true' : undefined} aria-describedby={tried && err === 'email' ? 'cwp-h-email-err' : undefined} onChange={e => setEmail(e.target.value)}/>
+                {tried && err === 'email' && <NcFieldError id="cwp-h-email-err">{email.trim() ? t('Mailadressen ser ikke rigtig ud.') : t('Skriv en mailadresse.')}</NcFieldError>}
+              </div>
+            </div>
+            <CWFold label={t('Ret beskeden (valgfrit)')} id="cwp-h-msg-fold" style={{ marginTop: 14 }}>
+              <label htmlFor="cwp-h-msg" style={ncHidden}>{t('Besked til')} {label}</label>
+              <textarea id="cwp-h-msg" className="input" rows={6} value={message} onChange={e => { setMsg(e.target.value); setMsgTouched(true); }} style={{ height: 'auto', padding: 10, resize: 'vertical', width: '100%', boxSizing: 'border-box' }}/>
+            </CWFold>
+          </div>
+        ) : (
+          <div className="modal-body">
+            <p style={{ fontSize: 14, lineHeight: 1.6, margin: 0, color: 'var(--c-text)' }}>
+              {ncFill(t('{name} ({email}) får et link til {items}. Linket udløber {date}, og {first} ser ikke resten af ansøgningen.'), { name: name.trim(), email: email.trim(), items: chosen.map(it => t(it.label)).join(', '), date: expires, first: ncFirstName(name) || name.trim() })}
+            </p>
+          </div>
+        )}
+        <div className="modal-foot">
+          {step === 'confirm' && <button type="button" className="btn" onClick={() => setStep('form')}><I.ChevronLeft className="ic"/> {t('Tilbage')}</button>}
+          <div style={{ flex: 1 }}/>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>{t('Annullér')}</button>
+          {step === 'form'
+            ? <button type="button" className="btn btn-primary" onClick={next}>{t('Næste')} <I.ArrowRight className="ic"/></button>
+            : <button type="button" className="btn btn-primary" onClick={send}>{kind === 'bank' ? t('Send til bank') : t('Send til revisor')}</button>}
         </div>
       </div>
     </div>
@@ -1361,4 +2274,5 @@ function DelegateBundleModal({ items, preselect, onClose, onSend }) {
 }
 
 window.NewCaseModal = NewCaseModal;
+CustomerPortal.supportsPreview = true;
 window.CustomerPortal = CustomerPortal;

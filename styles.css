@@ -8,8 +8,10 @@
   --c-ink-2: #1a1d22;
   --c-text: #15171b;
   --c-text-2: #5b6068;
-  --c-text-3: #8a9099;
-  --c-text-4: #b0b5bc;
+  /* Grå tekst skal kunne læses: text-3 er 5,4:1 mod hvid og 5,0:1 mod
+     sidebjælken, text-4 er 4,9:1 mod hvid og 4,5:1 mod sidebjælken (WCAG AA). */
+  --c-text-3: #636b74;
+  --c-text-4: #69717a;
   --c-line: #e6e8ec;
   --c-line-2: #eef0f3;
   --c-line-strong: #d3d6dc;
@@ -26,7 +28,7 @@
   --c-accent-hover: #1e40af;
   --c-success: #2f7d4f;
   --c-success-bg: #ecf5ef;
-  --c-warn: #b06f17;
+  --c-warn: #9a5f12;      /* 4,7:1 mod hvid, sidebjælke og advarselsflade */
   --c-warn-bg: #faf3e6;
   --c-danger: #b3261e;
   --c-danger-bg: #fbecea;
@@ -73,6 +75,12 @@ button { font-family: inherit; }
   grid-template-columns: 232px 1fr;
   height: 100vh;
   overflow: hidden;
+  /* Skallen er blok for absolut placerede elementer uden anden placeret
+     forælder (fx skjulte skærmlæsertekster med inline-stil). Uden den lå de
+     i forhold til hele dokumentet, gjorde siden højere end skærmen og gav en
+     ekstra rullebjælke og et hop på 15 px mellem fanerne. Skallen fylder
+     præcis skærmen, så intet andet flytter sig. */
+  position: relative;
 }
 
 /* Sidebar */
@@ -100,7 +108,7 @@ button { font-family: inherit; }
 .brand-org { font-size: 11px; color: var(--c-text-3); margin-top: -1px; }
 
 .nav { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; }
-.nav-section { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--c-text-3); padding: 12px 8px 6px; font-weight: 500; }
+.nav-section { font-size: 12px; color: var(--c-text-3); padding: 12px 8px 6px; font-weight: 500; }
 .nav-item {
   display: flex; align-items: center; gap: 9px;
   padding: 6px 8px;
@@ -216,21 +224,21 @@ button { font-family: inherit; }
   display: inline-flex; align-items: center; gap: 6px;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11.5px; font-weight: 500;
+  font-size: 12px; font-weight: 500;
   background: var(--c-neutral-bg); color: var(--c-text-2);
   white-space: nowrap;
   border: 1px solid transparent;
 }
 .pill .pill-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.85; }
-.pill.success { background: transparent; color: var(--c-success); border-color: var(--c-line); }
-.pill.warn    { background: transparent; color: var(--c-warn);    border-color: var(--c-line); }
-.pill.danger  { background: transparent; color: var(--c-danger);  border-color: var(--c-line); }
-.pill.info    { background: transparent; color: var(--c-info);    border-color: var(--c-line); }
-.pill.ink     { background: var(--c-primary-bg); color: var(--c-primary); border: none; }
-.pill.outline { background: transparent; border-color: var(--c-line-strong); color: var(--c-text-2); }
-.pill.solid-success { background: var(--c-success-bg); color: var(--c-success); }
-.pill.solid-warn    { background: var(--c-warn-bg);    color: var(--c-warn); }
-.pill.solid-danger  { background: var(--c-danger-bg);  color: var(--c-danger); }
+/* Statuspiller er grå tekst; kun prikken bærer farven (designgennemgang T3) */
+.pill.success, .pill.warn, .pill.danger, .pill.info, .pill.ink, .pill.outline,
+.pill.solid-success, .pill.solid-warn, .pill.solid-danger { background: transparent; color: var(--c-text-2); border-color: var(--c-line); }
+.pill.success .pill-dot, .pill.solid-success .pill-dot { color: var(--c-success); }
+.pill.warn .pill-dot, .pill.solid-warn .pill-dot { color: var(--c-warn); }
+.pill.danger .pill-dot, .pill.solid-danger .pill-dot { color: var(--c-danger); }
+.pill.info .pill-dot { color: var(--c-info); }
+.pill.ink .pill-dot { color: var(--c-primary); }
+.pill.outline .pill-dot { color: var(--c-text-3); }
 
 /* Tag */
 .tag {
@@ -288,7 +296,7 @@ button { font-family: inherit; }
 /* Misc */
 .divider { height: 1px; background: var(--c-line); margin: 16px 0; }
 .muted { color: var(--c-text-3); }
-.label-mini { font-size: 10.5px; color: var(--c-text-3); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 500; }
+.label-mini { font-size: 12px; color: var(--c-text-2); font-weight: 500; }
 
 .hstack { display: flex; align-items: center; gap: 8px; }
 .vstack { display: flex; flex-direction: column; gap: 8px; }
@@ -311,7 +319,7 @@ button { font-family: inherit; }
 .ws-tab .ic { width: 14px; height: 14px; color: var(--c-text-3); }
 .ws-tab.active .ic { color: var(--c-primary); }
 .ws-tab .badge { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--c-neutral-bg); color: var(--c-text-2); }
-.ws-tab.active .badge { background: var(--c-primary); color: #fff; }
+.ws-tab.active .badge { background: var(--c-neutral-bg); color: var(--c-ink); }
 
 /* Header */
 .ws-header {
@@ -320,15 +328,6 @@ button { font-family: inherit; }
   border-bottom: 1px solid var(--c-line);
 }
 .ws-h-row { display: flex; align-items: flex-start; gap: 18px; }
-.ws-logo {
-  width: 44px; height: 44px; border-radius: 10px;
-  background: var(--c-surface-2);
-  border: 1px solid var(--c-line);
-  display: grid; place-items: center;
-  color: var(--c-text-2);
-  font-weight: 600; font-size: 16px;
-  letter-spacing: -0.01em;
-}
 .ws-co-name { font-size: 20px; font-weight: 600; color: var(--c-ink); letter-spacing: -0.015em; line-height: 1.2; }
 .ws-co-meta { display: flex; gap: 10px; font-size: 12.5px; color: var(--c-text-2); margin-top: 4px; align-items: center; flex-wrap: wrap; }
 .ws-co-meta .dot { width: 2px; height: 2px; background: var(--c-text-4); border-radius: 50%; flex-shrink: 0; }
@@ -350,7 +349,7 @@ button { font-family: inherit; }
   cursor: pointer;
 }
 .read-cell:hover { background: var(--c-surface-2); }
-.read-label { font-size: 11px; color: var(--c-text-3); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
+.read-label { font-size: 12px; color: var(--c-text-2); font-weight: 500; }
 .read-val { font-size: 16px; font-weight: 600; color: var(--c-ink); display: flex; align-items: baseline; gap: 4px; }
 .read-val .sub { font-size: 12px; color: var(--c-text-3); font-weight: 400; }
 .read-bar { height: 3px; background: var(--c-line-2); border-radius: 999px; overflow: hidden; }
@@ -366,38 +365,15 @@ button { font-family: inherit; }
 .g-2-1 { grid-template-columns: 2fr 1fr; }
 .g-1-2 { grid-template-columns: 1fr 2fr; }
 
-/* AI hint (subtle) */
+/* Kildemærke (tidligere "AI hint"): stille grå tekst, ingen gnist */
 .ai-hint {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 1px 7px 1px 5px;
-  border-radius: 4px;
-  font-size: 10.5px;
-  background: var(--c-primary-bg);
-  color: var(--c-primary);
-  font-weight: 500;
+  font-size: 12px;
+  color: var(--c-text-3);
+  font-weight: 400;
 }
-.ai-hint .spark { width: 9px; height: 9px; color: var(--c-primary); }
+.ai-hint .spark { display: none; }
 
-/* KPI */
-.kpi { padding: 14px 16px; border-right: 1px solid var(--c-line-2); }
-.kpi:last-child { border-right: none; }
-.kpi-lbl { font-size: 11px; color: var(--c-text-3); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; }
-.kpi-val { font-size: 22px; font-weight: 600; color: var(--c-ink); letter-spacing: -0.02em; margin-top: 6px; font-variant-numeric: tabular-nums; }
-.kpi-delta { font-size: 11.5px; margin-top: 3px; display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
-.kpi-delta.up { color: var(--c-success); }
-.kpi-delta.down { color: var(--c-danger); }
-.kpi-delta.flat { color: var(--c-text-3); }
-
-/* Document item */
-.doc-item {
-  display: grid; grid-template-columns: 28px 1fr auto auto; gap: 12px; align-items: center;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--c-line-2);
-}
-.doc-item:hover { background: var(--c-surface-2); cursor: pointer; }
-.doc-item:last-child { border-bottom: none; }
-.doc-ic { width: 26px; height: 32px; border-radius: 3px; background: var(--c-surface-2); border: 1px solid var(--c-line); position: relative; }
-.doc-ic::after { content: ''; position: absolute; top: 0; right: 0; width: 8px; height: 8px; border-bottom-left-radius: 2px; background: var(--c-bg); border-left: 1px solid var(--c-line); border-bottom: 1px solid var(--c-line); }
 
 /* Empty */
 .empty {
@@ -464,18 +440,11 @@ button { font-family: inherit; }
 :focus-visible { outline: 2px solid var(--c-ink); outline-offset: 2px; border-radius: 4px; }
 
 /* Analyse page */
-.field-label { font-size: 10.5px; color: var(--c-text-3); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 3px; }
+.field-label { font-size: 12px; color: var(--c-text-2); font-weight: 500; margin-bottom: 3px; }
 
 /* ─────────────────────────────────────────────────────────────────────────
    AI-assistent i credit memo
    ──────────────────────────────────────────────────────────────────────── */
-.ai-chip {
-  display: inline-flex; align-items: center; justify-content: center;
-  height: 18px; padding: 0 7px; border-radius: 5px;
-  background: var(--c-ink); color: #fff;
-  font-size: 9.5px; font-weight: 600; letter-spacing: 0.06em;
-}
-
 /* Panelet under et afsnit */
 .ai-panel {
   margin: 10px 0 4px 28px;
@@ -619,7 +588,7 @@ button { font-family: inherit; }
 .fin-tbl thead .fin-band {
   font-size: 11px; font-weight: 500;
   letter-spacing: 0; text-transform: none;
-  text-align: left; padding: 10px 10px 4px;
+  text-align: center; padding: 10px 10px 4px;
   color: var(--c-text-3);
 }
 .fin-tbl thead .fin-hd { font-size: 12px; font-weight: 500; text-align: right; padding-bottom: 8px; }
@@ -641,12 +610,6 @@ button { font-family: inherit; }
 .fin-tbl .fin-est { background: var(--c-surface-2); }
 .fin-tbl tbody tr:not(.fin-grp):hover td.fin-est { background: #eef0f4; }
 
-/* Prik der navngiver båndet */
-.fin-band-dot {
-  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
-  margin-right: 6px; vertical-align: 1px;
-}
-
 /* Hårfin, tilbagetrukket linjering: hjælper øjet på tværs af 12 kolonner
    uden at tegne et gitter. */
 .fin-tbl tbody td { padding: 9px 10px; text-align: right; border-top: 1px solid var(--c-line-2); }
@@ -654,16 +617,613 @@ button { font-family: inherit; }
 /* Delsummer træder frem uden linjer eller flader */
 .fin-tbl .fin-sum td { font-weight: 500; }
 
-/* Gruppeskel (Resultat / Balance / Nøgletal): hårfin streg, ingen grå flade */
+/* Gruppeskel (Resultatopgørelse / Balance / Nøgletal): tydelig overskrift med en
+   let tonet flade, så de tre dele er lette at finde i en lang tabel */
 .fin-tbl .fin-grp td {
-  padding: 20px 12px 5px;
-  font-size: 11px; font-weight: 500;
-  letter-spacing: 0; text-transform: none;
-  color: var(--c-text-2);
-  border-top: 1px solid var(--c-line-2);
+  padding: 11px 12px 9px;
+  font-size: 13.5px; font-weight: 600;
+  letter-spacing: -0.005em; text-transform: none;
+  color: var(--c-ink);
+  background: var(--c-surface-2);
+  border-top: 1px solid var(--c-line);
+  border-bottom: 1px solid var(--c-line-2);
 }
 .fin-tbl .fin-grp td.fin-c1 { padding-left: 12px; }
-.fin-tbl tbody tr:first-child.fin-grp td { border-top: none; padding-top: 10px; }
+.fin-tbl tbody tr:first-child.fin-grp td { border-top: none; }
+.fin-tbl tbody tr:not(.fin-grp) + tr.fin-grp td { border-top: 1px solid var(--c-line); }
 
 /* Rækken spores med hover i stedet for en streg under hver eneste række */
 .fin-tbl tbody tr:not(.fin-grp):hover td { background: var(--c-surface-2); }
+
+/* ── Tilgængelighed ─────────────────────────────────────────────────────── */
+/* Tekst kun til skærmlæsere */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+/* "Spring til indhold": skjult til den får fokus med Tab */
+.skip-link {
+  position: fixed; left: 12px; top: -48px; z-index: 30000;
+  padding: 8px 14px; border-radius: 6px;
+  background: var(--c-ink); color: #fff; font-size: 13px; font-weight: 500;
+  text-decoration: none; transition: top 0.12s;
+}
+.skip-link:focus { top: 10px; }
+main.main:focus { outline: none; }
+
+/* Sagskort i Mine opgaver er knapper: nulstil knappens egen typografi */
+.case-card {
+  font: inherit; color: inherit; text-align: left; width: 100%;
+  cursor: pointer; transition: border-color 0.12s, box-shadow 0.12s;
+}
+.case-card:hover { border-color: var(--c-line-strong); box-shadow: var(--shadow-sm); }
+.case-card:focus-visible { outline: 2px solid var(--c-ink); outline-offset: 2px; }
+
+/* Sorterbare kolonneoverskrifter som knapper */
+.th-sort {
+  display: inline-flex; align-items: center; gap: 3px; max-width: 100%;
+  background: transparent; border: 0; padding: 0; margin: 0;
+  font: inherit; color: inherit; cursor: pointer; text-align: inherit;
+}
+
+
+
+/* Knapper der er slået fra, skal også se sådan ud */
+.btn:disabled, .btn[disabled], .btn[aria-disabled="true"] {
+  opacity: 0.45; cursor: not-allowed; box-shadow: none;
+}
+.btn:disabled:hover, .btn[disabled]:hover, .btn[aria-disabled="true"]:hover {
+  background: var(--c-surface); border-color: var(--c-line);
+}
+.btn-primary:disabled:hover, .btn-primary[disabled]:hover { background: var(--c-primary); border-color: var(--c-primary); }
+.btn-ghost:disabled:hover, .btn-ghost[disabled]:hover { background: transparent; border-color: transparent; }
+
+/* ── Runde 3: fokus, klikflader og kontrast ─────────────────────────────── */
+/* Felter får samme fokusring som knapperne, også når feltet selv har
+   outline: none i en inline-stil. */
+.input:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--c-ink) !important; outline-offset: 2px;
+}
+/* Klikflader på mindst 24 x 24 px uden at ændre udseendet: et usynligt lag
+   omkring små kopi-, sorterings- og chips-knapper. */
+.th-sort, button.tag, .hit24, button[aria-label^="Kopiér"], button[aria-label^="Copy"] { position: relative; }
+.th-sort::after, button.tag::after, .hit24::after, button[aria-label^="Kopiér"]::after, button[aria-label^="Copy"]::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: max(100%, 24px); height: max(100%, 24px); transform: translate(-50%, -50%);
+}
+/* Tællere i menuen: læsbare også på det aktive punkts flade */
+.nav-item.active .count { color: var(--c-text-2); }
+/* Brugerkortet er ikke en knap og skal ikke ligne en */
+.user-chip { cursor: default; }
+.user-chip:hover { background: transparent; }
+
+/* Nulstil demo nederst i sidebjælken: diskret, men altid synlig */
+.demo-reset {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  margin-top: 6px; padding: 5px 8px; min-height: 28px;
+  border: 1px dashed var(--c-line-strong); border-radius: 6px; background: transparent;
+  color: var(--c-text-3); font-size: 12px; font-weight: 500; cursor: pointer;
+}
+.demo-reset:hover { color: var(--c-text); border-color: var(--c-text-4); background: rgba(0,0,0,0.03); }
+
+/* Klokken */
+.bell-badge {
+  position: absolute; top: -4px; right: -5px; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 999px; background: var(--c-danger); color: #fff; border: 2px solid var(--c-bg);
+  font-size: 12px; font-weight: 700; line-height: 14px; display: grid; place-items: center; box-sizing: border-box;
+}
+.bell-panel {
+  position: absolute; top: calc(100% + 8px); right: -40px; width: 380px; z-index: 200;
+  background: #fff; border: 1px solid var(--c-line); border-radius: 10px; box-shadow: var(--shadow-lg);
+}
+.bell-list { list-style: none; margin: 0; padding: 4px; }
+.bell-row {
+  display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 8px 10px;
+  border: 0; border-radius: 7px; background: transparent; text-align: left; cursor: pointer; font: inherit;
+}
+.bell-row:hover { background: var(--c-surface-2); }
+
+/* Mine opgaver: sagskort med separat menuknap, arbejdsbyrde pr. rådgiver */
+.case-card-main {
+  display: flex; align-items: flex-start; gap: 12px; width: 100%; height: 100%;
+  padding: 12px 14px; border: 0; background: transparent; border-radius: inherit;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.case-card:focus-within { border-color: var(--c-line-strong); }
+.case-card-menu-btn { position: absolute; right: 8px; bottom: 8px; width: 28px; height: 28px; color: var(--c-text-3); }
+.menu-item:hover, .menu-item:focus { background: var(--c-surface-2); outline: none; }
+.menu-item:focus-visible { outline: 2px solid var(--c-ink); outline-offset: -2px; }
+
+/* Dataanmodninger: rækker med fast kolonnegitter og kolonneoverskrifter */
+.req-row {
+  display: grid; grid-template-columns: 32px minmax(0, 1.35fr) minmax(0, 1.5fr) 124px 136px 124px 28px;
+  gap: 14px; align-items: center; padding: 14px 18px; border-top: 1px solid var(--c-line-2);
+}
+.req-head {
+  padding: 9px 18px; border-top: 0; border-bottom: 1px solid var(--c-line);
+  font-size: 12px; font-weight: 500; color: var(--c-text-3); background: var(--c-surface);
+}
+.req-head + .req-row { border-top: 0; }
+
+/* Budgeteditoren: kundens budget står som grå forudfyldning */
+.budget-cell::placeholder { color: var(--c-text-3); opacity: 1; }
+
+/* Forklarende linje i regnskabstabellen (fx kapitalindskud): 12 px, ikke mindre */
+.fin-tbl .fin-memo td.mono { font-size: 12px; color: var(--c-text-2); }
+/* Sagskortets flade er en knap; selve kortet er kun rammen */
+div.case-card { cursor: default; }
+
+/* ── Smalle skærme og 200 % zoom ─────────────────────────────────────────
+   Alt herunder gælder kun under 1100 px. Ved demo-bredderne (1100 px og
+   derover) ser alt ud som før: menuknappen er skjult, og omslaget om
+   sidebjælken lægger sig ikke i vejen for gitteret. */
+.nav-toggle, .nav-scrim, .nav-close { display: none; }
+.app-nav { display: contents; }
+/* Omslaget om sagshovedet og indholdet: uden virkning over 1000 px */
+.ws-body { display: contents; }
+/* Overskrifter, der får fokus ved sideskift, skal ikke have en ramme */
+h1[tabindex="-1"]:focus { outline: none; }
+/* Skjulte skærmlæsertekster står øverst i deres indeholdende blok. Uden
+   top/left lå de, hvor teksten ellers ville stå, og når blokken var hele
+   siden (ingen placeret forælder), gjorde de siden højere end skærmen, så
+   den kunne rulles ned i et tomt gråt felt. De kan ikke ses, så intet ændrer sig. */
+.sr-only, span.memo-sr { top: 0; left: 0; }
+
+@media (max-width: 1099px) {
+  /* Topbjælken bryder over flere linjer i stedet for at skubbe knapper ud */
+  .topbar { height: auto; min-height: 48px; flex-wrap: wrap; row-gap: 8px; padding-top: 9px; padding-bottom: 9px; }
+  .crumb { flex-wrap: wrap; min-width: 0; }
+  .topbar-right { flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; min-width: 0; }
+  /* Sagshovedet: knapperne står under titlen */
+  .ws-h-row { flex-wrap: wrap; row-gap: 12px; }
+  .ws-h-row > div:nth-child(2) > div:first-child { flex-wrap: wrap; row-gap: 4px; }
+  .ws-h-row > div:last-child { flex-basis: 100%; flex-wrap: wrap; row-gap: 6px; padding-left: 62px; }
+  .page-head { flex-wrap: wrap; row-gap: 12px; }
+}
+
+@media (max-width: 999px) {
+  /* Sidebjælken foldes ind og åbnes som panel fra menuknappen øverst til venstre */
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .app-nav { display: none; }
+  .nav-toggle {
+    display: grid; position: fixed; top: 10px; left: 12px; z-index: 60;
+    background: var(--c-bg); border: 1px solid var(--c-line);
+  }
+  .nav-toggle:hover, .nav-close:hover { background: var(--c-surface-2); }
+  /* Åbent panel: luk-knappen i panelet står, hvor menuknappen stod */
+  .app.nav-open .nav-toggle { visibility: hidden; }
+  .app.nav-open .nav-close {
+    display: grid; position: fixed; top: 10px; left: 12px; z-index: 61;
+    background: var(--c-bg); border: 1px solid var(--c-line);
+  }
+  .app.nav-open .app-nav {
+    display: block; position: fixed; top: 0; left: 0; bottom: 0; z-index: 59;
+    width: 260px; max-width: calc(100vw - 48px);
+  }
+  .app.nav-open .app-nav > .sidebar { height: 100%; overflow-y: auto; padding-top: 50px; }
+  .app.nav-open .nav-scrim { display: block; position: fixed; inset: 0; z-index: 58; background: rgba(15,17,20,0.30); }
+  .topbar { padding-left: 52px; padding-right: 16px; }
+  /* Brødkrummen på første linje, søgning og knapper på anden; søgefeltet
+     tager den plads, der er */
+  .topbar-right { flex: 1 1 100%; }
+  .topbar [role=search] { flex: 1 1 200px; min-width: 0; }
+  .topbar [role=search] > div { width: 100% !important; max-width: 360px; }
+  #cw-case-search-list { left: 0; right: auto !important; width: 100% !important; min-width: 260px; max-width: calc(100vw - 32px); }
+  .bell-panel { max-width: calc(100vw - 32px); }
+  /* Fanerne i sagen bryder over to linjer i stedet for at forsvinde ud til højre */
+  .ws-tabs { padding: 0 16px; flex-wrap: wrap; }
+  .ws-header { padding: 16px 20px 14px; }
+  /* Sagshovedet og fanerne ruller med indholdet (omslaget er rullefeltet), så
+     der ved 200 % zoom er plads til memoet under topbjælken */
+  /* relative: absolut placerede elementer (fx skjulte skærmlæsertekster) skal
+     blive i rullefeltet og ikke gøre hele siden højere (tomt gråt felt) */
+  .ws-scroller { flex: 1; min-height: 0; overflow: auto; position: relative; }
+  .ws-scroller .ws-tabs { position: static; }
+  .page { padding: 24px 20px 64px; }
+  .page-wide { padding: 20px 16px 64px; }
+}
+
+/* Memoet: afsnitslisten står over dokumentet og ruller i sin egen boks,
+   så teksten får hele bredden */
+@media (max-width: 899px) {
+  .page .memo-layout { grid-template-columns: minmax(0, 1fr) 40px; gap: 12px; }
+  /* relative (ikke static): skjulte skærmlæsertekster i listen er absolut
+     placeret og skal blive inde i kortet, ellers gør de hele siden højere */
+  .memo-layout > .card:first-child { grid-column: 1 / -1; position: relative !important; top: auto !important; }
+  .memo-layout > .card:first-child > div:last-child {
+    position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    max-height: 216px; overflow-y: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .ws-h-row > div:last-child { padding-left: 0; }
+  .page .memo-doc { padding: 20px 16px 48px; }
+  .cta { flex-wrap: wrap; }
+  .card-head { flex-wrap: wrap; row-gap: 6px; }
+  .ws-header { padding: 14px 16px 12px; }
+  .page { padding: 20px 16px 56px; }
+}
+
+/* Mine opgaver og Dataanmodninger på smalle skærme */
+@media (max-width: 999px) {
+  /* Dataanmodninger: hver række brydes i tre linjer (kunde, fremdrift og
+     ansvarlig, frist og handling), så intet presses ind over hinanden.
+     Kolonneoverskrifterne passer så ikke længere og skjules. */
+  .req-row.req-head { display: none; }
+  /* Rækkerne brydes selv, så listen behøver ikke sin minimumsbredde og vandrette rulning her */
+  div:has(> .req-row) { min-width: 0 !important; }
+  .req-row { grid-template-columns: 32px minmax(0, 1fr) minmax(0, 1fr) 28px; row-gap: 10px; column-gap: 14px; }
+  .req-row > :nth-child(1) { grid-column: 1; grid-row: 1; }
+  .req-row > :nth-child(2) { grid-column: 2 / 4; grid-row: 1; }
+  .req-row > :nth-child(3) { grid-column: 2; grid-row: 2; }
+  .req-row > :nth-child(4) { grid-column: 3; grid-row: 2; }
+  .req-row > :nth-child(5) { grid-column: 2; grid-row: 3; }
+  .req-row > :nth-child(6) { grid-column: 3; grid-row: 3; align-self: center; }
+  .req-row > :nth-child(7) { grid-column: 4; grid-row: 1; }
+}
+@media (max-width: 760px) {
+  /* Sagskortene står i én kolonne, så navn og frister kan læses */
+  div:has(> div.case-card) { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+/* Dokumenter: listen og viseren står under hinanden, når der ikke er plads
+   til begge (ved 1024 px blev viserens tekstkolonne 56 px bred) */
+@media (max-width: 1099px) {
+  .grid[style*="grid-template-columns: 420px 1fr"] { grid-template-columns: minmax(0, 1fr) !important; }
+}
+@media (max-width: 560px) {
+  div[style*="grid-template-columns: 196px 1fr"] { grid-template-columns: minmax(0, 1fr) !important; }
+}
+/* Porteføljeanalyse: filterlinjen bryder i stedet for at skubbe "Nulstil" ud */
+@media (max-width: 999px) {
+  .card > div[style*="display: flex"]:has(> * select, > select) { flex-wrap: wrap; row-gap: 10px; }
+}
+
+/* Kildevisning slået fra (window.CW_SOURCE_VIEW i case_facts.js): henvisninger i memoet er almindelig tekst */
+.no-source-view .memo-cite { border-bottom: none !important; background: none !important; cursor: inherit !important; }
+.no-source-view .memo-cite::after { display: none !important; }
+
+/* Anmod om materiale (modal) */
+.ws-req-row { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 8px 12px; border-radius: 6px; font-size: 13.5px; line-height: 1.55; }
+.ws-req-row:hover { background: var(--c-surface-2); }
+.ws-req-row.on { background: var(--c-primary-bg); }
+.ws-req-row.on:hover { background: var(--c-primary-bg); }
+.ws-req-row.up:hover { background: transparent; }
+.ws-req-row.drag { background: var(--c-primary-bg); outline: 1px dashed var(--c-primary); outline-offset: -1px; }
+.ws-req-ghost { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; font: inherit; font-size: 12px; color: var(--c-text-2); cursor: pointer; white-space: nowrap; }
+.ws-req-ghost:hover { color: var(--c-ink); background: var(--c-surface-2); }
+.ws-req-row.on .ws-req-ghost:hover { background: rgba(255, 255, 255, 0.7); }
+.ws-req-cat { width: 150px; text-align: right; font-size: 12px; color: var(--c-text-3); white-space: nowrap; }
+.ws-req-cat-select { appearance: none; -webkit-appearance: none; border: 0; background: transparent; font: inherit; font-size: 12px; cursor: pointer; text-align: right; text-align-last: right; padding: 0; height: 24px; }
+.ws-req-cat-select:hover { color: var(--c-ink); }
+.ws-req-x { width: 22px; height: 22px; border: 0; border-radius: 6px; background: transparent; color: var(--c-text-3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.ws-req-x:hover { color: var(--c-danger); background: var(--c-danger-bg); }
+.ws-req-file { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--c-ink); }
+.ws-req-link { border: 0; padding: 0; background: transparent; font: inherit; font-size: 12px; color: var(--c-text-3); cursor: pointer; text-decoration: underline; }
+.ws-req-link:hover { color: var(--c-ink); }
+.ws-req-add { display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 6px 12px 10px; }
+.ws-req-add .input { border-color: transparent; background: transparent; }
+.ws-req-add .input:hover { border-color: var(--c-line-strong); }
+.ws-req-add .input:focus { border-color: var(--c-primary); background: #fff; }
+.ws-req-fold { width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px 0; border: 0; background: transparent; font: inherit; font-size: 13.5px; color: var(--c-text-2); cursor: pointer; text-align: left; }
+.ws-req-fold:hover { color: var(--c-ink); }
+.ws-req-filelink { border: 0; padding: 0; background: transparent; font: inherit; color: var(--c-text-3); cursor: pointer; text-decoration: underline; text-decoration-color: var(--c-line-strong); text-underline-offset: 2px; }
+.ws-req-filelink:hover { color: var(--c-primary); text-decoration-color: currentColor; }
+
+/* ── Fælles byggeklodser (mønstret fra Anmod om materiale; se src/ui_kit.jsx) ──
+   Stille række: fed titel, højst én grå linje, kategori som grå tekst til højre,
+   handlinger som ghost-knapper. Fold med antal. Neutral segmenteret kontrol. */
+.cw-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--c-line-2); font-size: 13.5px; line-height: 1.5; }
+.cw-row:first-child { border-top: 0; }
+.cw-row.lead { grid-template-columns: 16px minmax(0, 1fr) auto; }
+.cw-row-main { min-width: 0; display: flex; flex-direction: column; }
+.cw-row-title { font-weight: 600; color: var(--c-ink); }
+.cw-row-meta { font-size: 12px; color: var(--c-text-2); }
+.cw-row-cat { font-size: 12px; color: var(--c-text-3); text-align: right; white-space: nowrap; }
+.cw-row-actions { display: flex; align-items: center; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
+.btn-ghost-sm { display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; font: inherit; font-size: 12.5px; font-weight: 500; color: var(--c-ink); cursor: pointer; white-space: nowrap; }
+.btn-ghost-sm:hover { color: var(--c-ink); background: var(--c-surface-2); }
+.btn-ghost-sm:disabled { opacity: .5; cursor: not-allowed; }
+.cw-fold-wrap { border-top: 1px solid var(--c-line-2); }
+.cw-fold { width: 100%; display: flex; align-items: center; gap: 8px; padding: 12px 0; border: 0; background: transparent; font: inherit; font-size: 13.5px; color: var(--c-text-2); cursor: pointer; text-align: left; }
+.cw-fold:hover { color: var(--c-ink); }
+.cw-fold-body { padding-bottom: 8px; }
+.cw-seg { display: inline-flex; align-items: center; padding: 2px; background: var(--c-surface-2); border: 1px solid var(--c-line); border-radius: 7px; }
+.cw-seg button { height: 24px; padding: 0 10px; border: 0; background: transparent; color: var(--c-text-2); font: inherit; font-size: 12px; font-weight: 500; border-radius: 5px; cursor: pointer; white-space: nowrap; }
+.cw-seg button[aria-pressed="true"] { background: #fff; color: var(--c-ink); box-shadow: 0 1px 2px rgba(15, 17, 20, 0.06); }
+.cw-seg.sm button { height: 22px; font-size: 11.5px; }
+.cw-tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--c-line); }
+.cw-tabs button { border: 0; background: transparent; font: inherit; font-size: 13.5px; color: var(--c-text-2); padding: 8px 0; margin-bottom: -1px; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; }
+.cw-tabs button:hover { color: var(--c-ink); }
+.cw-tabs button[aria-selected="true"] { color: var(--c-ink); font-weight: 500; border-bottom-color: var(--c-primary); }
+.cw-tabs .n { color: var(--c-text-3); margin-left: 4px; font-variant-numeric: tabular-nums; }
+.cw-status { font-size: 12px; color: var(--c-text-2); }
+.cw-status.strong { color: var(--c-ink); font-weight: 500; }
+.cw-status.danger { color: var(--c-danger); }
+.cw-filelink { border: 0; padding: 0; background: transparent; font: inherit; color: var(--c-ink); cursor: pointer; text-align: left; }
+.cw-filelink:hover { color: var(--c-primary); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ── Område: forside (sidebjælke, topbjælke, Mine opgaver, Dataanmodninger, analyse, Hjælp) ── */
+/* Sidebjælkens bund: brugerkortet (knap med menu) og én grå linje med
+   Nulstil demo og sprog */
+.user-menu-wrap { position: relative; }
+button.user-chip { width: 100%; border: 0; background: transparent; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+button.user-chip:hover, button.user-chip[aria-expanded="true"] { background: rgba(0,0,0,0.04); }
+button.user-chip .meta span { display: block; }
+.user-menu { position: absolute; left: 0; right: 0; bottom: calc(100% + 4px); z-index: 40; padding: 4px; background: #fff; border: 1px solid var(--c-line); border-radius: 8px; box-shadow: var(--shadow-lg); }
+.user-menu-label { padding: 6px 10px 2px; font-size: 12px; color: var(--c-text-3); }
+.user-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 32px; padding: 6px 10px; border: 0; border-radius: 5px; background: transparent; font: inherit; font-size: 13px; color: var(--c-text); text-align: left; cursor: pointer; }
+.user-menu-sep { height: 1px; margin: 4px 0; background: var(--c-line-2); }
+.sidebar-foot-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; padding: 0 4px; }
+.demo-reset { width: auto; margin: 0; padding: 0 4px; min-height: 26px; border: 0; background: transparent; color: var(--c-text-3); font-size: 12px; font-weight: 400; }
+.demo-reset:hover { border: 0; background: transparent; color: var(--c-ink); }
+/* Mindst 12 px grå tekst i sidebjælken (tal i menuen, afdeling, rolle) */
+.nav-item .count, .brand-org, .user-chip .meta span { font-size: 12px; }
+
+/* Faner og værktøjer på én linje over en liste */
+.list-toolbar { display: flex; align-items: flex-end; gap: 4px 16px; flex-wrap: wrap; margin-bottom: 14px; border-bottom: 1px solid var(--c-line); }
+.list-toolbar .cw-tabs { flex: 1 1 auto; border-bottom: 0; flex-wrap: wrap; row-gap: 0; }
+.list-toolbar-tools { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; }
+.list-empty { margin: 4px 0 0; font-size: 13px; color: var(--c-text-3); }
+
+/* Mine opgaver: én række pr. sag i et kort */
+.case-list { padding: 0 8px; }
+.case-list > .cw-fold-wrap:first-child { border-top: 0; }
+.case-list .cw-fold { padding-left: 8px; }
+.case-list .cw-fold-body { padding-bottom: 4px; }
+.case-list .case-card { position: relative; border: 0; border-top: 1px solid var(--c-line-2); border-radius: 0; box-shadow: none; }
+.case-list > .case-card:first-child, .case-list .cw-fold-body > .case-card:first-child { border-top: 0; }
+.case-list .case-card:hover { box-shadow: none; }
+.case-list .case-card-main { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; align-items: center; padding: 11px 44px 11px 8px; border-radius: 6px; }
+.case-list .case-card-main:hover { background: var(--c-surface-2); }
+.case-list .case-card-main:focus-visible { outline: 2px solid var(--c-ink); outline-offset: -2px; }
+.case-row-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.case-row-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.case-row-nr { flex-shrink: 0; font-size: 12px; font-weight: 400; color: var(--c-text-3); }
+.case-row-next { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-list .case-card-menu-btn { top: 50%; bottom: auto; right: 8px; transform: translateY(-50%); }
+@media (max-width: 640px) {
+  .case-list .case-card-main { grid-template-columns: minmax(0, 1fr); }
+  .case-list .case-card-main .cw-row-cat { text-align: left; }
+  .case-row-next { white-space: normal; }
+}
+
+/* Dataanmodninger: stille rækker (overstyrer det gamle kolonnegitter i .req-row) */
+.req-list { padding: 0 8px; }
+.req-list .req-row { grid-template-columns: minmax(0, 1fr) auto 128px; align-items: center; gap: 2px 16px; padding: 11px 8px; border-top: 1px solid var(--c-line-2); border-radius: 6px; cursor: pointer; }
+.req-list .req-row:first-child { border-top: 0; }
+.req-list .req-row:hover { background: var(--c-surface-2); }
+.req-list .req-row > * { grid-column: auto; grid-row: auto; }
+.req-list .cw-row-meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.req-row-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.req-open { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.req-q { flex-shrink: 0; border: 0; padding: 0; background: transparent; font: inherit; font-size: 12px; font-weight: 400; color: var(--c-text-2); cursor: pointer; text-decoration: underline; text-decoration-color: var(--c-line-strong); text-underline-offset: 2px; }
+.req-q:hover { color: var(--c-ink); text-decoration-color: currentColor; }
+.req-modal .cw-row { align-items: center; }
+.req-modal .cw-row-actions { gap: 12px; }
+.req-ev .cw-row-main { font-size: 13px; color: var(--c-text); }
+.req-ev { padding: 7px 0; }
+@media (max-width: 640px) {
+  .req-list .req-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .req-list .req-row > .cw-row-main { grid-column: 1 / -1; }
+  .req-list .req-row > .cw-row-cat { text-align: left; white-space: normal; }
+  .req-list .cw-row-meta { white-space: normal; }
+}
+
+/* Porteføljeanalyse: tre vælgere på én linje, kriterier som grå chips og
+   "Egne kriterier" som fold */
+.an-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.an-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.an-fold { margin: 12px 0 14px; border-top: 0; }
+.an-fold > .cw-fold { padding: 4px 0; }
+.an-fold > .cw-fold-body { padding: 4px 0 12px 20px; }
+
+/* Hjælp: tre folde med stille rækker */
+.help-body { padding: 4px 22px 12px; }
+.help-body > .cw-fold-wrap:first-child { border-top: 0; }
+.help-list { margin: 0; }
+.help-list .cw-row { padding: 8px 0; }
+.help-list .help-term { font-weight: 500; color: var(--c-ink); }
+.help-list dd { margin: 2px 0 0; font-size: 13px; color: var(--c-text-2); line-height: 1.5; }
+
+/* ── Område: data (Finansielt overblik og Dokumenter) ── */
+/* Dokumentlisten: hver række er .cw-row i en .doc-row, så en række og dens
+   foldede tidligere versioner hænger sammen. Stregen står mellem rækkerne. */
+.doc-row + .doc-row { border-top: 1px solid var(--c-line-2); }
+.doc-row a.cw-filelink { text-decoration: none; }
+.doc-row a.cw-filelink:hover { text-decoration: underline; }
+/* "Tidligere versioner (n)" står lige under afløserens metalinje */
+.doc-older { border-top: 0; }
+.doc-older .cw-fold { padding: 0 0 10px; font-size: 12.5px; }
+.doc-older .cw-fold-body { padding: 0 0 6px 20px; }
+.doc-older .cw-fold-body .cw-row { padding: 6px 0; }
+
+/* ── Område: sag (sagshovedet, Overblik og Indstilling) ── */
+/* Sagshovedet har ikke længere en initialboks, så knapperne rykkes ikke ind */
+.ws-h-row > div.ws-h-actions { padding-left: 0; }
+.ws-h-row > div.ws-h-name > div:first-child { flex-wrap: wrap; row-gap: 4px; }
+/* Overblikkets materialekort: "Udestående" (til gennemgang og afventer kunden)
+   og "Materiale på sagen" med offentlige data (ca. 2/5) og det godkendte fra
+   kunden (ca. 3/5) adskilt af en tynd lodret linje. Under ca. 900 px stables de. */
+.ws-mat { margin-top: 16px; scroll-margin-top: 16px; overflow: hidden; }
+.ws-mat-cardhead { justify-content: flex-start; gap: 10px; padding: 12px 22px; }
+.ws-mat-cardhead .card-title { margin: 0; }
+.ws-mat-cardhead .n { font-weight: 400; color: var(--c-text-3); }
+.ws-mat-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+.ws-mat-col { min-width: 0; padding: 14px 22px 8px; }
+.ws-mat-col + .ws-mat-col { border-left: 1px solid var(--c-line-2); }
+.ws-mat-head { display: flex; align-items: center; gap: 8px; min-height: 26px; margin-bottom: 4px; }
+.ws-mat-h { flex: 1; margin: 0; font-size: 13.5px; font-weight: 600; color: var(--c-ink); }
+/* Udestående: en gruppe pr. tilstand med antal, streg mellem grupperne */
+.ws-out-body { padding: 12px 22px 8px; }
+.ws-out-grp + .ws-out-grp { border-top: 1px solid var(--c-line-2); margin-top: 4px; padding-top: 12px; }
+.ws-out-grp-head { display: flex; align-items: center; gap: 8px; min-height: 26px; }
+.ws-out-grp-h { flex: 1; margin: 0; font-size: 13.5px; font-weight: 600; color: var(--c-ink); }
+.ws-out-grp-h .n { font-weight: 400; color: var(--c-text-3); }
+.ws-out-grp + .ws-mat-fold { border-top: 1px solid var(--c-line-2); margin-top: 4px; padding-top: 6px; }
+.ws-mat .cw-status.strong { font-weight: 600; }
+.ws-mat-fold { margin-top: 2px; }
+.ws-mat-h .n { font-weight: 400; color: var(--c-text-3); }
+.ws-mat-empty { padding: 6px 0 10px; font-size: 13px; color: var(--c-text-3); }
+.ws-mat-list { list-style: none; margin: 0; padding: 0; }
+/* Streg kun mellem faser (skal gennemgås / modtaget / afventer / trukket tilbage), ikke mellem hvert punkt */
+.ws-mat-list > li.grp-start { border-top: 1px solid var(--c-line-2); }
+/* Tættere mellem punkter i samme gruppe; fuld luft omkring stregen mellem grupper */
+.ws-mat-list > li.ws-mat-row:has(+ li.ws-mat-row:not(.grp-start)) { padding-bottom: 5px; }
+.ws-mat-list > li.ws-mat-row + li.ws-mat-row:not(.grp-start) { padding-top: 5px; }
+.ws-mat .cw-status { white-space: nowrap; }
+/* Tekstknap i primærfarve (fx "Upload for kunden", "Gå til") */
+.btn-link { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 500; color: var(--c-primary); cursor: pointer; white-space: nowrap; text-decoration: none; }
+.btn-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+/* Kundens punkter: titel på linje 1; statusikon, filer/status og handlinger på linje 2 */
+.ws-mat-row { padding: 12px 0; scroll-margin-top: 16px; }
+.ws-mat-row.drag { background: var(--c-primary-bg); box-shadow: inset 0 0 0 1.5px var(--c-primary); border-radius: 8px; }
+/* Titel til venstre, handlinger til højre på samme linje */
+.ws-mat-row-head { display: flex; align-items: center; gap: 12px; min-height: 28px; }
+.ws-mat-row-head > .ws-mat-row-title { flex: 1; min-width: 0; }
+.ws-mat-row-title { font-size: 13.5px; font-weight: 600; color: var(--c-ink); line-height: 1.45; }
+.ws-mat-row.quiet .ws-mat-row-title { color: var(--c-text-2); }
+.ws-mat-row-line { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; margin-top: 4px; min-height: 26px; }
+.ws-mat-row-icon { display: inline-grid; place-items: center; width: 14px; flex-shrink: 0; }
+.ws-mat-row-main { flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; color: var(--c-ink); overflow-wrap: anywhere; }
+/* Én linje pr. fil: navn (aldrig brudt, ellipsis), evt. ×, og filens egen meta.
+   Ikon og handlinger står kun ved første fil; smal række: handlingerne under filerne. */
+.ws-mat-row { container-type: inline-size; }
+.ws-mat-row-line.files { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 8px; row-gap: 4px; align-items: start; }
+.ws-mat-flist { display: contents; }
+/* Alle filer holder sig i samme kolonne som den første, så lange filnavne forkortes ens */
+.ws-mat-flist > .ws-mat-fline { grid-column: 1; }
+.ws-mat-flist > .ws-mat-meta { grid-column: 1; }
+/* Navn og ✕ på første linje (navnet forkortes), hvem og hvornår på linjen under */
+.ws-mat-fline { display: grid; grid-template-columns: minmax(0, max-content) auto; justify-content: start; align-items: center; min-width: 0; min-height: 26px; white-space: nowrap; }
+.ws-mat-fline + .ws-mat-fline { margin-top: 6px; }
+.ws-mat-fname { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--c-primary); text-decoration: none; }
+a.ws-mat-fname:hover { text-decoration: underline; text-underline-offset: 2px; }
+.ws-mat-fname.off { color: var(--c-text-2); }
+/* Hvem og hvornår står på sin egen linje under hver fil */
+.ws-mat-fmeta { grid-column: 1 / -1; margin-top: -2px; font-size: 12px; color: var(--c-text-3); }
+.ws-mat-fline > .ws-mat-x { flex-shrink: 0; }
+.ws-mat-flist > .ws-mat-meta { padding: 0 0 4px; white-space: normal; }
+@container (max-width: 520px) {
+  .ws-mat-row-head { flex-wrap: wrap; }
+}
+.ws-mat-x { display: inline-grid; place-items: center; width: 16px; height: 16px; margin-left: 2px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: var(--c-text-3); cursor: pointer; vertical-align: -3px; }
+.ws-mat-x:hover { color: var(--c-ink); background: var(--c-surface-2); }
+.ws-mat-meta { color: var(--c-text-2); }
+.ws-mat-row.quiet .ws-mat-row-main, .ws-mat-row.quiet .ws-mat-file a { color: var(--c-text-2); }
+.ws-mat-row-actions { display: inline-flex; align-items: center; gap: 12px; margin-left: auto; flex-shrink: 0; }
+.ws-mat-row-actions .btn-link + .btn { margin-left: 4px; }
+.ws-mat-row-actions .btn-primary + .btn { margin-left: -6px; }
+.ws-mat-row-more { padding-left: 22px; }
+@media (max-width: 900px) {
+  .ws-mat-grid { grid-template-columns: minmax(0, 1fr); }
+  .ws-mat-col + .ws-mat-col { border-left: 0; border-top: 1px solid var(--c-line-2); }
+  /* Det, kunden har sendt, kommer først på smal skærm */
+  .ws-mat-col:last-child { order: -1; border-top: 0; }
+  .ws-mat-col:first-child { border-top: 1px solid var(--c-line-2); }
+}
+
+/* Detaljerækker bag en sum og linjen med skjulte tomme poster */
+.fin-tbl tbody tr.fin-child td { font-size: 12.5px; }
+.fin-tbl tbody tr.fin-emptyrow td { padding-top: 4px; padding-bottom: 4px; }
+.fin-tbl tbody tr.fin-emptyrow:hover td { background: transparent; }
+
+/* Kolonnenavnene i regnskabstabellen følger med ned i toppen af rullefeltet (fanerne ligger uden for det), til man er forbi tabellen.
+   Kortet og omslaget bruger overflow: clip (ikke hidden), ellers binder sticky sig til dem i stedet for siden. */
+.fin-tbl thead { position: sticky; top: 0; z-index: 3; }
+.fin-tbl thead th:not(.fin-est) { background: var(--c-surface, #fff); }
+
+/* Udfoldede kvartaler: realiseret og budget har hver sin baggrundstone hele vejen
+   ned gennem kolonnerne, og båndoverskriften har samme farve som tonen.
+   Farverne er uigennemsigtige, fordi kolonnenavnene klæber fast i toppen. */
+.fin-tbl .fin-z-real,
+.fin-tbl thead th.fin-z-real { background: #f3f7fe; }
+.fin-tbl .fin-z-budget,
+.fin-tbl thead th.fin-z-budget { background: #fcf8f0; }
+.fin-tbl tbody tr:not(.fin-grp):hover td.fin-z-real { background: #e8f0fc; }
+.fin-tbl tbody tr:not(.fin-grp):hover td.fin-z-budget { background: #f6eedc; }
+.fin-tbl thead .fin-band.fin-z-real { color: var(--c-primary); }
+.fin-tbl thead .fin-band.fin-z-budget { color: var(--c-warn); }
+.fin-tbl thead .fin-z-pending { color: var(--c-text-3); }
+/* Lille årstal over budgetkvartalerne, der går hen over to år */
+.fin-hd-year { font-size: 10.5px; font-weight: 500; line-height: 1.2; color: var(--c-text-3); }
+.fin-z-budget .fin-hd-year { color: var(--c-warn); }
+
+/* Knappen, der folder kvartalerne ud og sammen, sidder i båndoverskriften
+   lige over de kolonner, den ændrer */
+.fin-band-row { display: inline-flex; align-items: center; gap: 10px; }
+.fin-qtoggle {
+  display: inline-flex; align-items: center; gap: 3px;
+  height: 22px; padding: 0 8px 0 9px; margin: -3px 0;
+  border: 1px solid var(--c-primary-border); border-radius: 999px;
+  background: var(--c-surface); color: var(--c-primary);
+  font: inherit; font-size: 11.5px; font-weight: 500; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.fin-qtoggle:hover { background: var(--c-primary-bg); border-color: var(--c-primary); }
+.fin-qtoggle[data-fin-toggle="collapse"] { padding: 0 9px 0 6px; }
+
+/* ── Område: regnskab-rettelser ── */
+/* Tal, der kan rettes: tekstmarkør, svag flade og tynd kant ved hover, synligt fokus */
+.fin-tbl td.fin-ed { cursor: text; }
+.fin-tbl tbody tr:not(.fin-grp) td.fin-ed:hover { background: var(--c-surface-2); box-shadow: inset 0 0 0 1px var(--c-line); }
+.fin-tbl td.fin-ed:focus { outline: none; }
+.fin-tbl tbody tr:not(.fin-grp) td.fin-ed:focus-visible { box-shadow: inset 0 0 0 1.5px var(--c-primary); background: var(--c-primary-bg); border-radius: 4px; }
+/* Rettet tal: markeres kun med den blå prik (se .fin-editmark), uden baggrund */
+.fin-tbl td.fin-edited { position: relative; }   /* ingen baggrund: et rettet tal markeres kun med blyantikonet */
+/* Rettet tal: blå prik i øverste højre hjørne; hold musen over for at se, hvem der rettede og det oprindelige tal */
+.fin-tbl td.fin-edited::after { display: none; }
+.fin-editmark { position: absolute; top: 1px; right: 1px; display: grid; place-items: center; width: 14px; height: 14px; cursor: help; }
+.fin-editdot { width: 5px; height: 5px; border-radius: 50%; background: var(--c-primary); }
+.fin-tbl td.fin-editing .fin-editmark { display: none; }
+/* Under redigering: hvid celle med tynd primærkant; feltet arver skrift og størrelse, så tabellen ikke hopper */
+.fin-tbl tbody tr:not(.fin-grp) td.fin-editing,
+.fin-tbl tbody tr:not(.fin-grp):hover td.fin-editing { background: var(--c-surface); box-shadow: inset 0 0 0 1.5px var(--c-primary), 0 0 0 3px var(--c-primary-bg); border-radius: 4px; }
+.fin-tbl td.fin-editing { position: relative; }
+/* Markeret eller redigeret celle ligger over den klæbende rækkenavn-kolonne (z-index 2), så dens kant ikke skæres af i venstre side.
+   Under kolonnenavnene (z-index 3), så den ikke ligger ovenpå dem, når man ruller. */
+.fin-tbl td.fin-ed:focus, .fin-tbl td.fin-ed:focus-visible, .fin-tbl td.fin-editing { position: relative; z-index: 2; }
+.fin-tbl td.fin-editing::after { display: none; }
+.fin-ed-input { position: absolute; inset: 0; width: 100%; height: 100%; box-sizing: border-box; margin: 0; padding: 0 10px; border: 0; outline: none; background: transparent; font: inherit; color: var(--c-ink); text-align: right; }
+.fin-ed-input[aria-invalid="true"] { color: var(--c-danger); }
+/* Feltet har cellens egen markering; det globale sorte fokusring (2 px, forskudt) stikker ellers ud og skæres af i venstre side */
+.fin-tbl .fin-ed-input:focus-visible { outline: none !important; }
+/* Begrundelse lige efter en rettelse: et lille, stille felt under cellen */
+.fin-notes { position: fixed; z-index: 1200; width: 288px; box-sizing: border-box; padding: 4px; background: var(--c-surface); border: 1px solid var(--c-line); border-radius: 8px; box-shadow: 0 4px 14px rgba(15, 17, 20, .08); font-size: 13px; }
+.fin-notes-list { list-style: none; margin: 0; padding: 4px 6px 2px; max-height: 260px; overflow: auto; }
+.fin-notes-list li + li { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--c-line-2); }
+.fin-notes-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--c-text-3); }
+.fin-notes-meta button { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--c-text-4); cursor: pointer; }
+.fin-notes-meta button:hover { background: var(--c-surface-2); color: var(--c-danger); }
+.fin-notes-text { margin-top: 2px; line-height: 1.45; color: var(--c-ink); overflow-wrap: anywhere; white-space: pre-wrap; }
+.fin-notes input { width: 100%; box-sizing: border-box; height: 28px; margin-top: 2px; padding: 0 8px; border: 0; border-radius: 5px; font: inherit; color: var(--c-ink); background: transparent; }
+.fin-notes input::placeholder { color: var(--c-text-3); }
+.fin-notes input:focus { outline: none !important; background: var(--c-surface-2); }
+.fin-notes-list + input { border-top: 1px solid var(--c-line-2); border-radius: 0 0 5px 5px; margin-top: 4px; }
+.fin-tip { position: fixed; z-index: 1150; max-width: 320px; padding: 8px 10px; background: var(--c-surface); border: 1px solid var(--c-line); border-radius: 8px; box-shadow: 0 6px 18px rgba(15, 17, 20, .10); font-size: 12.5px; line-height: 1.5; color: var(--c-text-2); white-space: pre-line; pointer-events: none; }
+/* Sum-kolonnerne 2026E og 2027B står sidst i deres år og læses som summer: vægt 500, i sumrækker 600 */
+.fin-tbl tbody td.fin-est.num { font-weight: 500; }
+.fin-tbl tbody tr.fin-sum td.fin-est.num { font-weight: 600; }
+/* Oversigten over rettelser: grå linje og en stille liste delt i regnskab og budget */
+.fin-edits { margin: -2px 0 10px; }
+.fin-edits-head { padding: 10px 0 0; font-size: 12px; color: var(--c-text-3); }
+.fin-edits-group + .fin-edits-group { margin-top: 4px; }
+.fin-edits .cw-row { padding: 8px 0; }
+.fin-edits .fin-edits-head + .cw-row { border-top: 0; }
+
+/* Kommentar og nulstil lige til venstre for cellen (uden for den), i en fast bredde: vises, når cellen holdes over eller er markeret.
+   Felterne er børn af cellen, så musen kan flyttes hen på dem uden at de forsvinder. */
+.fin-tbl td.fin-ed { position: relative; }
+.fin-tbl td.fin-ed:hover, .fin-tbl td.fin-ed:focus-within { z-index: 2; }
+.fin-gutter { position: absolute; right: 100%; top: 0; bottom: 0; width: 24px; display: none; flex-direction: column; justify-content: center; align-items: flex-end; gap: 1px; }
+.fin-tbl td.fin-ed:hover > .fin-gutter, .fin-tbl td.fin-ed:focus-within > .fin-gutter { display: flex; }
+.fin-tbl td.fin-editing > .fin-gutter { display: flex; }   /* ikonerne bliver stående, mens tallet rettes */
+.fin-gutter button { display: grid; place-items: center; width: 17px; height: 17px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--c-text-4); cursor: pointer; }
+.fin-gutter button:hover, .fin-gutter button:focus-visible { background: var(--c-surface-2); color: var(--c-ink); }
+.fin-gutter button.on { color: var(--c-warn); }
+.fin-gutter button.fin-cbtn { width: auto; min-width: 15px; padding: 0 2px; display: inline-flex; gap: 1px; align-items: center; }
+.fin-ccount { font-size: 10.5px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+/* En celle med kommentar: lille trekant i øverste venstre hjørne (som Excels noter) */
+.fin-tbl td.fin-hasnote::before { content: ''; position: absolute; top: 0; left: 0; border-style: solid; border-width: 6px 6px 0 0; border-color: var(--c-warn) transparent transparent transparent; }
+.fin-tbl td.fin-editing::before { display: none; }

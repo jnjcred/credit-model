@@ -6,42 +6,57 @@
 <meta name="viewport" content="width=1280"/>
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0"/>
 <meta http-equiv="Pragma" content="no-cache"/>
-<link rel="stylesheet" href="tokens.css?v=88"/>
-<link rel="stylesheet" href="styles.css?v=93"/>
+<link rel="stylesheet" href="tokens.css?v=122"/>
+<link rel="stylesheet" href="styles.css?v=160"/>
 <script>
   // Wipe Babel-standalone's localStorage cache so file edits show up on reload.
   try { Object.keys(localStorage).filter(k => k.startsWith('babel-cache')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
 </script>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+  <!-- Vises, mens browseren oversætter appen (ca. 5-10 s). React erstatter det, når appen er klar. -->
+  <div role="status" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--c-bg,#f7f7f5);color:var(--c-text-2,#5b6068);font-family:var(--font,system-ui,sans-serif);font-size:14px;">
+    <span id="cw-boot-text">Indlæser demoen …</span>
+  </div>
+  <script>
+    try { if (localStorage.getItem('cw_lang') === 'en') document.getElementById('cw-boot-text').textContent = 'Loading the demo …'; } catch (e) {}
+  </script>
+</div>
 
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+<script>
+  // Babel skriver en note (som console.error), når en fil er over 500 KB og derfor ikke formateres pænt.
+  // Det er en byggenote i browseren, ikke en fejl i appen, så den holdes ude af konsollen.
+  (function () { var err = console.error; console.error = function (m) { if (typeof m === 'string' && m.indexOf('[BABEL] Note: The code generator has deoptimised') === 0) return; return err.apply(console, arguments); }; })();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-<script type="text/babel" src="tweaks-panel.jsx?v=89"></script>
-<script src="src/data.js?v=90"></script>
-<script src="src/i18n.js?v=3"></script>
-<script src="src/i18n_dictionaries.js?v=6"></script>
-<script src="src/ai.js?v=8"></script>
-<script src="src/case_documents.js?v=4"></script>
-<script type="text/babel" src="src/icons.jsx?v=89"></script>
-<script type="text/babel" src="src/shell.jsx?v=204"></script>
-<script type="text/babel" src="src/portfolio.jsx?v=91"></script>
-<script type="text/babel" src="src/data_requests.jsx?v=89"></script>
-<script type="text/babel" src="src/collection.jsx?v=89"></script>
-<script type="text/babel" src="src/financials.jsx?v=129"></script>
-<script type="text/babel" src="src/documents.jsx?v=94"></script>
-<script type="text/babel" src="src/findings_market.jsx?v=90"></script>
-<script type="text/babel" src="src/ownership_questions.jsx?v=91"></script>
-<script type="text/babel" src="src/memo_ai.jsx?v=12"></script>
-<script type="text/babel" src="src/memo.jsx?v=143"></script>
-<script type="text/babel" src="src/customer_status.jsx?v=13"></script>
-<script type="text/babel" src="src/workspace.jsx?v=114"></script>
-<script type="text/babel" src="src/new_case_portal.jsx?v=126"></script>
-<script type="text/babel" src="src/analyse.jsx?v=108"></script>
-<script type="text/babel" src="src/app.jsx?v=91"></script>
+<script type="text/babel" src="tweaks-panel.jsx?v=124"></script>
+<script src="src/case_documents.js?v=38"></script>
+<script src="src/data.js?v=129"></script>
+<script src="src/case_facts.js?v=39"></script>
+<script src="src/i18n.js?v=38"></script>
+<script src="src/i18n_dictionaries.js?v=95"></script>
+<script src="src/ai.js?v=43"></script>
+<script src="src/case_state.js?v=50"></script>
+<script type="text/babel" src="src/icons.jsx?v=122"></script>
+<script type="text/babel" src="src/ui_kit.jsx?v=13"></script>
+<script type="text/babel" src="src/shell.jsx?v=240"></script>
+<script type="text/babel" src="src/portfolio.jsx?v=126"></script>
+<script type="text/babel" src="src/data_requests.jsx?v=125"></script>
+<script type="text/babel" src="src/financials.jsx?v=194"></script>
+<script type="text/babel" src="src/documents.jsx?v=132"></script>
+<script type="text/babel" src="src/memo_handoff.jsx?v=10"></script>
+<script type="text/babel" src="src/memo_ai.jsx?v=49"></script>
+<script type="text/babel" src="src/memo.jsx?v=183"></script>
+<script type="text/babel" src="src/customer_status.jsx?v=53"></script>
+<script type="text/babel" src="src/workspace.jsx?v=224"></script>
+<script type="text/babel" src="src/new_case_portal.jsx?v=174"></script>
+<script type="text/babel" src="src/portal_onboarding.jsx?v=5"></script>
+<script type="text/babel" src="src/analyse.jsx?v=143"></script>
+<script type="text/babel" src="src/app.jsx?v=129"></script>
 </body>
 </html>

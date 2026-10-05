@@ -37,6 +37,21 @@
       defaultModel: 'gpt-5.2',
       baseUrl: 'https://api.openai.com',
     },
+    /* Microsoft 365 Copilot har intet åbent API man kan skrive til. Bankens
+       Copilot kører på Azure OpenAI, så det er dén vej vi forbinder: bankens egen
+       Azure-ressource, dens nøgle og navnet på en udrulning (deployment). Kaldene
+       er OpenAI-formatet på Azures v1-endpoint, så de deler kode med ChatGPT. */
+    copilot: {
+      id: 'copilot',
+      label: 'Copilot',
+      vendor: 'Microsoft Azure',
+      keyHint: t('Nøgle 1 eller 2 fra Azure-ressourcen'),
+      consoleUrl: 'https://ai.azure.com',
+      defaultModel: 'gpt-4.1',
+      needsEndpoint: true,
+      endpointHint: 'https://<ressource>.openai.azure.com',
+      baseUrl: '',
+    },
     /* Tredje vej: prototypens egen dev-server kalder Claude Code eller Codex CLI
        på maskinen. De to kommandolinjer logger ind med selve abonnementet, så
        der bruges ingen API-kredit. Kræver ingen nøgle, men virker kun lokalt. */
@@ -134,15 +149,16 @@
   function blankConfig() {
     return {
       provider: 'anthropic',
-      keys: { anthropic: '', openai: '' },
+      keys: { anthropic: '', openai: '', copilot: '' },
       models: {
         anthropic: PROVIDERS.anthropic.defaultModel,
         openai: PROVIDERS.openai.defaultModel,
+        copilot: PROVIDERS.copilot.defaultModel,
         // For den lokale bro er "model" hvilken kommandolinje der køres
         local: PROVIDERS.local.defaultModel,
       },
       // Tom = udbyderens eget endpoint. Kan pege på en firmaproxy eller et testmiljø.
-      baseUrls: { anthropic: '', openai: '' },
+      baseUrls: { anthropic: '', openai: '', copilot: '' },
     };
   }
 
@@ -161,15 +177,18 @@
         if (saved && saved.keys) {
           cfg.keys.anthropic = saved.keys.anthropic || '';
           cfg.keys.openai = saved.keys.openai || '';
+          cfg.keys.copilot = saved.keys.copilot || '';
         }
         if (saved && saved.models) {
           cfg.models.anthropic = saved.models.anthropic || cfg.models.anthropic;
           cfg.models.openai = saved.models.openai || cfg.models.openai;
+          cfg.models.copilot = saved.models.copilot || cfg.models.copilot;
           cfg.models.local = saved.models.local || cfg.models.local;
         }
         if (saved && saved.baseUrls) {
           cfg.baseUrls.anthropic = saved.baseUrls.anthropic || '';
           cfg.baseUrls.openai = saved.baseUrls.openai || '';
+          cfg.baseUrls.copilot = saved.baseUrls.copilot || '';
         }
       }
     } catch (e) { /* korrupt config: fald tilbage til blank */ }
@@ -188,12 +207,14 @@
   }
 
   function activeKey(cfg) { return (cfg || getConfig()).keys[(cfg || getConfig()).provider] || ''; }
+  /* Copilot har intet fast endpoint; uden bankens Azure-adresse er der intet at kalde */
+  function hasEndpoint(pid, cfg) { return !PROVIDERS[pid].needsEndpoint || !!baseUrlFor(pid, cfg); }
   function activeModel(cfg) { cfg = cfg || getConfig(); return cfg.models[cfg.provider] || PROVIDERS[cfg.provider].defaultModel; }
   function isReady(cfg) {
     cfg = cfg || getConfig();
     // Den lokale bro har ingen nøgle; den er klar når kommandolinjen svarer
     if (cfg.provider === 'local') return localReady(cfg);
-    return !!activeKey(cfg);
+    return !!activeKey(cfg) && hasEndpoint(cfg.provider, cfg);
   }
   function provider(cfg) { return PROVIDERS[(cfg || getConfig()).provider]; }
 
@@ -230,6 +251,8 @@
                t('Tjek') +
                (prov && prov.id === 'openai'
                  ? ' platform.openai.com/settings/organization/billing.'
+                 : prov && prov.id === 'copilot'
+                 ? ' ' + t('abonnementet i Azure-portalen.')
                  : ' console.anthropic.com/settings/billing.');
       } else {
         head = t('Du har ramt en hastighedsgrænse hos') + ' ' + name + '. ' + t('Vent et øjeblik og prøv igen.');
@@ -350,8 +373,18 @@
 
   /* ── OpenAI ────────────────────────────────────────────────────────────── */
 
-  function openaiHeaders(key) {
+  function openaiHeaders(key, pid) {
+    // Azure vil have nøglen i sin egen header
+    if (pid === 'copilot') return { 'content-type': 'application/json', 'api-key': key };
     return { 'content-type': 'application/json', authorization: 'Bearer ' + key };
+  }
+
+  /* Azures OpenAI-kompatible v1-API ligger under /openai på ressourcens adresse.
+     Folk indsætter adressen både med og uden /openai og /openai/v1 til sidst,
+     så begge dele skrælles af og sættes på igen. */
+  function openaiRoot(opts) {
+    if (opts.pid !== 'copilot') return opts.baseUrl;
+    return opts.baseUrl.replace(/\/v1$/i, '').replace(/\/openai$/i, '') + '/openai';
   }
 
   /* Anthropic tager indholdsblokke med cache_control. OpenAI cacher automatisk
@@ -377,9 +410,10 @@
   }
 
   async function openaiStream(opts, onDelta, signal, lean) {
-    var res = await fetch(opts.baseUrl + '/v1/chat/completions', {
+    var prov = PROVIDERS[opts.pid] || PROVIDERS.openai;
+    var res = await fetch(openaiRoot(opts) + '/v1/chat/completions', {
       method: 'POST',
-      headers: openaiHeaders(opts.key),
+      headers: openaiHeaders(opts.key, opts.pid),
       body: JSON.stringify(openaiBody(opts, lean)),
       signal: signal,
     });
@@ -388,7 +422,7 @@
       if (res.status === 400 && !lean && mentionsOptionalParam(text)) {
         return openaiStream(opts, onDelta, signal, true);
       }
-      var err = new Error(friendlyError(res.status, text, PROVIDERS.openai));
+      var err = new Error(friendlyError(res.status, text, prov));
       err.status = res.status;
       throw err;
     }
@@ -407,7 +441,7 @@
   }
 
   async function openaiModels(key, base) {
-    var res = await fetch(base + '/v1/models', { headers: openaiHeaders(key) });
+    var res = await fetch(base + '/v1/models', { headers: openaiHeaders(key, 'openai') });
     if (!res.ok) throw new Error(friendlyError(res.status, await res.text(), PROVIDERS.openai));
     var json = await res.json();
     return (json.data || [])
@@ -445,12 +479,13 @@
       }
     }
     var key = activeKey(cfg);
-    if (!key) {
-      var e = new Error(t('Der er ikke forbundet til Claude eller ChatGPT endnu.'));
+    if (!key || !hasEndpoint(cfg.provider, cfg)) {
+      var e = new Error(t('Der er ikke forbundet til en AI-konto endnu.'));
       e.code = 'no-key';
       throw e;
     }
     var full = {
+      pid: cfg.provider,
       key: key,
       baseUrl: baseUrlFor(cfg.provider, cfg),
       model: opts.model || activeModel(cfg),
@@ -478,6 +513,8 @@
     var pid = providerId || cfg.provider;
     var k = key || cfg.keys[pid];
     if (!k) throw new Error(t('Indsæt først en API-nøgle.'));
+    // Azure lister modeller, ikke bankens udrulninger, så navnet skrives af brugeren
+    if (pid === 'copilot') throw new Error(t('Skriv navnet på udrulningen fra Azure. Listen over modeller kan ikke hentes herfra.'));
     var base = (baseUrl || '').replace(/\/+$/, '') || baseUrlFor(pid, cfg);
     if (pid === 'anthropic') return anthropicModels(k, base);
     return openaiModels(k, base);
@@ -498,7 +535,11 @@
       }, function () {});
       return (out.text || '').trim();
     }
+    if (pid === 'copilot' && !hasEndpoint(pid, { baseUrls: { copilot: baseUrl || cfg.baseUrls.copilot } })) {
+      throw new Error(t('Indsæt adressen på jeres Azure-ressource.'));
+    }
     var opts = {
+      pid: pid,
       key: key || cfg.keys[pid],
       baseUrl: (baseUrl || '').replace(/\/+$/, '') || baseUrlFor(pid, cfg),
       model: model || cfg.models[pid],

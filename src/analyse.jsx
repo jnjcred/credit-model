@@ -1,81 +1,42 @@
 // Portfolio screening / analyse side
 
-const ANALYSE_CASES = [
-  { id: 1,  cvr: "12345678", name: "Nordhavn Composite ApS",      dept: "Frederikshavn Erhverv", branche: "Industri",             rev12: 18500000,  revPct: 32,  ebitda12: 2400000,  ebitdaPct: 13,  equity: 6200000,  bigCust: 41 },
-  { id: 2,  cvr: "12345678", name: "Vendia Bio ApS",              dept: "Esbjerg Erhverv",        branche: "Medicinal og biotek",  rev12: 9200000,   revPct: 28,  ebitda12: 1100000,  ebitdaPct: 12,  equity: 3100000,  bigCust: 22 },
-  { id: 3,  cvr: "12345678", name: "Marstal Maritime ApS",        dept: "Svendborg Erhverv",      branche: "Transport og logistik",rev12: 42100000,  revPct: -8,  ebitda12: -2400000, ebitdaPct: -6,  equity: 11400000, bigCust: 58 },
-  { id: 4,  cvr: "12345678", name: "Skagen Klima ApS",            dept: "Skagen Erhverv",         branche: "Energi og forsyning",  rev12: 5800000,   revPct: 27,  ebitda12: 800000,   ebitdaPct: 14,  equity: 1900000,  bigCust: 33 },
-  { id: 5,  cvr: "12345678", name: "Lyngbæk Industrier ApS",      dept: "Herning Erhverv",        branche: "Industri",             rev12: 28400000,  revPct: -12, ebitda12: -4100000, ebitdaPct: -14, equity: -1200000, bigCust: 71 },
-  { id: 6,  cvr: "12345678", name: "Aalborg Hydrogen A/S",        dept: "Aalborg Erhverv",        branche: "Energi og forsyning",  rev12: 61300000,  revPct: 45,  ebitda12: 9200000,  ebitdaPct: 15,  equity: 24100000, bigCust: 18 },
-  { id: 7,  cvr: "12345678", name: "Kløver Tekstil ApS",          dept: "Ikast Erhverv",          branche: "Tekstil og beklædning",rev12: 11000000,  revPct: 4,   ebitda12: 900000,   ebitdaPct: 8,   equity: 3800000,  bigCust: 29 },
-  { id: 8,  cvr: "12345678", name: "Refshaleøen Robotics ApS",    dept: "København Erhverv",      branche: "IT og teknologi",      rev12: 14700000,  revPct: 38,  ebitda12: 2100000,  ebitdaPct: 14,  equity: 5500000,  bigCust: 44 },
-  { id: 9,  cvr: "12345678", name: "Skov & Bertelsen Tømrer ApS", dept: "Odense Erhverv",         branche: "Bygge og anlæg",       rev12: 8700000,   revPct: 12,  ebitda12: 680000,   ebitdaPct: 8,   equity: 2100000,  bigCust: 38 },
-  { id: 10, cvr: "12345678", name: "Jutland Gulve & Fliser ApS",  dept: "Vejle Erhverv",          branche: "Bygge og anlæg",       rev12: 5200000,   revPct: 6,   ebitda12: 420000,   ebitdaPct: 8,   equity: 980000,   bigCust: 55 },
-  { id: 11, cvr: "12345678", name: "Morsø Slagter & Deli ApS",   dept: "Thisted Erhverv",        branche: "Fødevarer og drikke",  rev12: 6400000,   revPct: 3,   ebitda12: 310000,   ebitdaPct: 5,   equity: 1450000,  bigCust: 31 },
-  { id: 12, cvr: "12345678", name: "Ballerup Autoservice A/S",    dept: "København Erhverv",      branche: "Handel og service",    rev12: 12800000,  revPct: -5,  ebitda12: -180000,  ebitdaPct: -1,  equity: 2700000,  bigCust: 19 },
-  { id: 13, cvr: "12345678", name: "BrainSpark Technologies A/S", dept: "Aarhus Erhverv",         branche: "IT og teknologi",      rev12: 32400000,  revPct: 48,  ebitda12: 6100000,  ebitdaPct: 19,  equity: 18700000, bigCust: 12 },
-  { id: 14, cvr: "12345678", name: "Midtjylland Vindservice ApS", dept: "Herning Erhverv",        branche: "Energi og forsyning",  rev12: 54200000,  revPct: 41,  ebitda12: 11300000, ebitdaPct: 21,  equity: 29400000, bigCust: 8  },
-];
+// Kunderne i porteføljen ligger i data.js (DATA.PORTFOLIO), så sagskortenes
+// risikomarkør og analysen bruger de samme tal. caseId peger på kundens sag.
+const ANALYSE_CASES = DATA.PORTFOLIO;
+// Valgt skabelon og filtre huskes i sessionen (DATA.viewGet/viewSet), også når
+// man åbner en sag og går tilbage
+const ANALYSE_VIEW = 'analyse';
 
+// Skabeloner i to grupper (vist som optgroups i vælgeren). Kriterierne
+// vises som grå chips (ChipSummary), når en skabelon er valgt.
+const TEMPLATE_GROUPS = { god: 'Klarer det godt', fare: 'Faresignaler' };
 const TEMPLATES = [
-  {
-    group: "god", label: "Høj vækst", emoji: "📈",
-    desc: "Høj omsætnings- og EBITDA-vækst",
-    criteria: [
-      { metric: "revPct",    op: ">", val: 25, joinNext: "AND" },
-      { metric: "ebitdaPct", op: ">", val: 10 },
-    ]
-  },
-  {
-    group: "god", label: "Sund drift", emoji: "💰",
-    desc: "Positiv EBITDA og positiv egenkapital",
-    criteria: [
-      { metric: "ebitda12", op: ">", val: 500000, joinNext: "AND" },
-      { metric: "equity",   op: ">", val: 0 },
-    ]
-  },
-  {
-    group: "god", label: "Topperformere", emoji: "⭐",
-    desc: "Høj vækst og sund økonomi på alle fronter",
-    criteria: [
-      { metric: "revPct",    op: ">", val: 30, joinNext: "AND" },
-      { metric: "ebitdaPct", op: ">", val: 15, joinNext: "AND" },
-      { metric: "equity",    op: ">", val: 0  },
-    ]
-  },
-  {
-    group: "fare", label: "EBITDA-tilbagegang", emoji: "📉",
-    desc: "Faldende EBITDA ift. forrige 12 måneder",
-    criteria: [{ metric: "ebitdaPct", op: "<", val: -10 }]
-  },
-  {
-    group: "fare", label: "Negativ egenkapital", emoji: "⚠️",
-    desc: "Egenkapital under nul - mulig solvensmæssig risiko",
-    criteria: [{ metric: "equity", op: "<", val: 0 }]
-  },
-  {
-    group: "fare", label: "Kundekoncentration", emoji: "👥",
-    desc: "Mere end halvdelen af omsætning hos én kunde",
-    criteria: [{ metric: "bigCust", op: ">", val: 50 }]
-  },
-  {
-    group: "fare", label: "Faldende omsætning",
-    criteria: [{ metric: "revPct", op: "<", val: -5 }]
-  },
-  {
-    group: "fare", label: "Dobbelt underskud",
-    criteria: [
-      { metric: "ebitdaPct", op: "<", val: -10, joinNext: "AND" },
-      { metric: "equity",    op: "<", val: 0 },
-    ]
-  },
-  {
-    group: "fare", label: "Koncentration og fald",
-    criteria: [
-      { metric: "bigCust",   op: ">", val: 50,  joinNext: "AND" },
-      { metric: "ebitdaPct", op: "<", val: -10 },
-    ]
-  },
+  { group: "god", label: "Høj vækst", criteria: [
+    { metric: "revPct",    op: ">", val: 25, joinNext: "AND" },
+    { metric: "ebitdaPct", op: ">", val: 10 },
+  ] },
+  { group: "god", label: "Sund drift", criteria: [
+    { metric: "ebitda12", op: ">", val: 500000, joinNext: "AND" },
+    { metric: "equity",   op: ">", val: 0 },
+  ] },
+  { group: "god", label: "Topperformere", criteria: [
+    { metric: "revPct",    op: ">", val: 30, joinNext: "AND" },
+    { metric: "ebitdaPct", op: ">", val: 15, joinNext: "AND" },
+    { metric: "equity",    op: ">", val: 0  },
+  ] },
+  { group: "fare", label: "Negativ EBITDA", criteria: [{ metric: "ebitda12", op: "<", val: 0 }] },
+  { group: "fare", label: "EBITDA-tilbagegang", criteria: [{ metric: "ebitdaPct", op: "<", val: -10 }] },
+  { group: "fare", label: "Negativ egenkapital", criteria: [{ metric: "equity", op: "<", val: 0 }] },
+  { group: "fare", label: "Kundekoncentration", criteria: [{ metric: "bigCust", op: ">", val: 50 }] },
+  { group: "fare", label: "Faldende omsætning", criteria: [{ metric: "revPct", op: "<", val: -5 }] },
+  { group: "fare", label: "Dobbelt underskud", criteria: [
+    { metric: "ebitdaPct", op: "<", val: -10, joinNext: "AND" },
+    { metric: "equity",    op: "<", val: 0 },
+  ] },
+  { group: "fare", label: "Koncentration og fald", criteria: [
+    { metric: "bigCust",   op: ">", val: 50,  joinNext: "AND" },
+    { metric: "ebitdaPct", op: "<", val: -10 },
+  ] },
 ];
 
 const METRICS = [
@@ -133,11 +94,41 @@ function runQuery(dept, branche, criteria) {
   return base.filter(r => ids.has(r.id));
 }
 
+// Vækst i procent. Kun negative tal er røde (uden fed); positive står i tekstens farve.
 function pct(v) {
-  const color = v > 0 ? "var(--c-success)" : v < 0 ? "var(--c-danger)" : "var(--c-text-2)";
-  return <span style={{ color, fontWeight: 500 }}>{v > 0 ? "+" : ""}{v}%</span>;
+  return <span style={v < 0 ? { color: "var(--c-danger)" } : undefined}>{v > 0 ? "+" : ""}{v}{pctSign()}</span>;
 }
-function fmt(v) { return v.toLocaleString("da-DK", { maximumFractionDigits: 0 }); }
+// "45 %" på dansk, "45%" på engelsk
+function pctSign() { return window.CW_LANG === "en" ? "%" : " %"; }
+function fmt(v) { return v.toLocaleString(window.CW_LANG === "en" ? "en-GB" : "da-DK", { maximumFractionDigits: 0 }); }
+
+// Klik på en række: kunder med en sag åbner sagen. Nordhavn har levende data;
+// de øvrige sager viser sagens ærlige tomme tilstand. Kunder uden sag åbner
+// Ny sag-guiden forudfyldt med kunden (grænseflade 3: 'cw-new-case').
+// Sagen viser så "Tilbage til Porteføljeanalyse" (sessionStorage 'cw_back', læses af workspace).
+function openAnalyseRow(r, go) {
+  if (r.caseId) {
+    try { sessionStorage.setItem('cw_back', JSON.stringify({ route: 'analyse', label: 'Porteføljeanalyse' })); } catch (e) {}
+    go("workspace:" + r.caseId);
+    return;
+  }
+  try {
+    window.dispatchEvent(new CustomEvent('cw-new-case', { detail: { name: r.name, cvr: r.cvr, source: 'analyse' } }));
+  } catch (e) {}
+}
+/* Kundens sag i samme sagsliste som Mine opgaver (DATA.CASES): den faste sag
+   (caseId), ellers den nyeste åbne sag med samme CVR eller navn, fx en sag
+   oprettet i Ny sag. null hvis kunden ingen sag har. */
+function analyseCaseFor(r) {
+  if (r.caseId) return DATA.caseById(r.caseId);
+  const digits = (s) => String(s || '').replace(/[^0-9]/g, '');
+  const cvr = digits(r.cvr);
+  const name = String(r.name || '').trim().toLowerCase();
+  const hits = DATA.CASES.filter(c => !DATA.caseIsDecided(c) && ((cvr && digits(c.cvr) === cvr) || (name && String(c.name || '').trim().toLowerCase() === name)));
+  return hits.length ? hits.sort((a, b) => b.id - a.id)[0] : null;
+}
+// Tal i sprogets format
+function numLocale() { return window.CW_LANG === "en" ? "en-GB" : "da-DK"; }
 
 // ----- Criterion row -----
 function CriteriaRow({ c, onChange, onRemove, canRemove, showLabels }) {
@@ -153,7 +144,7 @@ function CriteriaRow({ c, onChange, onRemove, canRemove, showLabels }) {
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: 10, marginTop: 10 }}>
       <div style={{ flex: "0 0 216px" }}>
-        <Lbl>{t('Kriterie')}</Lbl>
+        <Lbl>{t('Kriterium')}</Lbl>
         <select value={c.metric} onChange={e => {
           const m = metaFor(e.target.value);
           onChange({ ...c, metric: e.target.value, unit: m.unit, minAmt: "" });
@@ -181,7 +172,7 @@ function CriteriaRow({ c, onChange, onRemove, canRemove, showLabels }) {
 
       {meta.amtField ? (
         <div>
-          <Lbl>{t('Minimum beløb')}</Lbl>
+          <Lbl>{t('Minimumsbeløb')}</Lbl>
           <div style={{ display: "flex" }}>
             <select value={c.minAmtOp} onChange={e => onChange({ ...c, minAmtOp: e.target.value })}
               style={{ ...S, padding: "0 6px", borderRadius: "6px 0 0 6px", borderRight: "none", width: 42, cursor: "pointer" }}>
@@ -199,11 +190,8 @@ function CriteriaRow({ c, onChange, onRemove, canRemove, showLabels }) {
         </div>
       ) : null}
 
-      <button onClick={onRemove} style={{
-        background: "none", border: "none", cursor: "pointer",
-        color: "var(--c-danger)", fontSize: 12, fontWeight: 500,
-        padding: "0 4px", alignSelf: "flex-end", height: 36, flexShrink: 0,
-      }}>
+      <button type="button" className="btn-ghost-sm" onClick={onRemove} style={{ alignSelf: "flex-end", marginBottom: 7, flexShrink: 0 }}
+        aria-label={t('Fjern kriterium') + ': ' + t(meta.l)}>
         {t('Fjern')}
       </button>
     </div>
@@ -215,13 +203,9 @@ function JoinToggle({ value, onChange }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0" }}>
       <div style={{ flex: 1, height: 1, background: "var(--c-line-2)" }}/>
-      <button onClick={() => onChange(value === "AND" ? "OR" : "AND")} style={{
-        padding: "3px 14px", border: "1px solid var(--c-line-strong)", borderRadius: 99,
-        background: "#fff", cursor: "pointer", fontSize: 11.5, fontWeight: 700,
-        color: value === "AND" ? "var(--c-ink)" : "#c47b00",
-        letterSpacing: "0.06em", userSelect: "none",
-      }}>
-        {value === "AND" ? t('OG') : t('ELLER')}
+      <button type="button" className="btn-ghost-sm" onClick={() => onChange(value === "AND" ? "OR" : "AND")}
+        title={t('Skift mellem og og eller')}>
+        {value === "AND" ? t('og') : t('eller')}
       </button>
       <div style={{ flex: 1, height: 1, background: "var(--c-line-2)" }}/>
     </div>
@@ -232,22 +216,22 @@ function JoinToggle({ value, onChange }) {
 function fmtVal(val, unit) {
   const n = Number(val);
   if (isNaN(n)) return val;
-  return unit === "kr." ? n.toLocaleString("da-DK") : String(val);
+  return unit === "kr." ? n.toLocaleString(numLocale()) : n.toLocaleString(numLocale(), { maximumFractionDigits: 2 });
 }
 
 function ChipSummary({ c, onRemove }) {
   const m = metaFor(c.metric);
   const parts = [t(m.l) + " " + c.op + " " + fmtVal(c.val, m.unit) + " " + t(m.unit)];
-  if (m.amtField && c.minAmt !== "") parts.push(t('og') + " " + c.minAmtOp + " " + Number(c.minAmt).toLocaleString("da-DK") + " " + t('kr.'));
+  if (m.amtField && c.minAmt !== "") parts.push(t('og') + " " + c.minAmtOp + " " + Number(c.minAmt).toLocaleString(numLocale()) + " " + t('kr.'));
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 6,
-      background: "var(--c-surface-2)", border: "1px solid var(--c-line-strong)",
-      borderRadius: 99, padding: "4px 6px 4px 12px", fontSize: 12.5, color: "var(--c-ink)",
+      background: "var(--c-surface-2)", border: "1px solid var(--c-line)",
+      borderRadius: 99, padding: "3px 5px 3px 11px", fontSize: 12.5, color: "var(--c-text-2)",
       whiteSpace: "nowrap",
     }}>
       {parts.join(" ")}
-      <button onClick={onRemove} style={{
+      <button type="button" onClick={onRemove} className="hit24" aria-label={t('Fjern kriterium') + ': ' + t(m.l)} style={{
         width: 18, height: 18, border: 0, borderRadius: 99, background: "var(--c-line)",
         cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--c-text-2)", flexShrink: 0,
       }}>
@@ -257,109 +241,51 @@ function ChipSummary({ c, onRemove }) {
   );
 }
 
-function describeTemplateCriteria(crits) {
-  const PCT_CHANGE = new Set(["revPct", "ebitdaPct"]);
-  return crits.map((c, i) => {
-    const m = metaFor(c.metric);
-    const valStr = m.unit === "kr." ? Number(c.val).toLocaleString("da-DK") + " " + t('kr.') : c.val + m.unit;
-    let op;
-    if (PCT_CHANGE.has(c.metric)) op = c.op === ">" ? "↑" : "↓";
-    else op = c.op;
-    const part = t(m.short || m.l) + " " + op + " " + valStr;
-    if (i < crits.length - 1) return part + (c.joinNext === "AND" ? " " + t('og') + " " : " " + t('eller') + " ");
-    return part;
-  }).join("");
-}
-
 // ----- Sortable header -----
+// Overskriften er en knap (kan nås med Tab) og fortæller sorteringen via aria-sort.
+// Teksten må bryde over to linjer, så smalle kolonner ikke løber ind i hinanden.
 function SortTh({ col, label, title, align, sortCol, sortDir, onSort, width }) {
   const active = sortCol === col;
   return (
-    <th title={title} style={{ textAlign: align || "left", cursor: "pointer", userSelect: "none", whiteSpace: "nowrap", padding: "8px 10px", width }}
-      onClick={() => onSort(col)}>
-      <span style={{ display: "inline-flex", alignItems: "center", gap: 3, justifyContent: align === "right" ? "flex-end" : "flex-start" }}>
-        {label}
-        <span style={{ opacity: active ? 1 : 0.2, fontSize: 9 }}>
-          {sortDir === "asc" && active ? "▲" : "▼"}
-        </span>
-      </span>
-    </th>
-  );
-}
-
-// ----- Template card -----
-function TemplateCard({ t: tpl, active, onClick, grid }) {
-  const [hover, setHover] = React.useState(false);
-  const isGod = tpl.group === "god";
-  const accentColor = isGod ? "#15803d" : "#b91c1c";
-  const bg = active ? (isGod ? "#f0fdf4" : "#fef2f2") : hover ? "#f3f4f6" : "transparent";
-
-  if (grid) {
-    return (
-      <button
-        onClick={onClick}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-        style={{
-          display: "flex", flexDirection: "column", gap: 2,
-          width: "100%", padding: "8px 10px",
-          textAlign: "left", cursor: "pointer",
-          border: "none",
-          borderLeft: `2px solid ${active ? accentColor : "transparent"}`,
-          background: bg, borderRadius: "0 4px 4px 0", transition: "background 0.1s",
-        }}
-      >
-        <div style={{ fontSize: 12, fontWeight: 600, color: "#111827" }}>{t(tpl.label)}</div>
-        <div style={{ fontSize: 10.5, color: "#6b7280", lineHeight: 1.3, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>{tpl.desc}</div>
-        {active && <span style={{ fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: "0.05em", textTransform: "uppercase", marginTop: 2 }}>{t('Valgt')}</span>}
+    <th title={title} scope="col"
+      aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+      style={{ textAlign: align || "left", userSelect: "none", whiteSpace: "normal", verticalAlign: "bottom", lineHeight: 1.25, padding: "8px 7px", width }}>
+      <button type="button" className="th-sort" onClick={() => onSort(col)}
+        style={{ justifyContent: align === "right" ? "flex-end" : "flex-start", textAlign: align || "left" }}>
+        <span>{label}</span>
+        {active && (
+          <span aria-hidden="true" style={{ color: "var(--c-ink)", fontSize: 9, flexShrink: 0 }}>
+            {sortDir === "asc" ? "▲" : "▼"}
+          </span>
+        )}
       </button>
-    );
-  }
-
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: "flex", alignItems: "center", gap: 10,
-        width: "100%", padding: "8px 10px 8px 12px",
-        textAlign: "left", cursor: "pointer",
-        border: "none",
-        borderLeft: `2px solid ${active ? accentColor : "transparent"}`,
-        background: bg, borderRadius: "0 4px 4px 0", transition: "background 0.1s",
-      }}
-    >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 12.5, fontWeight: 600, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t(tpl.label)}</div>
-        <div style={{ fontSize: 11, color: "#6b7280", marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{tpl.desc}</div>
-      </div>
-      {active && <span style={{ fontSize: 10, fontWeight: 700, color: accentColor, letterSpacing: "0.05em", textTransform: "uppercase", flexShrink: 0 }}>{t('Valgt')}</span>}
-    </button>
+    </th>
   );
 }
 
 // ----- Main component -----
 function PortfolioAnalyse({ go }) {
-  const [dept, setDept]           = React.useState("alle");
-  const [branche, setBranche]     = React.useState("alle");
-  const [criteria, setCriteria]   = React.useState([]);
-  const [activeTemplate, setActiveTemplate] = React.useState(null);
+  const caseVersion = CW.useCase(); // nye sager og omfordelinger slår straks igennem
+  // Valgt skabelon, afdeling og branche huskes, når man går til en sag og tilbage
+  const saved = React.useMemo(() => DATA.viewGet(ANALYSE_VIEW) || {}, []);
+  const savedTpl = saved.template ? TEMPLATES.find(x => x.label === saved.template) : null;
+  const tplCriteria = (tpl) => tpl.criteria.map(c => ({ ...makeCrit(c.metric), op: c.op, val: c.val, joinNext: c.joinNext || "AND" }));
+  const [dept, setDept]           = React.useState(saved.dept || "alle");
+  const [branche, setBranche]     = React.useState(saved.branche || "alle");
+  const [criteria, setCriteria]   = React.useState(() => (savedTpl ? tplCriteria(savedTpl) : []));
+  const [activeTemplate, setActiveTemplate] = React.useState(savedTpl ? savedTpl.label : null);
   const [advOpen, setAdvOpen]     = React.useState(false);
-  const [sortCol, setSortCol]     = React.useState("rev12");
-  const [sortDir, setSortDir]     = React.useState("desc");
-  const [results, setResults]     = React.useState(null);
-  const [loading, setLoading]     = React.useState(false);
-  const [selectedYear, setSelectedYear] = React.useState("2025");
-
+  const [sortCol, setSortCol]     = React.useState(saved.sortCol || "rev12");
+  const [sortDir, setSortDir]     = React.useState(saved.sortDir || "desc");
+  // Gem først, når visningen ændres (ikke ved indlæsning), så en ren demo forbliver ren
+  const viewMounted = React.useRef(false);
   React.useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(() => {
-      setResults(runQuery(dept, branche, criteria));
-      setLoading(false);
-    }, 350 + Math.random() * 250);
-    return () => clearTimeout(t);
-  }, [dept, branche, criteria]);
+    if (!viewMounted.current) { viewMounted.current = true; return; }
+    DATA.viewSet(ANALYSE_VIEW, { template: activeTemplate, dept, branche, sortCol, sortDir });
+  }, [activeTemplate, dept, branche, sortCol, sortDir]);
+
+  // Søgningen er lokal og hurtig, så resultatet regnes med det samme (ingen falsk ventetid)
+  const results = React.useMemo(() => runQuery(dept, branche, criteria), [dept, branche, criteria]);
 
   const onSort = (col) => {
     setSortCol(col);
@@ -367,45 +293,44 @@ function PortfolioAnalyse({ go }) {
   };
 
   const sorted = React.useMemo(() => {
-    if (!results) return [];
-    return [...results].sort((a, b) => {
+    // Sag og ansvarlig kommer fra sagsmodellen (følger omfordelinger og nye sager fra Ny sag)
+    const rows = results.map(r => {
+      const c = analyseCaseFor(r);
+      return { ...r, caseId: c ? c.id : null, caseNr: c ? c.caseNr : '', owner: c ? c.responsible : '', caseStatus: c ? c.statusKey : null };
+    });
+    return rows.sort((a, b) => {
       const av = a[sortCol], bv = b[sortCol];
       const cmp = typeof av === "string" ? av.localeCompare(bv, "da") : (av ?? 0) - (bv ?? 0);
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [results, sortCol, sortDir]);
+  }, [results, sortCol, sortDir, caseVersion]);
 
-  const update  = (id, updated) => { setCriteria(prev => prev.map(c => c.id === id ? updated : c)); };
-  const remove  = (id)          => { setCriteria(prev => prev.filter(c => c.id !== id)); };
-  const add     = ()            => { setCriteria(prev => [...prev, makeCrit("revPct")]); };
-  const setJoin = (id, val)     => { setCriteria(prev => prev.map(c => c.id === id ? { ...c, joinNext: val } : c)); };
+  // Retter man i kriterierne, er det ikke længere skabelonen, men egne kriterier
+  const edit    = (fn) => { setCriteria(fn); setActiveTemplate(null); };
+  const update  = (id, updated) => edit(prev => prev.map(c => c.id === id ? updated : c));
+  const remove  = (id)          => edit(prev => prev.filter(c => c.id !== id));
+  const add     = ()            => edit(prev => [...prev, makeCrit("revPct")]);
+  const setJoin = (id, val)     => edit(prev => prev.map(c => c.id === id ? { ...c, joinNext: val } : c));
 
   const reset = () => {
     setDept("alle"); setBranche("alle");
     setCriteria([]);
     setActiveTemplate(null);
   };
-
-  const loadTemplate = (t) => {
-    setCriteria(t.criteria.map(c => ({
-      ...makeCrit(c.metric),
-      op: c.op, val: c.val,
-      joinNext: c.joinNext || "AND",
-    })));
-    setActiveTemplate(t.label);
+  const pickTemplate = (v) => {
+    if (v === 'none') { setActiveTemplate(null); setCriteria([]); return; }
+    const tpl = TEMPLATES.find(x => x.label === v);
+    if (tpl) { setCriteria(tplCriteria(tpl)); setActiveTemplate(tpl.label); }
   };
 
-  const depts    = ["alle", ...new Set(ANALYSE_CASES.map(r => r.dept))];
-  const branches = ["alle", ...new Set(ANALYSE_CASES.map(r => r.branche)).values()].sort((a,b) => a === "alle" ? -1 : a.localeCompare(b, "da"));
-
-  const godTemplates  = TEMPLATES.filter(t => t.group === "god");
-  const fareTemplates = TEMPLATES.filter(t => t.group === "fare");
-
-  const selectStyle = {
-    height: 34, padding: "0 10px", border: "1px solid var(--c-line-strong)",
-    borderRadius: 6, fontSize: 13, background: "#fff", color: "var(--c-ink)",
-    minWidth: 200, cursor: "pointer",
-  };
+  const depts    = [...new Set(ANALYSE_CASES.map(r => r.dept))];
+  const branches = [...new Set(ANALYSE_CASES.map(r => r.branche))].sort((a, b) => a.localeCompare(b, "da"));
+  const own = !activeTemplate && criteria.length > 0;
+  const tplValue = activeTemplate || (own ? 'custom' : 'none');
+  const tplOptions = [{ v: 'none', l: t('Ingen') }]
+    .concat(own ? [{ v: 'custom', l: t('Egne kriterier') }] : [])
+    .concat(TEMPLATES.map(x => ({ v: x.label, l: t(x.label), group: t(TEMPLATE_GROUPS[x.group]) })));
+  const anyFilter = dept !== "alle" || branche !== "alle" || criteria.length > 0;
 
   return (
     <>
@@ -414,255 +339,140 @@ function PortfolioAnalyse({ go }) {
       <div className="scroll">
         <div className="page page-wide" style={{ maxWidth: 1360, padding: "20px 28px 80px" }}>
 
-          <div style={{ marginBottom: 20 }}>
+          <div style={{ marginBottom: 18 }}>
             <h1 className="page-title">{t('Porteføljeanalyse')}</h1>
             <div className="page-sub">{t('Find kunder på tværs af porteføljen ud fra finansielle kriterier')}</div>
           </div>
 
-          {/* Filter panel */}
-          <div className="card" style={{ marginBottom: 14, padding: 0 }}>
-
-            {/* Templates */}
-            <div style={{ padding: "14px 20px", borderBottom: "1px solid #E5E7EB", background: "#f9fafb" }}>
-              <div style={{ fontSize: 10.5, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 10 }}>
-                {t('Vælg skabelon')}
-              </div>
-              <div style={{ display: "flex", gap: 0 }}>
-                {/* Good group */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6, paddingLeft: 12 }}>
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#15803d", flexShrink: 0 }}/>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", letterSpacing: "0.02em" }}>{t('Klarer det godt')}</span>
-                  </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                    {godTemplates.map(t => (
-                      <TemplateCard
-                        key={t.label}
-                        t={{ ...t, desc: describeTemplateCriteria(t.criteria) }}
-                        active={activeTemplate === t.label}
-                        onClick={() => {
-                          if (activeTemplate === t.label) { setActiveTemplate(null); setCriteria([]); }
-                          else loadTemplate(t);
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                {/* Divider */}
-                <div style={{ width: 1, background: "#E5E7EB", margin: "0 16px", flexShrink: 0 }}/>
-                {/* Fare group */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6, paddingLeft: 12 }}>
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#b91c1c", flexShrink: 0 }}/>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: "#374151", letterSpacing: "0.02em" }}>{t('Faresignaler')}</span>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
-                    {fareTemplates.map(t => (
-                      <TemplateCard
-                        key={t.label}
-                        t={{ ...t, desc: describeTemplateCriteria(t.criteria) }}
-                        active={activeTemplate === t.label}
-                        grid
-                        onClick={() => {
-                          if (activeTemplate === t.label) { setActiveTemplate(null); setCriteria([]); }
-                          else loadTemplate(t);
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Dept + branche row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 20px", borderBottom: "1px solid var(--c-line-2)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 13, color: "var(--c-text-2)", fontWeight: 500, flexShrink: 0 }}>{t('Afdeling')}</span>
-                <select value={dept} onChange={e => { setDept(e.target.value); setResults(null); }} style={selectStyle}>
-                  <option value="alle">{t('Alle afdelinger')}</option>
-                  {depts.filter(d => d !== "alle").map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 13, color: "var(--c-text-2)", fontWeight: 500, flexShrink: 0 }}>{t('Branche')}</span>
-                <select value={branche} onChange={e => { setBranche(e.target.value); setResults(null); }} style={selectStyle}>
-                  <option value="alle">{t('Alle brancher')}</option>
-                  {branches.filter(b => b !== "alle").map(b => <option key={b} value={b}>{t(b)}</option>)}
-                </select>
-              </div>
-              <button className="btn btn-sm btn-ghost" style={{ marginLeft: "auto" }} onClick={reset}>
-                <I.Refresh size={12}/> {t('Nulstil alle valg')}
-              </button>
-            </div>
-
-            {/* Avanceret søgning */}
-            <div style={{ borderBottom: (activeTemplate && criteria.length > 0) ? "1px solid var(--c-line-2)" : "none" }}>
-              <button
-                onClick={() => setAdvOpen(o => !o)}
-                style={{
-                  width: "100%", padding: "11px 20px",
-                  display: "flex", alignItems: "center", gap: 8,
-                  background: "transparent", border: "none", cursor: "pointer",
-                }}
-              >
-                <I.ChevronRight size={13} style={{ color: "var(--c-text-3)", transition: "transform 0.15s", transform: advOpen ? "rotate(90deg)" : "none" }}/>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--c-text-2)" }}>{t('Avanceret søgning')}</span>
-                {!activeTemplate && criteria.length > 0 && (
-                  <span style={{ fontSize: 11, background: "var(--c-surface-2)", border: "1px solid var(--c-line-strong)", padding: "1px 6px", borderRadius: 99, fontWeight: 600, color: "var(--c-text-2)" }}>
-                    {criteria.length}
-                  </span>
-                )}
-              </button>
-              {advOpen && (
-                <div style={{ padding: "4px 20px 16px", borderTop: "1px solid var(--c-line-2)" }}>
-                  {criteria.length === 0 && (
-                    <div style={{ fontSize: 12.5, color: "var(--c-text-3)", margin: "8px 0 10px" }}>
-                      {t('Ingen aktive kriterier. Klik "Tilføj kriterie" for at filtrere manuelt.')}
-                    </div>
-                  )}
-                  {criteria.map((c, i) => (
-                    <React.Fragment key={c.id}>
-                      <CriteriaRow
-                        c={c}
-                        onChange={updated => update(c.id, updated)}
-                        onRemove={() => remove(c.id)}
-                        canRemove={true}
-                        showLabels={i === 0}
-                      />
-                      {i < criteria.length - 1 && (
-                        <JoinToggle value={c.joinNext} onChange={val => setJoin(c.id, val)}/>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  <div style={{ marginTop: criteria.length > 0 ? 10 : 0 }}>
-                    <button className="btn btn-sm btn-ghost" onClick={add}>
-                      <I.Plus size={12}/> {t('Tilføj kriterie')}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Active template criteria display */}
-            {activeTemplate && criteria.length > 0 && (
-              <div style={{ padding: "12px 20px" }}>
-                <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--c-text-2)" }}>{t('Aktive kriterier')}</span>
-                  <button
-                    className="btn btn-sm btn-ghost"
-                    style={{ marginLeft: "auto", fontSize: 12 }}
-                    onClick={() => { setActiveTemplate(null); setCriteria([]); }}
-                  >
-                    <I.X size={11}/> {t('Fjern skabelon')}
-                  </button>
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
-                  {criteria.map((c, i) => (
-                    <React.Fragment key={c.id}>
-                      <ChipSummary c={c} onRemove={() => criteria.length > 1 && remove(c.id)}/>
-                      {i < criteria.length - 1 && (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: c.joinNext === "AND" ? "var(--c-text-3)" : "#c47b00", letterSpacing: "0.08em", padding: "0 2px" }}>
-                          {c.joinNext === "AND" ? t('OG') : t('ELLER')}
-                        </span>
-                      )}
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-            )}
+          {/* Filtre: tre vælgere på én linje; Nulstil kun når noget er valgt */}
+          <div className="an-filters">
+            <FilterDropdown label={t('Skabelon')} value={tplValue} onChange={pickTemplate} options={tplOptions} neutral/>
+            <FilterDropdown label={t('Afdeling')} value={dept} onChange={setDept} neutral
+              options={[{ v: 'alle', l: t('Alle') }].concat(depts.map(d => ({ v: d, l: d })))}/>
+            <FilterDropdown label={t('Branche')} value={branche} onChange={setBranche} neutral
+              options={[{ v: 'alle', l: t('Alle') }].concat(branches.map(b => ({ v: b, l: t(b) })))}/>
+            {anyFilter && <button type="button" className="btn-ghost-sm" onClick={reset}>{t('Nulstil')}</button>}
           </div>
 
-          {/* Results */}
-          {loading ? (
-            <>
-              <style>{`@keyframes cw-spin { to { transform: rotate(360deg); } }`}</style>
-              <div className="card" style={{ marginTop: 4, minHeight: 120, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                <div style={{ width: 22, height: 22, border: '2px solid var(--c-line)', borderTopColor: 'var(--c-accent)', borderRadius: '50%', animation: 'cw-spin 0.75s linear infinite' }}/>
-                <div style={{ color: 'var(--c-text-2)', fontSize: 13 }}>{t('Søger i porteføljen…')}</div>
+          {/* Den valgte skabelons (eller egne) kriterier som grå chips */}
+          {criteria.length > 0 && !advOpen && (
+            <div className="an-chips" role="group" aria-label={t('Aktive kriterier')}>
+              {criteria.map((c, i) => (
+                <React.Fragment key={c.id}>
+                  <ChipSummary c={c} onRemove={() => remove(c.id)}/>
+                  {i < criteria.length - 1 && (
+                    <span style={{ fontSize: 12, color: "var(--c-text-3)" }}>{c.joinNext === "AND" ? t('og') : t('eller')}</span>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          )}
+
+          {/* Egne kriterier */}
+          <CWFold id="cw-an-criteria" className="an-fold" label={t('Egne kriterier')} count={criteria.length || undefined} open={advOpen} onToggle={setAdvOpen}>
+            {criteria.length === 0 && (
+              <div style={{ fontSize: 12.5, color: "var(--c-text-3)", margin: "0 0 8px" }}>
+                {t('Ingen aktive kriterier. Tilføj et kriterium for at filtrere manuelt.')}
               </div>
-            </>
-          ) : results === null || results.length === 0 ? (
-            <div className="card empty" style={{ marginTop: 4 }}>
-              <I.Search className="ic" style={{ width: 26, height: 26 }}/>
-              <div>{t('Ingen kunder matcher de valgte kriterier')}</div>
-              <div style={{ fontSize: 11.5, marginTop: 4, color: "var(--c-text-3)" }}>{t('Prøv at justere tærskelværdierne')}</div>
+            )}
+            {criteria.map((c, i) => (
+              <React.Fragment key={c.id}>
+                <CriteriaRow
+                  c={c}
+                  onChange={updated => update(c.id, updated)}
+                  onRemove={() => remove(c.id)}
+                  canRemove={true}
+                  showLabels={i === 0}
+                />
+                {i < criteria.length - 1 && (
+                  <JoinToggle value={c.joinNext} onChange={val => setJoin(c.id, val)}/>
+                )}
+              </React.Fragment>
+            ))}
+            <div style={{ marginTop: criteria.length > 0 ? 10 : 0 }}>
+              <button type="button" className="btn-ghost-sm" onClick={add}>
+                <I.Plus size={12} aria-hidden="true"/> {t('Tilføj kriterium')}
+              </button>
+            </div>
+          </CWFold>
+
+          {/* Resultater */}
+          {results.length === 0 ? (
+            <div className="card" style={{ padding: "18px 20px" }}>
+              <p className="list-empty" style={{ margin: 0 }}>{t('Ingen kunder matcher de valgte kriterier. Prøv at justere tærskelværdierne.')}</p>
             </div>
           ) : (
             <div className="card" style={{ overflow: "hidden" }}>
               <div className="card-head">
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--c-ink)" }}>{t('Dine kunder')}</span>
-                  <span style={{ background: "var(--c-surface-2)", border: "1px solid var(--c-line-strong)", padding: "1px 8px", borderRadius: 999, fontSize: 12, fontWeight: 600 }}>
-                    {results.length} {t('kunder')}
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "var(--c-ink)" }}>{t('Kunder i porteføljen')}</h2>
+                  <span style={{ fontSize: 12.5, color: "var(--c-text-3)" }} aria-live="polite">
+                    {results.length} {t('af')} {ANALYSE_CASES.length}
                   </span>
-                  {activeTemplate && (
-                    <span style={{ fontSize: 12, color: "var(--c-text-2)", marginLeft: 4 }}>
-                      · {t('Skabelon')}: <b>{t(activeTemplate)}</b>
-                    </span>
-                  )}
                 </div>
               </div>
-              {/* Periode-filter toolbar */}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderBottom: "1px solid var(--c-line-2)", background: "var(--c-surface-1)" }}>
-                <span style={{ fontSize: 12.5, fontWeight: 500, color: "var(--c-text-2)", flexShrink: 0 }}>{t('Periode')}:</span>
-                {["2023", "2024", "2025"].map(yr => {
-                  const active = selectedYear === yr;
-                  return (
-                    <button
-                      key={yr}
-                      onClick={() => setSelectedYear(yr)}
-                      style={{
-                        height: 30, padding: "0 12px", borderRadius: 999,
-                        border: "1px solid " + (active ? "var(--c-accent)" : "var(--c-line-strong)"),
-                        background: active ? "var(--c-accent)" : "#fff",
-                        color: active ? "#fff" : "var(--c-ink)",
-                        fontSize: 12.5, fontWeight: active ? 600 : 400,
-                        cursor: "pointer", transition: "all 0.1s",
-                      }}
-                    >
-                      {yr}
-                    </button>
-                  );
-                })}
-              </div>
-              <table className="tbl" style={{ tableLayout: "fixed", width: "100%", fontSize: 12 }}>
+              {/* Mindst 960 px: kolonnerne får plads til tal som 61.300.000 og 45 %.
+                  Er siden smallere (fx 1024 px skærm), ruller tabellen vandret. */}
+              <div style={{ overflowX: "auto" }} role="region" aria-label={t('Kunder i porteføljen')} tabIndex={0}>
+              <table className="tbl" style={{ tableLayout: "fixed", width: "100%", minWidth: 960, fontSize: 12 }}>
+                <caption className="sr-only">{t('Kunder i porteføljen')}</caption>
                 <thead>
                   <tr>
-                    <SortTh col="name"      label={t('Kundenavn')}                    title={t('Virksomhedens navn')}                                                    align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="20%"/>
-                    <SortTh col="dept"      label={t('Afdeling')}                     title={t('Ansvarlig afdeling')}                                                    align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="branche"   label={t('Branche')}                      title={t('Branche / sektor')}                                                      align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
-                    <SortTh col="rev12"     label={t('Omsætning') + " " + selectedYear} title={t('Samlet omsætning') + " " + selectedYear + " (" + t('kr.') + ")"}      align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="revPct"    label={t('Oms. %')}                       title={t('Omsætningsvækst i % - seneste 12 mdr. ift. foregående 12 mdr.')}        align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
-                    <SortTh col="ebitda12"  label={"EBITDA " + selectedYear}          title={"EBITDA " + selectedYear + " (" + t('kr.') + ")"}                          align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="ebitdaPct" label="EBITDA %"                          title={t('EBITDA-ændring i % - seneste 12 mdr. ift. foregående 12 mdr.')}         align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
-                    <SortTh col="equity"    label={t('Egenkapital') + " " + selectedYear} title={t('Bogført egenkapital') + " " + selectedYear + " (" + t('kr.') + ")"} align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="10%"/>
-                    <SortTh col="bigCust"   label={t('Største kunde')}                title={t('Andel af omsætning fra største enkelt kunde - gennemsnit seneste 24 mdr. (%)')} align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
+                    <SortTh col="name"      label={t('Kunde')}          title={t('Virksomhedens navn og CVR')}                                          align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="17%"/>
+                    <SortTh col="caseNr"    label={t('Sag')}            title={t('Kundens åbne sag. Klik på kunden for at åbne den.')} align="left" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="11%"/>
+                    <SortTh col="owner"     label={t('Ansvarlig')}      title={t('Rådgiveren, der ejer sagen')} align="left" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="8%"/>
+                    <SortTh col="dept"      label={t('Afdeling')}       title={t('Ansvarlig afdeling')}                                                 align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="9%"/>
+                    <SortTh col="branche"   label={t('Branche')}        title={t('Branche / sektor')}                                                   align="left"  sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="9%"/>
+                    <SortTh col="rev12"     label={t('Omsætning')}      title={t('Omsætning seneste 12 mdr. (kr.). For Nordhavn: nettoomsætning 2025 fra årsrapporten.')} align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="9%"/>
+                    <SortTh col="revPct"    label={t('Oms. vækst')}     title={t('Omsætningsvækst i % - seneste 12 mdr. ift. foregående 12 mdr.')}      align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="6%"/>
+                    <SortTh col="ebitda12"  label="EBITDA"              title={t('EBITDA seneste 12 mdr. (kr.)')}                                        align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="9%"/>
+                    <SortTh col="ebitdaPct" label={t('EBITDA-vækst')}   title={t('EBITDA-ændring i % - seneste 12 mdr. ift. foregående 12 mdr.')}       align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="6%"/>
+                    <SortTh col="equity"    label={t('Egenkapital')}    title={t('Bogført egenkapital, seneste regnskab (kr.)')}                         align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="9%"/>
+                    <SortTh col="bigCust"   label={t('Største kunde')}  title={t('Andel af omsætningen fra den største enkeltkunde, seneste regnskabsår (%)')} align="right" sortCol={sortCol} sortDir={sortDir} onSort={onSort} width="7%"/>
                   </tr>
                 </thead>
                 <tbody>
                   {sorted.map(r => {
                     const td = { padding: "9px 7px", fontSize: 12 };
+                    const filled = !!r.caseId;
+                    // Kun negative tal er røde, uden fed
+                    const neg = (v) => (v < 0 ? { color: "var(--c-danger)" } : null);
                     return (
-                      <tr key={r.id} style={{ cursor: "pointer" }} onClick={() => go("workspace:" + r.id + ":financials")}>
-                        <td style={{ ...td, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }}>
-                          <span style={{ fontWeight: 500, color: "var(--c-ink)" }}>{r.name}</span>
-                          <span className="mono" style={{ color: "var(--c-text-3)", fontSize: 11, marginLeft: 6 }}>({r.cvr})</span>
+                      <tr key={r.id} style={{ cursor: "pointer" }} onClick={() => openAnalyseRow(r, go)}>
+                        <td style={{ ...td, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }} title={r.name + ' (CVR ' + r.cvr + ')'}>
+                          {/* Navnet er en knap, så rækken kan åbnes med tastaturet */}
+                          <button type="button" className="th-sort" onClick={(e) => { e.stopPropagation(); openAnalyseRow(r, go); }}
+                            aria-label={r.name + (filled ? ', ' + t('åbn sag') + ' ' + r.caseNr : ', ' + t('ingen åben sag, opret en ny sag'))}
+                            style={{ fontWeight: 500, color: "var(--c-ink)", display: "block", width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {r.name}
+                          </button>
+                          <span style={{ display: "block", color: "var(--c-text-3)", fontSize: 12, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis" }}><span className="mono">CVR {r.cvr}</span>{r.period ? ' · ' + t(r.period) : ''}</span>
                         </td>
-                        <td style={{ ...td, color: "var(--c-text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }}>{r.dept}</td>
+                        <td style={{ ...td, overflow: "hidden", maxWidth: 0 }}>
+                          {filled ? (
+                            <>
+                              <span className="mono" style={{ display: "block", color: "var(--c-text-2)" }}>{r.caseNr}</span>
+                              <span style={{ display: "block", marginTop: 1, fontSize: 12, color: "var(--c-text-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{DATA.STATUS[r.caseStatus] ? t(DATA.STATUS[r.caseStatus].label) : ''}</span>
+                            </>
+                          ) : <span style={{ color: "var(--c-text-3)" }} title={t('Klik for at oprette en sag til kunden')}>{t('Ingen sag')}</span>}
+                        </td>
+                        <td style={{ ...td, color: "var(--c-text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }}>{r.owner || '-'}</td>
+                        <td style={{ ...td, color: "var(--c-text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }} title={r.dept}>{r.dept}</td>
                         <td title={t(r.branche)} style={{ ...td, color: "var(--c-text-2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 0 }}>{t(r.branche)}</td>
                         <td className="mono num" style={{ ...td, textAlign: "right" }}>{fmt(r.rev12)}</td>
                         <td style={{ ...td, textAlign: "right" }}>{pct(r.revPct)}</td>
-                        <td className="mono num" style={{ ...td, textAlign: "right", color: r.ebitda12 < 0 ? "var(--c-danger)" : "inherit", fontWeight: r.ebitda12 < 0 ? 600 : 400 }}>{fmt(r.ebitda12)}</td>
+                        <td className="mono num" style={{ ...td, textAlign: "right", ...neg(r.ebitda12) }}>{fmt(r.ebitda12)}</td>
                         <td style={{ ...td, textAlign: "right" }}>{pct(r.ebitdaPct)}</td>
-                        <td className="mono num" style={{ ...td, textAlign: "right", color: r.equity < 0 ? "var(--c-danger)" : "inherit", fontWeight: r.equity < 0 ? 600 : 400 }}>{fmt(r.equity)}</td>
-                        <td style={{ ...td, textAlign: "right", color: r.bigCust > 50 ? "var(--c-warn)" : "inherit" }}>{r.bigCust}%</td>
+                        <td className="mono num" style={{ ...td, textAlign: "right", ...neg(r.equity) }}>{fmt(r.equity)}</td>
+                        <td style={{ ...td, textAlign: "right" }}>{r.bigCust}{pctSign()}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
+              </div>
               <div style={{ padding: "10px 16px", borderTop: "1px solid var(--c-line-2)", fontSize: 12, color: "var(--c-text-3)" }}>
-                {t('Viser')} {results.length} {t('af')} {ANALYSE_CASES.length} {t('kunder')}
+                {t('Beløb i kr., seneste 12 måneder.')}
               </div>
             </div>
           )}

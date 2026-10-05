@@ -20,8 +20,6 @@ Object.assign(window.I18N.en, {
     "The guarantee document refers to 'customary collateral' without specification. Requires clarification before the credit recommendation.",
   'Q1 2026 realiseret omsætning 5,2M mod budget 5,0M (+4,9%). EBITDA-margin holder.':
     'Q1 2026 actual revenue of 5.2M against a budget of 5.0M (+4.9%). EBITDA margin holds.',
-  'Selskabet leverer kun B2B til vindmølle­producenter. Soft signals fra LinkedIn og branche­presse vurderet i stedet.':
-    'The company sells B2B only, to wind turbine manufacturers. Soft signals from LinkedIn and trade press assessed instead.',
 
   // FINDINGS - suggestions
   'Bekræft baggrund for juli-stigning. Mulig forklaring: levering af Block-Island ordre Q3.':
@@ -86,4 +84,43 @@ Object.assign(window.I18N.en, {
   // Competitor table figures ("mia" -> "bn")
   'EUR 1,2 mia': 'EUR 1.2bn',
   'USD 1,3 mia': 'USD 1.3bn',
+});
+
+// Stamdata og demoindhold rettet mod Aarsrapport_2025 og Ejerbog_2026
+Object.assign(window.I18N.en, {
+  "Aktieselskab (A/S)": "Public limited company (A/S)",
+  "Fremstilling af andre plastprodukter (222900)": "Manufacture of other plastic products (222900)",
+  "Kompositkomponenter til vindindustrien": "Composite components for the wind industry",
+  "3. februar 2014": "3 February 2014",
+  "Danmark": "Denmark",
+  "Økonomichef": "Finance manager",
+  "Administrerende direktør": "Chief executive officer",
+  "Teknisk direktør (CTO)": "Chief technology officer (CTO)",
+  "Bestyrelses­formand": "Chair of the board",
+  "Bestyrelsesmedlem": "Board member",
+  "+7,7% år til år": "+7.7% year on year",
+  "Ulovligt kapitalejerlån (§ 210)": "Unlawful shareholder loan (section 210)",
+  "Revisors påtegning for 2025 har en supplerende oplysning om ulovligt kapitalejerlån efter selskabslovens § 210 (lån på 0,5 mio. kr., note 14).": "The auditor's report for 2025 contains an emphasis of matter on an unlawful shareholder loan under section 210 of the Companies Act (loan of DKK 0.5m, note 14).",
+  "Aarsrapport_2025.pdf · s. 14": "Aarsrapport_2025.pdf · p. 14",
+  "Afklar lånets forhold og indhent tilbagetrædelseserklæring før indstilling.": "Clarify the loan and obtain a subordination declaration before the recommendation.",
+  "Anmod om tilbagetrædelses­erklæring fra Anders Christensen.": "Request a subordination declaration from Anders Christensen.",
+  "Periodetal 2026 i tråd med forventningerne": "Interim figures 2026 in line with expectations",
+  "Realiseret nettoomsætning Q1-Q3 2026 er 32,9 mio. kr. Ledelsen forventede 44-45 mio. kr. for hele 2026.": "Actual net revenue Q1-Q3 2026 is DKK 32.9m. Management expected DKK 44-45m for the full year 2026.",
+  "Periodetal_Q1-Q3_2026.xlsx": "Periodetal_Q1-Q3_2026.xlsx",
+  "Trustpilot: 4,2 af 5 (127 anmeldelser)": "Trustpilot: 4.2 of 5 (127 reviews)",
+  "Anmeldelserne handler mest om rekruttering og eftermarkedsservice, ikke om OEM-kunderne. Blødt signal med lav vægt.": "The reviews are mostly about recruitment and aftermarket service, not the OEM customers. A soft signal with little weight.",
+  "Aarsrapport_2025.pdf · s. 4": "Aarsrapport_2025.pdf · p. 4",
+  "Hvordan og hvornår bliver kapitalejerlånet på 0,5 mio. kr. (§ 210) lovliggjort?": "How and when will the DKK 0.5m shareholder loan (section 210) be regularised?",
+  "Årsrapport 2025, revisors påtegning": "Annual report 2025, auditor's report",
+});
+
+// Runde 3 (data og team)
+Object.assign(window.I18N.en, {
+  "1 rødt flag": "1 red flag",
+  "Kunden har indsendt materialet": "The customer has submitted the material",
+});
+// Runde 4 (indhold): ratingmodellens udskrift i dokumentregistret
+Object.assign(window.I18N.en, {
+  "EIFO ratingmodel": "EIFO rating model",
+  "Ratingberegning": "Rating calculation",
 });
