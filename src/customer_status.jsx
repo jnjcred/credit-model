@@ -125,7 +125,8 @@ function csClearDraft(itemId) {
   try { localStorage.setItem(CS_DRAFT_KEY, JSON.stringify(all)); } catch (e) {}
 }
 // Valgte filer lægges straks i demoens fillager, så de overlever genindlæsning
-function csStageFiles(files, itemId) { return CW.putFiles(files, { by: 'kunde', itemId }); }
+// På Kundeside (forhåndsvisning) er det rådgiveren, der uploader på kundens vegne
+function csStageFiles(files, itemId) { return CW.putFiles(files, { by: CW.isPreview() ? 'rådgiver' : 'kunde', itemId }); }
 function csHHMM(iso) { const d = new Date(iso); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 // Dato uden klokkeslæt til lister ("30. sep."); det fulde tidspunkt kan stå i title (T11)
 function csShortDate(iso) { return String(CW.fmtWhen(iso) || '').replace(/ \d{2}:\d{2}$/, ''); }
@@ -587,11 +588,13 @@ function CWConversation({ side, idPrefix, compact, readOnly, variant, bare, note
   function send() {
     const txt = text.trim();
     if (!txt) return;
-    CW.sendMessage(side, txt, itemId || null);
+    // I forhåndsvisningen af kundesiden er det rådgiveren, der skriver (fx svarer derinde ved en fejl)
+    const asAdvisor = side === 'kunde' && preview;
+    CW.sendMessage(asAdvisor ? 'rådgiver' : side, txt, itemId || null);
     CW.markConversationRead(side);
     fresh.current = new Set();
     setText(''); setItemId('');
-    CW.toast(side === 'kunde' ? csFill(t('Beskeden er sendt til {navn}'), { navn: advFirst }) : t('Beskeden er sendt til kunden'));
+    CW.toast(side === 'kunde' && !asAdvisor ? csFill(t('Beskeden er sendt til {navn}'), { navn: advFirst }) : t('Beskeden er sendt til kunden'));
   }
 
   // Hvem skrev? Beskeder skrevet i forhåndsvisningen er rådgiverens (D11).
@@ -629,18 +632,12 @@ function CWConversation({ side, idPrefix, compact, readOnly, variant, bare, note
         const it = m.itemId ? CW.itemById(m.itemId) : null;
         return (
           <li key={m.key} style={{ padding: '10px 0' }}>
-            {i === firstFresh && (
-              <div role="separator" aria-label={t('Nye beskeder')} style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 0 10px', color: 'var(--c-text-3)', fontSize: 12, fontWeight: 500 }}>
-                <span aria-hidden="true" style={{ flex: 1, height: 1, background: 'var(--c-line)' }}/>
-                {t('Nye beskeder')}
-                <span aria-hidden="true" style={{ flex: 1, height: 1, background: 'var(--c-line)' }}/>
-              </div>
-            )}
             <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
               <div className="avatar" aria-hidden="true" style={{ width: 24, height: 24, fontSize: 9.5, flexShrink: 0 }}>{a.initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', fontSize: 12, color: 'var(--c-text-3)' }}>
                   <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--c-ink)' }}>{a.name}</span>
+                  {fresh.current.has(m.key) && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--c-primary)', background: 'var(--c-primary-soft, rgba(52,80,220,0.1))', borderRadius: 999, padding: '0 7px', lineHeight: '17px' }}>{t('Nyt')}</span>}
                   {a.tag && <span>{a.tag}</span>}
                   <span title={CW.fmtWhen(m.at)}>{csShortDate(m.at)}</span>
                   {it && <span>· {t(it.label)}</span>}
@@ -659,7 +656,7 @@ function CWConversation({ side, idPrefix, compact, readOnly, variant, bare, note
       <label htmlFor={pid + '-msg'} style={csVisuallyHidden}>{side === 'kunde' ? csFill(t('Besked til {navn}'), { navn: advFirst }) : t('Besked til kunden')}</label>
       <textarea id={pid + '-msg'} className="input" rows={2} value={text} onChange={e => setText(e.target.value)} aria-keyshortcuts="Control+Enter"
         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); } }}
-        placeholder={side === 'kunde' ? csFill(t('Skriv til {navn}'), { navn: advFirst }) : t('Skriv til kunden')}
+        placeholder={side === 'kunde' ? (preview ? t('Skriv som rådgiver') : csFill(t('Skriv til {navn}'), { navn: advFirst })) : t('Skriv til kunden')}
         style={{ width: '100%', height: 'auto', padding: '8px 10px', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', fontSize: 13, boxSizing: 'border-box', background: '#fff' }}
         aria-describedby={note ? pid + '-msg-note' : undefined}/>
       {note && <div id={pid + '-msg-note'} style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 4, lineHeight: 1.5 }}>{note}</div>}

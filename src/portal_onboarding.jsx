@@ -1,8 +1,11 @@
 /* ─────────────────────────────────────────────────────────────────────────────
    Kundens opstart i portalen, bygget efter dagens indsamlingsflow
-   (Indsamlingsflow_i_dag): opret bruger eller log ind, vilkår, virksomhed,
-   aftalen med EIFO (ja til at dele data), datadeling (løbende eller til og med
-   en dato) og regnskabssystem. Derefter velkomsten og materialet som før.
+   (Indsamlingsflow_i_dag) og designet "Bruger trin" (Claude Design, runde 2, 2a):
+   landingssiden, så ① Bruger ("Log ind eller opret bruger" med én knap,
+   "Fortsæt med Crediwire"), Crediwires egen side (PortalCwAuth, en demo af
+   omstillingen: Crediwire viser selv Opret bruger eller Log ind ud fra mailen),
+   tilbage til Bruger (færdiggør navn, virksomhed og vilkår, eller videre, hvis
+   brugeren allerede har virksomheden) og ② Datadeling. Derefter oversigten.
 
    Tilstanden ligger i CW.onboarding() (case_state.js) og er kundens. I
    forhåndsvisningen (rådgiverens "Kundeside") kan skærmene ses og gennemgås,
@@ -14,27 +17,19 @@
    ERP_SOURCES, portalPeriod, portalConsentNow, portalConnectNow m.fl.).
    ──────────────────────────────────────────────────────────────────────────── */
 
-// Rækkefølgen i trinlisten. 'material' er velkomsten og oversigten.
-const OB_ORDER = ['account', 'terms', 'company', 'agreement', 'access', 'erp', 'material'];
+// Rækkefølgen i trinlisten. 'material' er oversigten.
+const OB_ORDER = ['account', 'material'];
 function obLabel(k) {
   switch (k) {
     case 'account': return t('Bruger');
-    case 'terms': return t('Vilkår');
-    case 'company': return t('Virksomhed');
-    case 'agreement': return t('Aftale med EIFO');
-    case 'access': return t('Datadeling');
-    case 'erp': return t('Regnskabssystem');
+    case 'data': return t('Datadeling');
     default: return t('Materiale');
   }
 }
 // Er trinnet gjort af kunden? (afgøres af kundens rigtige tilstand, også i forhåndsvisningen)
 function obDone(ob, k) {
-  if (k === 'account') return !!ob.account;
-  if (k === 'terms') return !!ob.terms;
-  if (k === 'company') return !!ob.company;
-  if (k === 'agreement') return !!ob.agreement;
-  if (k === 'access') return !!ob.sharing;
-  if (k === 'erp') return !!ob.erp;
+  if (k === 'account') return !!(ob.account && ob.terms && ob.company);
+  if (k === 'data') return !!(ob.doneAt || ob.erp || (ob.agreement && ob.agreement.declined));
   return false;
 }
 
@@ -76,15 +71,17 @@ function obSharingText(sharing) {
   return sharing.mode === 'ongoing' ? t('løbende deling') : ncFill(t('tal til og med {date}'), { date: obFmt(sharing.dataUntil) });
 }
 
-/* ── Trinlisten til venstre (som i dag). På smalle skærme: "Trin 3 af 6 · Virksomhed" ── */
+/* ── Trinlisten til venstre (som i dag). På smalle skærme: "Trin 2 af 2 · Datadeling" ── */
 
 function ObStepper({ current, ob, onJump }) {
   const steps = OB_ORDER;
   const idx = steps.indexOf(current);
+  // "Trin 1 af 2": materialet efter opstarten tælles ikke med
+  const total = steps.filter(k => k !== 'material').length;
   return (
     <nav className="cwp-ob-steps" aria-label={t('Trin i opstarten')}>
       <div className="cwp-ob-steps-sm">
-        {ncFill(t('Trin {n} af {m}'), { n: Math.min(idx + 1, steps.length), m: steps.length })} · {obLabel(current)}
+        {ncFill(t('Trin {n} af {m}'), { n: Math.min(idx + 1, total), m: total })} · {obLabel(current)}
       </div>
       <ol>
         {steps.map((k, i) => {
@@ -118,7 +115,6 @@ function ObFrame({ step, ob, onJump, children, footer }) {
   const bare = step === 'account';
   return (
     <div className="cwp-ob">
-      <ObStepper current={step} ob={ob} onJump={onJump}/>
       <div className="cwp-ob-main">
         {bare ? children : <div className="cwp-ob-card">{children}</div>}
         {footer}
@@ -136,67 +132,76 @@ function ObTitle({ children, lead }) {
   );
 }
 
-function ObButtons({ onBack, children }) {
-  return (
-    <div className="cwp-ob-btns">
-      {onBack ? <button type="button" className="btn" onClick={onBack}>{t('Tilbage')}</button> : <span/>}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>{children}</div>
-    </div>
-  );
-}
-
 const obPrimary = { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' };
+// Deaktiveret knap som i designet: grå flade og grå tekst (ikke en bleg primærfarve)
+const obDisabled = { background: 'var(--c-neutral-bg)', borderColor: 'var(--c-neutral-bg)', color: 'var(--c-text-3)', opacity: 1, cursor: 'not-allowed' };
 const obErrStyle = { fontSize: 12.5, color: 'var(--c-danger)', marginTop: 4 };
 
-/* ── Bruger: opret eller log ind ─────────────────────────────────────────── */
+/* ── Crediwires egen side: Crediwire ser selv, om mailen har en bruger ────── */
 
-function PortalAuth({ mode, setMode, preview, onAuthed }) {
+/**
+ * Demo af Crediwires login-side, som kunden sendes til fra trinnet Bruger og
+ * tilbage fra bagefter (design: "Bruger trin", runde 2, 2a). Mailen kommer fra
+ * invitationen, og Crediwire viser selv "Opret bruger" eller "Log ind" ud fra
+ * den. Der er ingen "Har du allerede en bruger?"-link. Vilkår, navn og
+ * virksomhed hører til portalens trin Bruger, når kunden er tilbage.
+ * I forhåndsvisningen afgør mode ('signup' | 'login'), hvilken side der vises.
+ */
+function PortalCwAuth({ mode, preview, onAuthed, onBack }) {
   preview = preview || CW.isPreview();
   const ob = CW.onboarding();
   const rcp = portalRecipient();
-  const [email, setEmail] = React.useState(() => (ob.account && ob.account.email) || rcp.email || '');
+  const co = DATA.COMPANY || {};
+  // Demo: om mailen allerede har en Crediwire-bruger, og om virksomheden ligger på den
+  const [demoExists, setDemoExists] = React.useState(false);
+  const [demoHasCo, setDemoHasCo] = React.useState(false);
+  const exists = preview ? mode === 'login' : (!!ob.account || demoExists);
+  const presetMail = (ob.account && ob.account.email) || rcp.email || '';
+  const [email, setEmail] = React.useState(presetMail);
   const [pw, setPw] = React.useState('');
   const [show, setShow] = React.useState(false);
-  const [remember, setRemember] = React.useState(false); // fra som standard: en delt pc skal ikke huskes uden et aktivt valg
   const [tried, setTried] = React.useState(false);
   const [err, setErr] = React.useState('');
   const [forgot, setForgot] = React.useState(false);
-  const signup = mode === 'signup';
+  const [busy, setBusy] = React.useState(false);
+  const timer = React.useRef(null);
+  React.useEffect(() => () => clearTimeout(timer.current), []);
   const probs = obPwProblems(pw);
   const emailOk = NC_EMAIL_RE.test(email.trim());
 
-  React.useEffect(() => { setTried(false); setErr(''); setForgot(false); }, [mode]);
-
   const submit = (e) => {
     if (e) e.preventDefault();
-    if (preview) return; // fanges også af data-cust-act
+    if (preview || busy) return; // fanges også af data-cust-act
     setTried(true); setErr('');
     if (!emailOk) { CW.focusSoon('#cwp-auth-mail'); return; }
-    if (signup) {
-      if (ob.account) {
-        // En bruger findes allerede for virksomheden (demoen har én). Den må ikke overskrives.
-        setErr(ncFill(t('Der er allerede en bruger til {company}. Log ind, eller skriv til {adv}.'), { company: DATA.COMPANY.name, adv: PORTAL_CONTACT.first })
-          + ' ' + t('Er du revisor eller bogholder, så bed virksomheden sende dig et link med "Få hjælp fra revisor eller bank".'));
+    if (exists && !pw) { setErr(t('Skriv adgangskoden.')); CW.focusSoon('#cwp-auth-pw1'); return; }
+    if (exists && ob.account && ob.account.pw !== obPwHash(pw)) { setErr(t('Adgangskoden passer ikke.')); CW.focusSoon('#cwp-auth-pw1'); return; }
+    if (!exists && probs.length) { CW.focusSoon('#cwp-auth-pw1'); return; }
+    setBusy(true);
+    timer.current = setTimeout(() => {
+      setBusy(false);
+      const now = new Date().toISOString();
+      const mail = email.trim();
+      if (exists && ob.account) {
+        CW.log('portal-login', t('Kunden loggede ind i portalen'), { who: 'kunde' });
+        onAuthed(false, false);
         return;
       }
-      if (probs.length) { CW.focusSoon('#cwp-auth-pw1'); return; }
-      if (CW.setOnboarding({ account: { email: email.trim(), pw: obPwHash(pw), at: new Date().toISOString() } },
-        ncFill(t('Kunden oprettede en bruger ({email})'), { email: email.trim() })) === false) return;
-      onAuthed(false);
-      return;
-    }
-    const acc = ob.account;
-    if (!acc || acc.email.toLowerCase() !== email.trim().toLowerCase() || acc.pw !== obPwHash(pw)) {
-      setErr(t('Mail eller adgangskode passer ikke.'));
-      CW.focusSoon('#cwp-auth-pw1');
-      return;
-    }
-    CW.log('portal-login', t('Kunden loggede ind i portalen'), { who: 'kunde' });
-    onAuthed(remember);
+      if (exists) {
+        // Demo: en bruger, Crediwire allerede kender. Den har accepteret Crediwires vilkår og har et navn
+        const patch = { account: { email: mail, pw: obPwHash(pw), name: rcp.name || '', existing: true, at: now }, terms: { at: now, marketing: false } };
+        if (demoHasCo) patch.company = { cvr: String(co.cvr || '').replace(/\D/g, ''), name: co.name, person: rcp.name || '', advisor: false, at: now };
+        if (CW.setOnboarding(patch, ncFill(t('Kunden loggede ind med sin Crediwire-bruger ({email})'), { email: mail })) === false) return;
+        onAuthed(false, demoHasCo);
+        return;
+      }
+      if (CW.setOnboarding({ account: { email: mail, pw: obPwHash(pw), at: now } }, ncFill(t('Kunden oprettede en bruger på Crediwire ({email})'), { email: mail })) === false) return;
+      onAuthed(false, false);
+    }, 900);
   };
 
   const mailErr = tried && !emailOk ? t('Skriv en gyldig mail.') : '';
-  const pwErr = signup && tried && probs.length ? t('Adgangskoden opfylder ikke kravene nedenfor.') : '';
+  const pwErr = !exists && tried && probs.length ? t('Adgangskoden opfylder ikke kravene nedenfor.') : '';
   const rule = (k, txt) => {
     const ok = !probs.includes(k);
     return <li key={k} style={{ color: pw && ok ? 'var(--c-text-2)' : 'var(--c-text-3)' }}>
@@ -204,348 +209,371 @@ function PortalAuth({ mode, setMode, preview, onAuthed }) {
       <span style={ncHidden}>{pw ? (ok ? ': ' + t('opfyldt') : ': ' + t('mangler')) : ''}</span>
     </li>;
   };
+  const req = <span aria-hidden="true" className="cwx-req">*</span>;
+  const label = busy ? (exists ? t('Logger ind…') : t('Opretter bruger…')) : (exists ? t('Log ind') : t('Opret bruger'));
 
-  const why = (
-    <CWFold label={t('Hvorfor ligger siden på crediwire.app?')} id="cwp-auth-why" style={{ marginTop: 16 }}>
-      <p style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.6, margin: 0 }}>
-        {ncFill(t('EIFO bruger Crediwire til at indsamle materialet, derfor ligger siden på crediwire.app. Kun {adv} og hendes kolleger hos EIFO ser det, I sender.'), { adv: PORTAL_CONTACT.first })}{' '}
-        {t('Det virker som HentSelv hos Skat: I giver selv adgang, og I kan trække den tilbage.')}
-      </p>
-    </CWFold>
-  );
-  const form = (
-      <form onSubmit={submit} noValidate className="cwp-ob-card" style={signup ? undefined : { maxWidth: 440, margin: '0 auto' }}>
-        <ObTitle lead={signup
-          ? ncFill(t('{org} bruger Crediwire til at indsamle materialet til jeres ansøgning. Med en bruger kan I gemme undervejs og komme tilbage senere.'), { org: PORTAL_CONTACT.org })
-          : t('Log ind for at fortsætte med materialet til EIFO.')}>
-          {signup ? t('Opret jeres bruger') : t('Log ind')}
-        </ObTitle>
-
-        <div className="field" style={{ marginBottom: 12 }}>
-          <label htmlFor="cwp-auth-mail">{t('Mail')}</label>
-          <input id="cwp-auth-mail" className="input" type="email" autoComplete="username" value={email} readOnly={preview}
-            onChange={e => { setEmail(e.target.value); setErr(''); }} aria-invalid={mailErr ? 'true' : undefined} aria-describedby={mailErr ? 'cwp-auth-mail-err' : undefined}/>
-          {mailErr && <div id="cwp-auth-mail-err" role="alert" style={obErrStyle}>{mailErr}</div>}
-        </div>
-
-        <div className="field" style={{ marginBottom: 8 }}>
-          <label htmlFor="cwp-auth-pw1">{t('Adgangskode')}</label>
-          <div style={{ position: 'relative' }}>
-            <input id="cwp-auth-pw1" className="input" type={show ? 'text' : 'password'} autoComplete={signup ? 'new-password' : 'current-password'} value={pw} readOnly={preview}
-              onChange={e => { setPw(e.target.value); setErr(''); }} style={{ paddingRight: 64 }}
-              aria-invalid={pwErr || err ? 'true' : undefined} aria-describedby={[signup ? 'cwp-auth-rules' : '', pwErr ? 'cwp-auth-pw-err' : '', err ? 'cwp-auth-err' : ''].filter(Boolean).join(' ') || undefined}/>
-            <button type="button" className="cwp-linkbtn" onClick={() => setShow(!show)} aria-pressed={show}
-              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12.5 }}>{show ? t('Skjul') : t('Vis')}</button>
-          </div>
-          {pwErr && <div id="cwp-auth-pw-err" role="alert" style={obErrStyle}>{pwErr}</div>}
-          {signup && (
-            <ul id="cwp-auth-rules" style={{ listStyle: 'none', margin: '6px 0 0', padding: 0, fontSize: 12.5, lineHeight: 1.6 }}>
-              {rule('len', t('Mindst 8 tegn'))}
-              {rule('num', t('Et tal'))}
-              {rule('lower', t('Et lille bogstav'))}
-              {rule('upper', t('Et stort bogstav'))}
-            </ul>
-          )}
-        </div>
-
-        {!signup && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '10px 0 4px' }}>
-            <label data-cust-act="login" style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13.5, cursor: 'pointer', minHeight: 24 }}>
-              <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}/>
-              {t('Husk mig i 30 dage')}
-            </label>
-            <button type="button" className="cwp-linkbtn" data-cust-act="reset" onClick={() => setForgot(true)} style={{ fontSize: 13 }}>{t('Glemt adgangskode?')}</button>
-          </div>
-        )}
-        {forgot && (
-          <p role="status" style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.55, margin: '8px 0 0' }}>
-            {ncFill(t('Vi har sendt et link til {email}, så I kan vælge en ny adgangskode. Linket virker i 1 time.'), { email: portalMaskEmail(email.trim() || rcp.email) })}
-            {' '}<span className="muted">{t('Demo: mailen sendes ikke.')}</span>
-          </p>
-        )}
-        {err && <div id="cwp-auth-err" role="alert" style={Object.assign({}, obErrStyle, { fontSize: 13, marginTop: 10 })}>{err}{signup && ob.account ? <> <button type="button" className="cwp-linkbtn" onClick={() => setMode('login')}>{t('Log ind')}</button></> : null}</div>}
-
-        <button type="submit" className="btn btn-primary btn-lg" data-cust-act={signup ? 'account' : 'login'} style={Object.assign({ width: '100%', justifyContent: 'center', marginTop: 16 }, obPrimary)}>
-          {signup ? t('Opret bruger') : t('Log ind')}
-        </button>
-        <div style={{ marginTop: 14, fontSize: 13.5, color: 'var(--c-text-2)' }}>
-          {signup ? t('Har I allerede en bruger?') : t('Ny bruger?')}{' '}
-          <button type="button" className="cwp-linkbtn" onClick={() => setMode(signup ? 'login' : 'signup')}>{signup ? t('Log ind') : t('Opret en bruger')}</button>
-        </div>
-        {signup && why}
-      </form>
-  );
-  if (signup) {
-    return (
-      <ObFrame step="account" ob={preview ? ob : {}} onJump={preview ? (k => setMode(k === 'account' ? 'signup' : k)) : null}>
-        {form}
-        <PortalContactLine style={{ marginTop: 14 }}/>
-      </ObFrame>
-    );
-  }
   return (
-    <div className="cwp-auth">
-      {form}
-      <div style={{ maxWidth: 440, margin: '14px auto 0' }}><PortalContactLine/></div>
+    <div className="cwx">
+      <div className="cwx-left">
+        <div className="cwx-top">
+          <span className="cwx-logo" aria-label="Crediwire"><span className="cwx-logo-mark" aria-hidden="true">cw</span>crediwire</span>
+          {!preview && <div className="cwp-lang"><LanguageSwitcher compact/></div>}
+        </div>
+        <form onSubmit={submit} noValidate className="cwx-form">
+          <div className="cwx-demo">
+            <div>{t('Demo: Crediwires egen side. Crediwire ser selv, om mailen har en bruger, og sender kunden tilbage bagefter.')}</div>
+            {!preview && !ob.account && (
+              <div className="cwx-demo-opts">
+                <label><input type="checkbox" checked={demoExists} onChange={e => { setDemoExists(e.target.checked); if (!e.target.checked) setDemoHasCo(false); setErr(''); setTried(false); }}/> {t('Mailen har allerede en bruger')}</label>
+                <label><input type="checkbox" checked={demoHasCo} onChange={e => { setDemoHasCo(e.target.checked); if (e.target.checked) setDemoExists(true); setErr(''); setTried(false); }}/> {t('Brugeren har allerede virksomheden')}</label>
+              </div>
+            )}
+          </div>
+          <div className="cwx-ctx">
+            {exists
+              ? ncFill(t('Du har allerede en bruger hos Crediwire. Log ind, så sender vi dig tilbage til {what} for {company}.'), { what: t('Materiale til EIFO'), company: co.name })
+              : ncFill(t('Du er på vej til {what} for {company}.'), { what: t('Materiale til EIFO'), company: co.name }) + ' ' + t('Når brugeren er oprettet, sender vi dig tilbage.')}
+          </div>
+          <h1 className="cwx-h">{exists ? t('Log ind') : t('Opret bruger')}</h1>
+
+          <div className="field" style={{ marginBottom: 12 }}>
+            <label htmlFor="cwp-auth-mail">{req}{t('Mail')}</label>
+            <input id="cwp-auth-mail" className={'input' + (presetMail ? ' cwx-fixed' : '')} type="email" autoComplete="username" value={email} readOnly={preview || !!presetMail}
+              onChange={e => { setEmail(e.target.value); setErr(''); }} aria-required="true"
+              aria-invalid={mailErr ? 'true' : undefined} aria-describedby={mailErr ? 'cwp-auth-mail-err' : undefined}/>
+            {mailErr && <div id="cwp-auth-mail-err" role="alert" style={obErrStyle}>{mailErr}</div>}
+          </div>
+
+          <div className="field" style={{ marginBottom: 8 }}>
+            <div className="cwx-pw-row">
+              <label htmlFor="cwp-auth-pw1">{req}{t('Adgangskode')}</label>
+              {exists && <button type="button" className="cwp-linkbtn" data-cust-act="reset" onClick={() => { setForgot(true); setErr(''); }} style={{ fontSize: 13 }}>{t('Glemt adgangskode?')}</button>}
+            </div>
+            <div style={{ position: 'relative' }}>
+              <input id="cwp-auth-pw1" className="input" type={show ? 'text' : 'password'} autoComplete={exists ? 'current-password' : 'new-password'} value={pw} readOnly={preview}
+                onChange={e => { setPw(e.target.value); setErr(''); }} style={{ paddingRight: 64 }} aria-required="true"
+                aria-invalid={pwErr || err ? 'true' : undefined} aria-describedby={[!exists ? 'cwp-auth-rules' : '', pwErr ? 'cwp-auth-pw-err' : '', err ? 'cwp-auth-err' : ''].filter(Boolean).join(' ') || undefined}/>
+              <button type="button" className="cwp-linkbtn" onClick={() => setShow(!show)} aria-pressed={show}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12.5 }}>{show ? t('Skjul') : t('Vis')}</button>
+            </div>
+            {pwErr && <div id="cwp-auth-pw-err" role="alert" style={obErrStyle}>{pwErr}</div>}
+            {!exists && (
+              <ul id="cwp-auth-rules" className="cwp-ob-rules">
+                {rule('len', t('Mindst 8 tegn'))}
+                {rule('num', t('Et tal'))}
+                {rule('lower', t('Et lille bogstav'))}
+                {rule('upper', t('Et stort bogstav'))}
+              </ul>
+            )}
+          </div>
+          {forgot && (
+            <p role="status" style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.55, margin: '8px 0 0' }}>
+              {ncFill(t('Vi har sendt et link til {email}, så I kan vælge en ny adgangskode. Linket virker i 1 time.'), { email: portalMaskEmail(email.trim() || rcp.email) })}
+              {' '}<span className="muted">{t('Demo: mailen sendes ikke.')}</span>
+            </p>
+          )}
+          {err && <div id="cwp-auth-err" role="alert" style={Object.assign({}, obErrStyle, { fontSize: 13, marginTop: 10 })}>{err}</div>}
+
+          <button type="submit" className="btn btn-primary btn-lg" data-cust-act={exists ? 'login' : 'account'} aria-busy={busy || undefined}
+            style={Object.assign({ width: '100%', justifyContent: 'center', marginTop: 18 }, obPrimary)}>
+            {busy && <span aria-hidden="true" className="cwp-spin cwx-spin"/>}{label}
+          </button>
+          <button type="button" className="cwp-linkbtn cwx-back" onClick={onBack}>{t('Tilbage til Materiale til EIFO')}</button>
+        </form>
+      </div>
+      <div className="cwx-right" aria-hidden="true">
+        <div className="cwx-claim">{t('Digital og sikker deling af jeres finansielle data')}</div>
+      </div>
     </div>
   );
 }
 
-/* ── Vilkår ───────────────────────────────────────────────────────────────── */
+/* ── ① Bruger: før og efter Crediwire ─────────────────────────────────────── */
 
-function ObTerms({ preview, onNext, footer, onJump }) {
-  preview = preview || CW.isPreview();
-  const ob = CW.onboarding();
-  const [accepted, setAccepted] = React.useState(!!ob.terms);
-  const [marketing, setMarketing] = React.useState(!!(ob.terms && ob.terms.marketing));
-  const [tried, setTried] = React.useState(false);
-  const doc = (name) => (e) => { e.preventDefault(); e.stopPropagation(); CW.notInDemo(name); };
-  const next = () => {
-    if (!accepted) { setTried(true); CW.focusSoon('#cwp-ob-terms'); return; }
-    if (CW.setOnboarding({ terms: { at: new Date().toISOString(), marketing } }, marketing ? t('Kunden accepterede brugsvilkårene og sagde ja til nyheder fra Crediwire') : t('Kunden accepterede brugsvilkårene')) === false) return;
-    onNext();
-  };
-  const err = tried && !accepted;
+// Grøn boks: hvem kunden er logget ind som, med "Skift bruger"
+function ObWho({ ob, title, sub, onSwitch }) {
+  const name = (ob.account && ob.account.name) || '';
+  // Initialer fra navnet, ellers de to første bogstaver i mailen (fx "SP" for sp@…)
+  const mailLocal = ((ob.account && ob.account.email) || '?').split('@')[0];
+  const initials = name ? name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') : mailLocal.slice(0, 2).toUpperCase();
   return (
-    <ObFrame step="terms" ob={ob} onJump={onJump} footer={footer}>
-      <ObTitle lead={ncFill(t('{org} samarbejder med Crediwire om at indsamle materialet sikkert.'), { org: PORTAL_CONTACT.org })}>{t('Brugsvilkår')}</ObTitle>
-      <label data-cust-act="terms" className="cwp-ob-check">
-        <input id="cwp-ob-terms" type="checkbox" checked={accepted} onChange={e => { setAccepted(e.target.checked); if (e.target.checked) setTried(false); }}
-          aria-required="true" aria-invalid={err ? 'true' : undefined} aria-describedby={err ? 'cwp-ob-terms-err' : undefined}/>
-        <span>{t('Jeg accepterer Crediwires')} <button type="button" className="cwp-linkbtn" onClick={doc(t('Brugsvilkår'))}>{t('brugsvilkår')}</button>.</span>
-      </label>
-      {err && <div id="cwp-ob-terms-err" role="alert" style={Object.assign({}, obErrStyle, { marginLeft: 26 })}>{t('Acceptér brugsvilkårene for at fortsætte.')}</div>}
-      <label data-cust-act="terms" className="cwp-ob-check" style={{ marginTop: 12 }}>
-        <input type="checkbox" checked={marketing} onChange={e => setMarketing(e.target.checked)}/>
-        <span>{t('Ja tak, Crediwire må sende mig nyheder om produktet på mail (valgfrit).')}</span>
-      </label>
-      <p style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.6, margin: '16px 0 0' }}>
-        {t('EIFO er dataansvarlig for det, I deler med EIFO, og Crediwire behandler det på vegne af EIFO.')}{' '}
-        {t('Læs mere i')} <button type="button" className="cwp-linkbtn" onClick={doc(t('EIFO\'s privatlivsoplysninger'))}>{t('EIFO\'s privatlivsoplysninger')}</button>{' '}{t('og')}{' '}<button type="button" className="cwp-linkbtn" onClick={doc(t('Privatlivspolitik'))}>{t('Crediwires privatlivspolitik')}</button>.
-      </p>
-      <ObButtons>
-        <button type="button" className="btn btn-primary" data-cust-act="terms" onClick={next} style={obPrimary}>{t('Næste')}</button>
-      </ObButtons>
-    </ObFrame>
+    <div className="cwp-ob-whobox">
+      <span className="cwp-ob-avatar" aria-hidden="true">{initials}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="cwp-ob-whobox-t"><I.Check size={12} aria-hidden="true" className="cwp-ob-ok"/>{title}</div>
+        <div className="cwp-ob-whobox-s">{sub}</div>
+      </div>
+      {onSwitch && <button type="button" className="cwp-linkbtn" onClick={onSwitch} style={{ fontSize: 13, flexShrink: 0 }}>{t('Skift bruger')}</button>}
+    </div>
   );
 }
 
-/* ── Virksomhed: CVR og kontaktperson ────────────────────────────────────── */
-
-function ObCompany({ preview, onNext, onBack, footer, onJump }) {
+/**
+ * Trinnet Bruger (design "Bruger trin", 2a). Før login: "Log ind eller opret
+ * bruger" med virksomheden og én knap, "Fortsæt med Crediwire". Efter login:
+ * - ny bruger: "Færdiggør dine oplysninger" (navn, virksomhed, CVR, vilkår)
+ * - kendt bruger uden virksomheden: "Du er logget ind" og bekræft virksomheden
+ * - kendt bruger med virksomheden (arrive): tjekker, og sender videre til datadeling
+ */
+function ObUser({ preview, pre, arrive, demo, onContinue, onDone, onLogout, footer, onJump }) {
   preview = preview || CW.isPreview();
-  const ob = CW.onboarding();
-  const co = DATA.COMPANY || {};
+  // demo: et stadie, rådgiveren ser i Kundeflow (PortalObDemo), i stedet for kundens rigtige tilstand
+  const ob = demo || CW.onboarding();
   const rcp = portalRecipient();
-  const [cvr, setCvr] = React.useState(() => String((ob.company && ob.company.cvr) || co.cvr || '').replace(/\D/g, ''));
-  // Navnet fra anmodningen passer kun, når det er modtageren selv, der er logget ind (ikke fx revisoren)
-  const own = !ob.account || !rcp.email || ob.account.email.toLowerCase() === rcp.email.toLowerCase();
-  const [person, setPerson] = React.useState(() => (ob.company && ob.company.person) || (own ? rcp.name : '') || '');
-  const [helper, setHelper] = React.useState(!!(ob.company && ob.company.advisor));
-  const [tried, setTried] = React.useState(false);
-  const digits = cvr.replace(/\D/g, '');
+  const co = DATA.COMPANY || {};
+  const acc = ob.account || null;
+  const mail = (acc && acc.email) || '';
   const known = String(co.cvr || '').replace(/\D/g, '');
+  // Modtagerens navn står kun, når brugeren er modtageren selv
+  const own = !rcp.email || !mail || mail.toLowerCase() === rcp.email.toLowerCase();
+  const [person, setPerson] = React.useState(() => (ob.company && ob.company.person) || (acc && acc.name) || (own ? rcp.name || '' : ''));
+  const [coName, setCoName] = React.useState(() => (ob.company && ob.company.name) || co.name || '');
+  const [cvr, setCvr] = React.useState(() => (ob.company && ob.company.cvr) || known);
+  const [accepted, setAccepted] = React.useState(!!ob.terms);
+  const [marketing, setMarketing] = React.useState(false);
+  const [tried, setTried] = React.useState(false);
+  const [phase, setPhase] = React.useState(() => (arrive && ob.company ? 'checking' : null));
+  const isNew = !!acc && !ob.terms;
+  const needCo = !!acc && !!ob.terms && !ob.company;
+
+  // Kendt bruger med virksomheden: tjek, og når virksomheden er fundet, direkte til datadeling
+  React.useEffect(() => {
+    if (phase !== 'checking') return;
+    const a = setTimeout(() => onDone(), 1500);
+    return () => clearTimeout(a);
+  }, []);
+
+  const digits = String(cvr).replace(/\D/g, '');
+  const nameErr = isNew && !person.trim() ? t('Skriv dit navn.') : '';
+  const coErr = !coName.trim() ? t('Skriv virksomhedens navn.') : '';
   const cvrErr = digits.length !== 8 ? t('CVR-nummeret har 8 cifre.')
     : digits !== known ? ncFill(t('CVR {cvr} er ikke den virksomhed, EIFO har bedt om materiale fra. Tjek nummeret, eller skriv til {adv}.'), { cvr: digits, adv: PORTAL_CONTACT.first })
     : '';
-  const personErr = !person.trim() ? t('Skriv jeres navn.') : '';
-  const next = () => {
+  const doc = (n) => (e) => { e.preventDefault(); e.stopPropagation(); CW.notInDemo(n); };
+
+  const submit = (e) => {
+    if (e) e.preventDefault();
+    if (preview) return;
+    if (ob.company && !isNew) { onDone(); return; }
     setTried(true);
+    if (nameErr) { CW.focusSoon('#cwp-auth-name'); return; }
+    if (coErr) { CW.focusSoon('#cwp-ob-coname'); return; }
     if (cvrErr) { CW.focusSoon('#cwp-ob-cvr'); return; }
-    if (personErr) { CW.focusSoon('#cwp-ob-person'); return; }
-    if (CW.setOnboarding({ company: { cvr: digits, name: co.name, person: person.trim(), advisor: helper, at: new Date().toISOString() } },
-      ncFill(t('Kunden oprettede virksomheden {name} (CVR {cvr})'), { name: co.name, cvr: digits })) === false) return;
-    onNext();
+    if (isNew && !accepted) { CW.focusSoon('#cwp-auth-terms'); return; }
+    const now = new Date().toISOString();
+    const who = isNew ? person.trim() : ((acc && acc.name) || rcp.name || '');
+    const patch = { company: { cvr: digits, name: coName.trim(), person: who, advisor: false, at: now } };
+    if (isNew) {
+      patch.terms = { at: now, marketing };
+      patch.account = Object.assign({}, acc, { name: who });
+    }
+    const text = isNew
+      ? ncFill(t('Kunden accepterede brugsvilkårene og bekræftede virksomheden {company} ({name})'), { company: coName.trim(), name: who }) + (marketing ? '. ' + t('Ja tak til nyheder fra Crediwire') : '')
+      : ncFill(t('Kunden tilføjede virksomheden {company} (CVR {cvr}) til sin Crediwire-bruger'), { company: coName.trim(), cvr: digits });
+    if (CW.setOnboarding(patch, text) === false) return;
+    onDone();
   };
-  const showCvrErr = (tried || digits.length === 8) && cvrErr;
-  return (
-    <ObFrame step="company" ob={ob} onJump={onJump} footer={footer}>
-      <ObTitle lead={t('Tjek, at det er den virksomhed, EIFO har bedt om materiale fra.')}>{t('Jeres virksomhed')}</ObTitle>
-      <div className="field" style={{ marginBottom: 12 }}>
-        <label htmlFor="cwp-ob-cvr">{t('CVR-nummer')}</label>
-        <div style={{ display: 'flex' }}>
-          <span aria-hidden="true" className="cwp-ob-prefix">DK</span>
-          <input id="cwp-ob-cvr" className="input" inputMode="numeric" autoComplete="off" value={cvr} readOnly={preview}
-            onChange={e => setCvr(e.target.value.replace(/^\s*DK/i, '').replace(/\D/g, '').slice(0, 8))} onKeyDown={e => { if (e.key === 'Enter') next(); }} style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, flex: 1, minWidth: 0 }}
-            aria-invalid={showCvrErr ? 'true' : undefined} aria-describedby={showCvrErr ? 'cwp-ob-cvr-err' : (!cvrErr ? 'cwp-ob-cvr-found' : undefined)}/>
+
+  const coBox = (
+    <div className="cwp-ob-co">
+      <span className="cwp-ob-co-k">{t('Virksomhed')}</span>
+      <b>{co.name}</b>
+      <span>{[known ? 'CVR ' + known : '', co.address].filter(Boolean).join(' · ')}</span>
+    </div>
+  );
+  const coFields = (
+    <div className="cwp-ob-cofields">
+      <div className="field">
+        <label htmlFor="cwp-ob-coname">{t('Virksomhedsnavn')}</label>
+        <input id="cwp-ob-coname" className="input" value={coName} readOnly={preview} onChange={e => setCoName(e.target.value)}
+          aria-invalid={tried && coErr ? 'true' : undefined} aria-describedby={tried && coErr ? 'cwp-ob-coname-err' : undefined}/>
+        {tried && coErr && <div id="cwp-ob-coname-err" role="alert" style={obErrStyle}>{coErr}</div>}
+      </div>
+      <div className="field">
+        <label htmlFor="cwp-ob-cvr">{t('CVR')}</label>
+        <input id="cwp-ob-cvr" className="input" inputMode="numeric" value={cvr} readOnly={preview} onChange={e => setCvr(e.target.value.replace(/^\s*DK/i, '').replace(/\D/g, '').slice(0, 8))}
+          aria-invalid={tried && cvrErr ? 'true' : undefined} aria-describedby={tried && cvrErr ? 'cwp-ob-cvr-err' : undefined}/>
+      </div>
+      {tried && cvrErr && <div id="cwp-ob-cvr-err" role="alert" style={Object.assign({}, obErrStyle, { gridColumn: '1 / -1', marginTop: -4 })}>{cvrErr}</div>}
+    </div>
+  );
+
+  let heading, body;
+  if (pre || !acc) {
+    heading = t('Log ind eller opret bruger');
+    body = (
+      <>
+        {coBox}
+        <div className="cwp-ob-cwgo">
+          <button type="button" className="cwp-ob-cwbtn" onClick={onContinue}>
+            <span className="cwx-logo-mark" aria-hidden="true">cw</span>{t('Fortsæt med Crediwire')}
+          </button>
+          <p>{t('Du opretter en bruger eller logger ind hos Crediwire og kommer tilbage hertil.')}</p>
         </div>
-        {showCvrErr && <div id="cwp-ob-cvr-err" role="alert" style={obErrStyle}>{cvrErr}</div>}
-        {!cvrErr && (
-          <div id="cwp-ob-cvr-found" className="cwp-ob-found">
-            <b style={{ fontWeight: 600, color: 'var(--c-ink)' }}>{co.name}</b>
-            <span>{[co.address, co.form].filter(Boolean).join(' · ')}</span>
-          </div>
+      </>
+    );
+  } else if (phase === 'checking') {
+    heading = t('Du er logget ind');
+    body = (
+      <>
+        <ObWho ob={ob} title={ncFill(t('Logget ind som {name}'), { name: (acc && acc.name) || mail })} sub={mail}/>
+        <div className="cwp-ob-wait-row" role="status">
+          <span aria-hidden="true" className="cwp-spin"/>
+          <span>{ncFill(t('Tjekker, om {company} findes på din bruger…'), { company: co.name })}</span>
+        </div>
+      </>
+    );
+  } else if (isNew) {
+    heading = t('Færdiggør dine oplysninger');
+    body = (
+      <>
+        <ObWho ob={ob} title={t('Bruger oprettet.')} sub={mail} onSwitch={preview ? null : onLogout}/>
+        <div className="field">
+          <label htmlFor="cwp-auth-name">{t('Dit navn')}</label>
+          <input id="cwp-auth-name" className="input" autoComplete="name" value={person} readOnly={preview} onChange={e => setPerson(e.target.value)}
+            aria-invalid={tried && nameErr ? 'true' : undefined} aria-describedby={tried && nameErr ? 'cwp-auth-name-err' : undefined}/>
+          {tried && nameErr && <div id="cwp-auth-name-err" role="alert" style={obErrStyle}>{nameErr}</div>}
+        </div>
+        {coFields}
+        <div>
+          <label data-cust-act="terms" className="cwp-ob-check">
+            <input id="cwp-auth-terms" type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} aria-required="true"/>
+            <span>{t('Jeg accepterer Crediwires')} <button type="button" className="cwp-linkbtn" onClick={doc(t('Brugsvilkår'))}>{t('brugsvilkår')}</button>.</span>
+          </label>
+          <label data-cust-act="terms" className="cwp-ob-check" style={{ marginTop: 10 }}>
+            <input type="checkbox" checked={marketing} onChange={e => setMarketing(e.target.checked)}/>
+            <span>{t('Crediwire må sende mig nyheder og tilbud på mail (valgfrit).')}</span>
+          </label>
+        </div>
+      </>
+    );
+  } else {
+    heading = t('Du er logget ind');
+    body = (
+      <>
+        <ObWho ob={ob} title={ncFill(t('Logget ind som {name}'), { name: (acc && acc.name) || mail })} sub={[acc && acc.name, mail].filter(Boolean).join(' · ')} onSwitch={preview ? null : onLogout}/>
+        {needCo && <p className="cwp-ob-note">{t('Virksomheden findes ikke på din bruger endnu. Bekræft navn og CVR, så tilføjer vi den.')}</p>}
+        {needCo ? coFields : coBox}
+      </>
+    );
+  }
+  const showSubmit = !!acc && !pre && !phase;
+  const blocked = isNew && !accepted;
+
+  return (
+    <ObFrame step="account" ob={ob} onJump={onJump} footer={footer}>
+      <form onSubmit={submit} noValidate className="cwp-ob-card cwp-ob-user">
+        <h1 className="cwp-ob-h">{heading}</h1>
+        {body}
+        {showSubmit && (
+          <>
+            <div className="cwp-ob-rule" aria-hidden="true"/>
+            <button type="submit" className="btn btn-primary btn-lg" data-cust-act="company" disabled={blocked}
+              aria-describedby={blocked ? 'cwp-ob-user-hint' : undefined}
+              style={Object.assign({ width: '100%', justifyContent: 'center' }, blocked ? obDisabled : obPrimary)}>{t('Fortsæt til datadeling')}</button>
+            {blocked && <span id="cwp-ob-user-hint" style={ncHidden}>{t('Acceptér brugsvilkårene for at fortsætte.')}</span>}
+          </>
         )}
-      </div>
-      <div className="field" style={{ marginBottom: 12 }}>
-        <label htmlFor="cwp-ob-person">{t('Jeres navn')}</label>
-        <input id="cwp-ob-person" className="input" autoComplete="name" value={person} readOnly={preview} onChange={e => setPerson(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') next(); }}
-          aria-invalid={tried && personErr ? 'true' : undefined} aria-describedby={tried && personErr ? 'cwp-ob-person-err' : undefined}/>
-        {tried && personErr && <div id="cwp-ob-person-err" role="alert" style={obErrStyle}>{personErr}</div>}
-      </div>
-      <label data-cust-act="company" className="cwp-ob-check">
-        <input type="checkbox" checked={helper} onChange={e => setHelper(e.target.checked)}/>
-        <span>{t('Jeg er revisor, bogholder eller rådgiver og hjælper virksomheden.')}</span>
-      </label>
-      <ObButtons onBack={onBack}>
-        <button type="button" className="btn btn-primary" data-cust-act="company" onClick={next} style={obPrimary}>{t('Næste')}</button>
-      </ObButtons>
+      </form>
+      <PortalContactLine style={{ marginTop: 14 }}/>
     </ObFrame>
   );
 }
 
-/* ── Aftalen med EIFO: ja til at dele data ───────────────────────────────── */
+/* ── Demo: spring mellem stadierne i trinnet Bruger ───────────────────────── */
 
-function ObAgreement({ preview, onNext, onBack, onDecline, footer, onJump, standalone }) {
-  preview = preview || CW.isPreview();
-  const ob = CW.onboarding();
-  const [yes, setYes] = React.useState(!!(ob.agreement && !ob.agreement.declined));
-  const helper = !!(ob.company && ob.company.advisor);
-  const [mandate, setMandate] = React.useState(!!(ob.agreement && ob.agreement.mandate));
-  const [tried, setTried] = React.useState(false);
-  const next = () => {
-    if (!yes) { setTried(true); CW.focusSoon('#cwp-ob-agree'); return; }
-    if (helper && !mandate) { setTried(true); CW.focusSoon('#cwp-ob-mandate'); return; }
-    // Fra punktet Periodetal gemmes aftalen først sammen med datadelingen (så et "nej" ikke forsvinder halvvejs)
-    if (standalone) { onNext({ at: new Date().toISOString(), mandate: helper || undefined }); return; }
-    if (CW.setOnboarding({ agreement: Object.assign({ at: new Date().toISOString() }, helper ? { mandate: true } : {}) }, helper
-      ? ncFill(t('{name} ({role}) sagde ja til at dele periodetal og debitordata med EIFO på vegne af kunden'), { name: ob.company.person, role: t('revisor eller rådgiver') })
-      : t('Kunden sagde ja til at dele periodetal og debitordata med EIFO')) === false) return;
-    onNext();
-  };
-  const decline = () => {
-    if (CW.setOnboarding({ agreement: { declined: true, at: new Date().toISOString() }, sharing: null, erp: null, doneAt: ob.doneAt || new Date().toISOString() },
-      t('Kunden sagde nej til datadeling og sender tallene selv')) === false) return;
-    onDecline();
-  };
-  const err = tried && !yes;
-  const body = (
-    <>
-      <ObTitle lead={t('Når I forbinder virksomheden, deler I periodetal og debitordata med EIFO.')}>{t('Jeres aftale med EIFO')}</ObTitle>
-      <p style={{ fontSize: 14, color: 'var(--c-text)', lineHeight: 1.6, margin: '0 0 12px' }}>
-        {t('EIFO gemmer dataene og bruger dem til at vurdere jeres ansøgning og i dialogen med jer om den. På næste trin vælger I, om EIFO kun får tal til og med en bestemt måned, eller om EIFO løbende kan hente nye tal.')}
-      </p>
-      <CWFold label={t('Hvilke data deler I?')} id="cwp-ob-faq" style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.6 }}>
-          <p style={{ margin: '0 0 6px' }}>{t('Det er de samme tal, I ellers ville sende på mail, bare digitalt og mere sikkert.')}</p>
-          <div style={{ fontWeight: 600, color: 'var(--c-ink)' }}>{t('EIFO får')}</div>
-          <ul style={{ margin: '2px 0 8px', paddingLeft: 18 }}>
-            <li>{t('Kontoplan, saldobalance og periodetal')}</li>
-            <li>{t('Debitordata: hvem der skylder jer penge, og hvor længe')}</li>
-          </ul>
-          <div style={{ fontWeight: 600, color: 'var(--c-ink)' }}>{t('EIFO får ikke')}</div>
-          <ul style={{ margin: '2px 0 0', paddingLeft: 18 }}>
-            <li>{t('Posteringer og bilag')}</li>
-            <li>{t('Adgang til jeres netbank og banktransaktioner')}</li>
-          </ul>
-        </div>
-      </CWFold>
-      <label data-cust-act="agreement" className="cwp-ob-check">
-        <input id="cwp-ob-agree" type="checkbox" checked={yes} onChange={e => { setYes(e.target.checked); if (e.target.checked) setTried(false); }}
-          aria-required="true" aria-invalid={err ? 'true' : undefined} aria-describedby={err ? 'cwp-ob-agree-err' : undefined}/>
-        <span style={{ fontWeight: 500 }}>{t('Ja, vi accepterer at dele data med EIFO.')}</span>
-      </label>
-      {err && <div id="cwp-ob-agree-err" role="alert" style={Object.assign({}, obErrStyle, { marginLeft: 26 })}>{onDecline ? t('Sæt kryds for at fortsætte, eller send tallene selv.') : t('Sæt kryds for at fortsætte.')}</div>}
-      {helper && (
-        <>
-          <label data-cust-act="agreement" className="cwp-ob-check" style={{ marginTop: 10 }}>
-            <input id="cwp-ob-mandate" type="checkbox" checked={mandate} onChange={e => setMandate(e.target.checked)} aria-required="true"
-              aria-invalid={tried && yes && !mandate ? 'true' : undefined} aria-describedby={tried && yes && !mandate ? 'cwp-ob-mandate-err' : undefined}/>
-            <span>{ncFill(t('Jeg bekræfter, at jeg må give samtykke på vegne af {company}.'), { company: DATA.COMPANY.name })}</span>
-          </label>
-          {tried && yes && !mandate && <div id="cwp-ob-mandate-err" role="alert" style={Object.assign({}, obErrStyle, { marginLeft: 26 })}>{t('Bekræft, at du må give samtykke for virksomheden.')}</div>}
-        </>
-      )}
-      <ObButtons onBack={onBack}>
-        {onDecline && <button type="button" className="btn btn-ghost" data-cust-act="agreement" onClick={decline}>{t('Vi sender tallene selv')}</button>}
-        <button type="button" className="btn btn-primary" data-cust-act="agreement" onClick={next} style={obPrimary}>{t('Næste')}</button>
-      </ObButtons>
-    </>
-  );
-  if (standalone) return <div className="cwp-ob-card" style={{ maxWidth: 560, margin: '0 auto' }}>{body}</div>;
-  return <ObFrame step="agreement" ob={ob} onJump={onJump} footer={footer}>{body}</ObFrame>;
+const OB_DEMO_STAGES = ['pre', 'new', 'known', 'knownCo'];
+function obDemoLabel(k) {
+  switch (k) {
+    case 'pre': return t('Før login');
+    case 'new': return t('Ny bruger');
+    case 'known': return t('Kendt bruger uden virksomheden');
+    default: return t('Kendt bruger med virksomheden');
+  }
+}
+// Det stadie, kundens tilstand svarer til
+function obDemoStage(ob, loggedIn) {
+  if (!loggedIn || !ob.account) return 'pre';
+  if (!ob.terms) return 'new';
+  if (!ob.company) return 'known';
+  return 'knownCo';
+}
+// Kundens tilstand for et stadie. I portalen gemmes den; i Kundeflow vises den kun
+function obDemoState(k) {
+  const now = new Date().toISOString();
+  const rcp = portalRecipient();
+  const co = DATA.COMPANY || {};
+  const email = rcp.email || 'kunde@example.dk';
+  if (k === 'pre') return { account: null, terms: null, company: null };
+  if (k === 'new') return { account: { email, pw: obPwHash(OB_DEMO_PW), at: now }, terms: null, company: null };
+  const known = { account: { email, pw: obPwHash(OB_DEMO_PW), name: rcp.name || '', existing: true, at: now }, terms: { at: now, marketing: false } };
+  if (k === 'known') return Object.assign(known, { company: null });
+  return Object.assign(known, { company: { cvr: String(co.cvr || '').replace(/\D/g, ''), name: co.name, person: rcp.name || '', advisor: false, at: now } });
 }
 
-/* ── Datadeling: løbende (ubegrænset) eller til og med en dato (begrænset) ── */
+/** Stiplede demoknapper under trinnet Bruger: før login, ny bruger, kendt bruger uden og med virksomheden. */
+function PortalObDemo({ current, onPick, preview }) {
+  return (
+    <div className="cwp-obdemo" role="group" aria-label={t('Demo: stadier i trinnet Bruger')}>
+      <span className="cwp-obdemo-l">{preview ? t('Demo: vis trinnet som') : t('Demo: spring til')}</span>
+      {OB_DEMO_STAGES.map(k => (
+        <button key={k} type="button" className="cwp-obdemo-btn" aria-pressed={current === k} onClick={() => onPick(k)}>{obDemoLabel(k)}</button>
+      ))}
+    </div>
+  );
+}
 
-function ObAccess({ preview, onNext, onBack, footer, onJump, standalone, agreement }) {
+/* ── ② Datadeling: hvor meget EIFO må se, regnskabssystemet og aftalen ──── */
+
+const OB_TOP_SYSTEMS = ['ec', 'bi', 'di'];
+
+/**
+ * Ét kort: løbende eller til og med en måned, systemet og ja til at dele data
+ * (med fuldmagt, hvis det er revisoren eller rådgiveren). "Forbind" gemmer
+ * aftalen og valget og åbner systemets login og samtykke (PortalErpRun).
+ * Kunden kan også sende tallene selv eller vente på revisoren.
+ * standalone: uden for opstarten (fra punktet Periodetal eller oversigten), kun
+ * Tilbage og Forbind.
+ */
+function ObData({ preview, onFinished, onPin, onBack, footer, onJump, standalone }) {
   preview = preview || CW.isPreview();
   const ob = CW.onboarding();
+  const helper = !!(ob.company && ob.company.advisor);
   const maxYm = obLastMonth();
   const minYm = (Number(maxYm.slice(0, 4)) - 3) + '-01';
   // Forvalgt som i dag: til og med seneste måned. I forhåndsvisningen vises kundens eget valg (eller intet)
   const [mode, setMode] = React.useState(() => (ob.sharing && ob.sharing.mode) || (preview ? null : 'until'));
   const [ym, setYm] = React.useState(() => (ob.sharing && ob.sharing.dataUntil ? ob.sharing.dataUntil.slice(0, 7) : maxYm));
-  const ymOk = /^\d{4}-\d{2}$/.test(ym) && ym <= maxYm && ym >= minYm;
-  const next = () => {
-    if (!mode) return;
-    if (mode === 'until' && !ymOk) { CW.focusSoon('#cwp-ob-month'); return; }
-    const sharing = mode === 'ongoing' ? { mode, at: new Date().toISOString() } : { mode, dataUntil: obMonthEnd(ym), at: new Date().toISOString() };
-    if (CW.setOnboarding(Object.assign({ sharing }, agreement ? { agreement } : {}), mode === 'ongoing' ? t('Kunden valgte løbende datadeling') : ncFill(t('Kunden valgte datadeling til og med {date}'), { date: obFmt(sharing.dataUntil) })) === false) return;
-    onNext(sharing);
-  };
-  const opt = (v, label, desc) => (
-    <label data-cust-act="access" className={'cwp-ob-opt' + (mode === v ? ' on' : '')}>
-      <input type="radio" name="cwp-ob-share" checked={mode === v} onChange={() => setMode(v)} style={{ marginTop: 3 }}/>
-      <span style={{ minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>{label}</span>
-        <span style={{ display: 'block', fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.5, marginTop: 2 }}>{desc}</span>
-      </span>
-    </label>
-  );
-  const body = (
-    <>
-      <ObTitle lead={t('Vælg, hvordan I vil dele regnskabstal med EIFO.')}>{t('Hvor meget må EIFO se?')}</ObTitle>
-      <fieldset style={{ border: 0, margin: 0, padding: 0 }}>
-        <legend style={ncHidden}>{t('Datadeling')}</legend>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {opt('ongoing', t('Løbende deling (anbefalet)'), t('EIFO kan hente nye periodetal og debitordata, så I ikke skal sende filer frem og tilbage, og kan følge udviklingen, mens I har et lån eller en kaution hos EIFO. I kan trække adgangen tilbage når som helst.'))}
-          {opt('until', t('Til og med en bestemt måned'), t('EIFO får periodetal og debitordata til og med den måned, I vælger, og ikke nyere tal. Adgangen lukker, når sagen er afgjort.'))}
-        </div>
-      </fieldset>
-      {mode === 'until' && (
-        <div className="field" style={{ margin: '12px 0 0 28px' }}>
-          <label htmlFor="cwp-ob-month">{t('Til og med måned')}</label>
-          <input id="cwp-ob-month" className="input" type="month" value={ym} min={minYm} max={maxYm} readOnly={preview} onChange={e => setYm(e.target.value)}
-            style={{ maxWidth: 200 }} aria-invalid={!ymOk ? 'true' : undefined} aria-describedby="cwp-ob-month-hint"/>
-          <div id="cwp-ob-month-hint" className="muted" style={{ fontSize: 12.5, marginTop: 4 }} role={!ymOk ? 'alert' : undefined}>
-            {ymOk ? ncFill(t('EIFO får tal for {period}, til og med {date}.'), { period: portalPeriod(null, obMonthEnd(ym)), date: obFmt(obMonthEnd(ym)) }) : t('Vælg en afsluttet måned.')}
-          </div>
-        </div>
-      )}
-      <ObButtons onBack={onBack}>
-        <button type="button" className="btn btn-primary" data-cust-act="access" onClick={next} style={obPrimary}>{t('Næste')}</button>
-      </ObButtons>
-    </>
-  );
-  if (standalone) return <div className="cwp-ob-card" style={{ maxWidth: 560, margin: '0 auto' }}>{body}</div>;
-  return <ObFrame step="access" ob={ob} onJump={onJump} footer={footer}>{body}</ObFrame>;
-}
-
-/* ── Regnskabssystem ─────────────────────────────────────────────────────── */
-
-const OB_TOP_SYSTEMS = ['ec', 'bi', 'di'];
-
-function ObErp({ preview, onConnected, onWaiting, onBack, onPin, footer, onJump, standalone }) {
-  preview = preview || CW.isPreview();
-  const ob = CW.onboarding();
-  const sharing = ob.sharing || { mode: 'until', dataUntil: obMonthEnd(obLastMonth()) };
   // I forhåndsvisningen står kundens forbundne system valgt
   const [pick, setPick] = React.useState(() => { const s0 = ob.erp && ob.erp.system && ERP_SOURCES.find(x => x.name === ob.erp.system); return s0 ? s0.id : null; });
-  const [waiting, setWaiting] = React.useState(() => !!(preview && ob.erp && ob.erp.waiting));
-  const [noPick, setNoPick] = React.useState(false);
+  const [yes, setYes] = React.useState(!!(ob.agreement && !ob.agreement.declined));
+  const [mandate, setMandate] = React.useState(!!(ob.agreement && ob.agreement.mandate));
+  const [tried, setTried] = React.useState(false);
   const [run, setRun] = React.useState(null);         // kilden, der forbindes til
   const [declined, setDeclined] = React.useState(null);
   const src = ERP_SOURCES.find(s => s.id === pick) || null;
   const other = ERP_SOURCES.filter(s => !OB_TOP_SYSTEMS.includes(s.id));
+  const ymOk = /^\d{4}-\d{2}$/.test(ym) && ym <= maxYm && ym >= minYm;
+  const sharing = mode === 'ongoing' ? { mode } : mode === 'until' && ymOk ? { mode, dataUntil: obMonthEnd(ym) } : null;
+  const problem = !mode ? 'mode' : !sharing ? 'month' : !src ? 'sys' : !yes ? 'agree' : helper && !mandate ? 'mandate' : null;
+  const show = (k) => tried && problem === k;
 
-  const next = () => {
-    if (waiting) {
-      if (CW.setOnboarding({ erp: { waiting: true, at: new Date().toISOString() }, doneAt: ob.doneAt || new Date().toISOString() }, t('Kunden venter på sin revisor med at forbinde regnskabssystemet')) === false) return;
-      onWaiting();
+  // Aftalen og valget gemmes, før systemets login åbner, så de står der, hvis kunden afbryder
+  const saveChoices = () => {
+    const now = new Date().toISOString();
+    const sh = Object.assign({}, sharing, { at: now });
+    const what = obSharingText(sh);
+    return CW.setOnboarding({ agreement: Object.assign({ at: now }, helper ? { mandate: true } : {}), sharing: sh }, helper
+      ? ncFill(t('{name} ({role}) sagde ja til at dele periodetal og debitordata med EIFO på vegne af kunden ({sharing})'), { name: ob.company.person, role: t('revisor eller rådgiver'), sharing: what })
+      : ncFill(t('Kunden sagde ja til at dele periodetal og debitordata med EIFO ({sharing})'), { sharing: what })) !== false;
+  };
+  const connect = () => {
+    setTried(true);
+    if (problem) {
+      CW.focusSoon({ mode: 'input[name=cwp-ob-share]', month: '#cwp-ob-month', sys: 'input[name=cwp-ob-sys]', agree: '#cwp-ob-agree', mandate: '#cwp-ob-mandate' }[problem]);
       return;
     }
-    if (!src) { setNoPick(true); CW.focusSoon('input[name=cwp-ob-sys]'); return; }
+    if (!saveChoices()) return;
     setDeclined(null);
     // Trinnet bliver stående, mens forbindelsen kører, også når opstarten bliver færdig undervejs
     if (onPin) onPin();
@@ -554,7 +582,8 @@ function ObErp({ preview, onConnected, onWaiting, onBack, onPin, footer, onJump,
   // Tallene er hentet: trinnet er gjort med det samme (ikke først ved "Fortsæt"),
   // så en lukket fane ikke får kunden til at forbinde igen
   const fetched = (s) => {
-    CW.setOnboarding(Object.assign({ erp: { system: s.name, at: new Date().toISOString() } }, standalone ? {} : { doneAt: ob.doneAt || new Date().toISOString() }));
+    const now = new Date().toISOString();
+    CW.setOnboarding(Object.assign({ erp: { system: s.name, at: now } }, standalone ? {} : { doneAt: CW.onboarding().doneAt || now }));
   };
   const runDone = (res) => {
     const s = run;
@@ -564,79 +593,150 @@ function ObErp({ preview, onConnected, onWaiting, onBack, onPin, footer, onJump,
       setDeclined(s.name); CW.focusSoon('#cwp-ob-erp-declined'); return;
     }
     if (res !== 'done') return;
-    onConnected(s);
+    onFinished(s);
   };
+  const decline = () => {
+    if (CW.setOnboarding({ agreement: { declined: true, at: new Date().toISOString() }, sharing: null, erp: null, doneAt: ob.doneAt || new Date().toISOString() },
+      t('Kunden sagde nej til datadeling og sender tallene selv')) === false) return;
+    onFinished();
+  };
+  const wait = () => {
+    // Har kunden allerede sagt ja og valgt, gemmes det, så revisoren kun skal forbinde
+    if (yes && sharing && (!helper || mandate) && !saveChoices()) return;
+    if (CW.setOnboarding({ erp: { waiting: true, at: new Date().toISOString() }, doneAt: ob.doneAt || new Date().toISOString() }, t('Kunden venter på sin revisor med at forbinde regnskabssystemet')) === false) return;
+    onFinished();
+  };
+
+  const opt = (v, label, desc) => (
+    <label data-cust-act="data" className={'cwp-ob-opt' + (mode === v ? ' on' : '')}>
+      <input type="radio" name="cwp-ob-share" checked={mode === v} onChange={() => setMode(v)} style={{ marginTop: 3 }}
+        aria-describedby={show('mode') ? 'cwp-ob-share-err' : undefined}/>
+      <span style={{ minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>{label}</span>
+        <span style={{ display: 'block', fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.5, marginTop: 2 }}>{desc}</span>
+      </span>
+    </label>
+  );
 
   const body = (
     <>
-      <ObTitle lead={!ob.sharing && preview ? t('Kunden har ikke valgt datadeling endnu.')
-        : sharing.mode === 'ongoing' ? t('EIFO henter løbende periodetal og debitordata med læseadgang. I logger ind i jeres eget system.')
-        : ncFill(t('EIFO henter periodetal og debitordata til og med {date} med læseadgang. I logger ind i jeres eget system.'), { date: obFmt(sharing.dataUntil) })}>{t('Forbind jeres regnskabssystem')}</ObTitle>
-      {!standalone && (
-        <label data-cust-act="erp" className="cwp-ob-check" style={{ marginBottom: 14 }}>
-          <input type="checkbox" checked={waiting} onChange={e => setWaiting(e.target.checked)} aria-describedby="cwp-ob-wait-hint"/>
-          <span>{t('Vi venter på vores revisor')}
-            <span id="cwp-ob-wait-hint" style={{ display: 'block', fontSize: 12.5, color: 'var(--c-text-3)' }}>{t('Har revisoren adgangen, kan I forbinde senere fra oversigten.')}</span>
-          </span>
-        </label>
-      )}
+      <ObTitle lead={t('EIFO henter periodetal og debitordata direkte fra jeres regnskabssystem med læseadgang. Det er de samme tal, I ellers ville sende på mail.')}>{t('Del regnskabstal med EIFO')}</ObTitle>
       {declined && (
-        <p id="cwp-ob-erp-declined" role="status" tabIndex={-1} style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.55, outline: 'none' }}>
+        <p id="cwp-ob-erp-declined" className="cwp-ob-notice" role="status" tabIndex={-1}>
           {ncFill(t('I afviste adgangen i {src}. Intet er hentet, og EIFO har ikke fået adgang.'), { src: declined })}{' '}
-          {standalone ? t('I kan vælge et andet system eller gå tilbage og uploade en saldobalance selv.') : t('I kan vælge et andet system, sætte kryds i "Vi venter på vores revisor" eller gå tilbage til aftalen og sende tallene selv.')}
+          {standalone ? t('I kan vælge et andet system eller gå tilbage og uploade en saldobalance selv.') : t('I kan vælge et andet system, sende tallene selv eller vente på jeres revisor.')}
         </p>
       )}
-      <fieldset disabled={waiting} style={{ border: 0, margin: 0, padding: 0, opacity: waiting ? 0.5 : 1 }}>
-        <legend style={ncHidden}>{t('Vælg jeres regnskabssystem')}</legend>
+
+      <fieldset className="cwp-ob-sec cwp-ob-sec-first">
+        <legend className="cwp-ob-sub">{t('Hvor meget må EIFO se?')}</legend>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {opt('ongoing', t('Løbende deling (anbefalet)'), t('EIFO kan hente nye periodetal og debitordata, så I ikke skal sende filer frem og tilbage, og kan følge udviklingen, mens I har et lån eller en kaution hos EIFO. I kan trække adgangen tilbage når som helst.'))}
+          {opt('until', t('Til og med en bestemt måned'), t('EIFO får periodetal og debitordata til og med den måned, I vælger, og ikke nyere tal. Adgangen lukker, når sagen er afgjort.'))}
+        </div>
+        {show('mode') && <div id="cwp-ob-share-err" role="alert" style={obErrStyle}>{t('Vælg, hvor meget EIFO må se.')}</div>}
+        {mode === 'until' && (
+          <div className="field" style={{ margin: '12px 0 0 28px' }}>
+            <label htmlFor="cwp-ob-month">{t('Til og med måned')}</label>
+            <input id="cwp-ob-month" className="input" type="month" value={ym} min={minYm} max={maxYm} readOnly={preview} onChange={e => setYm(e.target.value)}
+              style={{ maxWidth: 200 }} aria-invalid={!ymOk ? 'true' : undefined} aria-describedby="cwp-ob-month-hint"/>
+            <div id="cwp-ob-month-hint" className="muted" style={{ fontSize: 12.5, marginTop: 4 }} role={!ymOk ? 'alert' : undefined}>
+              {ymOk ? ncFill(t('EIFO får tal for {period}, til og med {date}.'), { period: portalPeriod(null, obMonthEnd(ym)), date: obFmt(obMonthEnd(ym)) }) : t('Vælg en afsluttet måned.')}
+            </div>
+          </div>
+        )}
+      </fieldset>
+
+      <fieldset className="cwp-ob-sec">
+        <legend className="cwp-ob-sub">{t('Jeres regnskabssystem')}</legend>
         <div className="cwp-ob-systems">
           {OB_TOP_SYSTEMS.map(id => ERP_SOURCES.find(s => s.id === id)).map(s => (
-            <label key={s.id} data-cust-act="erp" className={'cwp-ob-sys' + (pick === s.id ? ' on' : '')}>
-              <input type="radio" name="cwp-ob-sys" checked={pick === s.id} onChange={() => { setPick(s.id); setNoPick(false); }} aria-describedby={noPick ? 'cwp-ob-sys-err' : undefined}/>
+            <label key={s.id} data-cust-act="data" className={'cwp-ob-sys' + (pick === s.id ? ' on' : '')}>
+              <input type="radio" name="cwp-ob-sys" checked={pick === s.id} onChange={() => setPick(s.id)} aria-describedby={show('sys') ? 'cwp-ob-sys-err' : undefined}/>
               <span>{s.name}</span>
             </label>
           ))}
         </div>
-        <div className="field" style={{ marginTop: 12 }}>
+        <div className="field" style={{ marginTop: 10 }}>
           <label htmlFor="cwp-ob-sys-other">{t('Kan I ikke se jeres system? Vælg det her.')}</label>
-          <select id="cwp-ob-sys-other" data-cust-act="erp" className="input" value={other.some(s => s.id === pick) ? pick : ''} disabled={preview}
-            onChange={e => { setPick(e.target.value || null); setNoPick(false); }}>
+          <select id="cwp-ob-sys-other" data-cust-act="data" className="input" value={other.some(s => s.id === pick) ? pick : ''} disabled={preview}
+            onChange={e => setPick(e.target.value || null)}>
             <option value="">{t('Vælg regnskabssystem')}</option>
             {other.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
         </div>
+        {show('sys') && <div id="cwp-ob-sys-err" role="alert" style={obErrStyle}>{t('Vælg jeres regnskabssystem.')}</div>}
       </fieldset>
-      {noPick && !waiting && !src && <div id="cwp-ob-sys-err" role="alert" style={obErrStyle}>{t('Vælg jeres regnskabssystem.')}</div>}
-      <ObButtons onBack={onBack}>
-        <button type="button" className="btn btn-primary" data-cust-act="erp" onClick={next} aria-disabled={!waiting && !src ? 'true' : undefined}
-          style={!waiting && !src ? Object.assign({}, obPrimary, { opacity: 0.5 }) : obPrimary}>
-          {waiting ? t('Næste') : src ? ncFill(t('Forbind {src}'), { src: src.name }) : t('Forbind')}
+
+      {/* Folden har selv en streg foroven */}
+      <div className="cwp-ob-sec cwp-ob-sec-fold">
+        <CWFold label={t('Hvilke data deler I?')} id="cwp-ob-faq" style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 6px' }}>{t('EIFO gemmer dataene og bruger dem til at vurdere jeres ansøgning og i dialogen med jer om den.')}</p>
+            <div style={{ fontWeight: 600, color: 'var(--c-ink)' }}>{t('EIFO får')}</div>
+            <ul style={{ margin: '2px 0 8px', paddingLeft: 18 }}>
+              <li>{t('Kontoplan, saldobalance og periodetal')}</li>
+              <li>{t('Debitordata: hvem der skylder jer penge, og hvor længe')}</li>
+            </ul>
+            <div style={{ fontWeight: 600, color: 'var(--c-ink)' }}>{t('EIFO får ikke')}</div>
+            <ul style={{ margin: '2px 0 0', paddingLeft: 18 }}>
+              <li>{t('Posteringer og bilag')}</li>
+              <li>{t('Adgang til jeres netbank og banktransaktioner')}</li>
+            </ul>
+          </div>
+        </CWFold>
+        <label data-cust-act="data" className="cwp-ob-check">
+          <input id="cwp-ob-agree" type="checkbox" checked={yes} onChange={e => setYes(e.target.checked)}
+            aria-required="true" aria-invalid={show('agree') ? 'true' : undefined} aria-describedby={show('agree') ? 'cwp-ob-agree-err' : undefined}/>
+          <span style={{ fontWeight: 500 }}>{t('Ja, vi accepterer at dele data med EIFO.')}</span>
+        </label>
+        {show('agree') && <div id="cwp-ob-agree-err" role="alert" style={Object.assign({}, obErrStyle, { marginLeft: 26 })}>{standalone ? t('Sæt kryds for at fortsætte.') : t('Sæt kryds for at fortsætte, eller send tallene selv.')}</div>}
+        {helper && (
+          <>
+            <label data-cust-act="data" className="cwp-ob-check" style={{ marginTop: 10 }}>
+              <input id="cwp-ob-mandate" type="checkbox" checked={mandate} onChange={e => setMandate(e.target.checked)} aria-required="true"
+                aria-invalid={show('mandate') ? 'true' : undefined} aria-describedby={show('mandate') ? 'cwp-ob-mandate-err' : undefined}/>
+              <span>{ncFill(t('Jeg bekræfter, at jeg må give samtykke på vegne af {company}.'), { company: DATA.COMPANY.name })}</span>
+            </label>
+            {show('mandate') && <div id="cwp-ob-mandate-err" role="alert" style={Object.assign({}, obErrStyle, { marginLeft: 26 })}>{t('Bekræft, at du må give samtykke for virksomheden.')}</div>}
+          </>
+        )}
+      </div>
+
+      <div className="cwp-ob-btns">
+        {standalone
+          ? <button type="button" className="btn" onClick={onBack}>{t('Tilbage')}</button>
+          : <button type="button" className="btn btn-ghost" data-cust-act="data" onClick={decline}>{t('Vi sender tallene selv')}</button>}
+        <button type="button" className="btn btn-primary" data-cust-act="data" onClick={connect} style={obPrimary}>
+          {src ? ncFill(t('Forbind {src}'), { src: src.name }) : t('Forbind')}
         </button>
-      </ObButtons>
+      </div>
+      {/* Er det revisoren selv, der udfylder, giver "vi venter på revisoren" ikke mening */}
+      {!standalone && !helper && (
+        <p className="cwp-ob-wait">
+          {t('Har jeres revisor adgang til regnskabssystemet?')}{' '}
+          <button type="button" className="cwp-linkbtn" data-cust-act="data" onClick={wait}>{t('Vi venter på vores revisor')}</button>
+          <span style={{ display: 'block', fontSize: 12.5, color: 'var(--c-text-3)' }}>{t('På oversigten kan I sende revisoren et link eller forbinde senere.')}</span>
+        </p>
+      )}
       {run && <PortalErpRun src={run} sharing={sharing} onFetched={fetched} onClose={runDone}/>}
     </>
   );
-  if (standalone) return <div className="cwp-ob-card" style={{ maxWidth: 560, margin: '0 auto' }}>{body}</div>;
-  return <ObFrame step="erp" ob={ob} onJump={onJump} footer={footer}>{body}</ObFrame>;
+  if (standalone) return <div className="cwp-ob-card">{body}</div>;
+  return <ObFrame step="data" ob={ob} onJump={onJump} footer={footer}>{body}</ObFrame>;
 }
 
 /**
  * Forbind regnskabssystemet uden for opstarten (fra punktet Periodetal eller
- * oversigten): aftalen og datadelingen først, hvis kunden ikke har dem, og så
- * valget af system. onDone kaldes, når tallene er hentet.
+ * oversigten): samme kort som i opstarten, med kundens tidligere valg udfyldt.
+ * onDone kaldes, når tallene er hentet.
  */
 function PortalErpSetup({ onBack, onDone, backLabel }) {
-  const ob = CW.onboarding();
-  const first = !ob.agreement || ob.agreement.declined ? 'agreement' : !ob.sharing ? 'access' : 'erp';
-  const [phase, setPhase] = React.useState(first);
-  const [agreement, setAgreement] = React.useState(null);
-  const go = (p) => { setPhase(p); CW.focusSoon('.cwp-main h1'); };
   React.useEffect(() => { if (CW.consent()) onBack(); }, []);
   return (
     <div style={{ maxWidth: 560, margin: '0 auto' }}>
       <PortalBackNav onBack={onBack} label={backLabel}/>
-      {phase === 'agreement' && <ObAgreement standalone onNext={(a) => { setAgreement(a); go('access'); }} onBack={onBack}/>}
-      {phase === 'access' && <ObAccess standalone agreement={agreement} onNext={() => go('erp')} onBack={() => (first === 'agreement' ? go('agreement') : onBack())}/>}
-      {phase === 'erp' && <ObErp standalone onConnected={() => onDone()} onWaiting={onBack} onBack={() => go('access')}/>}
+      <ObData standalone onFinished={() => onDone()} onBack={onBack}/>
     </div>
   );
 }
@@ -816,49 +916,25 @@ function PortalErpRun({ src, sharing, onFetched, onClose }) {
  * (eller et tidligere, hvis kunden går tilbage). I forhåndsvisningen er det det
  * trin, rådgiveren har valgt; footer er så forhåndsvisningens egen navigation.
  */
-function PortalOnboarding({ step, setStep, preview, onFinished, footer, onJump }) {
-  const next = (k) => () => { setStep(k); CW.focusSoon('.cwp-main h1'); };
-  const finish = () => onFinished();
-  if (step === 'terms') return <ObTerms preview={preview} onNext={next('company')} footer={footer} onJump={onJump}/>;
-  if (step === 'company') return <ObCompany preview={preview} onNext={next('agreement')} onBack={next('terms')} footer={footer} onJump={onJump}/>;
-  if (step === 'agreement') return <ObAgreement preview={preview} onNext={next('access')} onBack={next('company')} onDecline={finish} footer={footer} onJump={onJump}/>;
-  if (step === 'access') return <ObAccess preview={preview} onNext={next('erp')} onBack={next('agreement')} footer={footer} onJump={onJump}/>;
-  if (step === 'erp') return <ObErp preview={preview} onConnected={finish} onWaiting={finish} onBack={next('access')} onPin={() => setStep('erp')} footer={footer} onJump={onJump}/>;
+function PortalOnboarding({ step, setStep, preview, pre, arrive, demo, onContinue, onFinished, onLogout, footer, onJump }) {
+  if (step === 'account') return <ObUser preview={preview} pre={pre} arrive={arrive} demo={demo} onContinue={onContinue} onLogout={onLogout}
+    onDone={() => onFinished()} footer={footer} onJump={onJump}/>;
+  if (step === 'data') return <ObData preview={preview} onFinished={() => onFinished()} onPin={() => setStep('data')} footer={footer} onJump={onJump}/>;
   return null;
 }
 
 /* ── Forhåndsvisningen: navigation og noten, når rådgiveren rører en kundehandling ── */
 
 // Rækkefølgen af kundens skærme, som rådgiveren kan gå igennem
-const PV_SCREENS = ['signup', 'login', 'terms', 'company', 'agreement', 'access', 'erp', 'welcome', 'hub'];
+const PV_SCREENS = ['landing', 'account', 'signup', 'login', 'hub'];
 function pvScreenLabel(k) {
   switch (k) {
-    case 'signup': return t('Opret bruger');
-    case 'login': return t('Log ind');
-    case 'welcome': return t('Velkomst');
+    case 'landing': return t('Landingsside');
+    case 'signup': return t('Crediwire: Opret bruger');
+    case 'login': return t('Crediwire: Log ind');
     case 'hub': return t('Oversigt');
     default: return obLabel(k);
   }
-}
-
-// Hvor kunden er i opstarten, som én linje til rådgiveren
-function pvCustomerWhere() {
-  const ob = CW.onboarding();
-  const legacy = !ob.account && portalMem().accepted;
-  if (legacy) return t('Kunden er i gang med materialet.');
-  if (!ob.account) return t('Kunden har ikke oprettet en bruger endnu.');
-  const step = CW.onboardingStep(ob);
-  if (step) {
-    const i = CW.ONBOARDING_STEPS.indexOf(step);
-    // Antallet står i statusboksens overskrift (6 opstartstrin); her kun trinnets navn
-    return ncFill(t('Kunden er nået til trinnet {step}.'), { step: obLabel(step) });
-  }
-  if (ob.agreement && ob.agreement.declined) return t('Kunden har sagt nej til datadeling og sender tallene selv.');
-  const c = CW.consent();
-  const erp = c ? ncFill(t('{src} er forbundet'), { src: c.system })
-    : ob.erp && ob.erp.system ? ncFill(t('tallene er hentet fra {src}, og adgangen er lukket'), { src: ob.erp.system })
-    : ob.erp && ob.erp.waiting ? t('venter på revisor med regnskabssystemet') : t('regnskabssystemet er ikke forbundet');
-  return ncFill(t('Kunden har gennemført opstarten: {sharing}, {erp}.'), { sharing: obSharingText(ob.sharing) || t('ingen datadeling valgt'), erp });
 }
 
 // Under kortet i forhåndsvisningen: forrige og næste skærm (ingen af dem gemmer noget)
@@ -884,9 +960,7 @@ function pvBlockedText(what) {
     case 'login': return t('Kunden logger selv ind.');
     case 'reset': return t('Kunden beder selv om en ny adgangskode.');
     case 'terms': return t('Kunden accepterer selv brugsvilkårene.');
-    case 'company': return t('Kunden opretter selv virksomheden.');
-    case 'agreement': return t('Kunden vælger selv, om de vil dele data med EIFO.');
-    case 'access': return t('Kunden vælger selv, hvor meget EIFO må se.');
+    case 'data': return t('Kunden vælger selv, om og hvordan de deler regnskabstal med EIFO.');
     case 'erp': return t('Kunden forbinder selv regnskabssystemet.');
     case 'consent': return t('Kunden giver og trækker selv adgangen til regnskabssystemet tilbage.');
     case 'undo': return t('Kunden fortryder selv det, de har sendt.');
@@ -937,7 +1011,7 @@ function obDemoSkip() {
 }
 
 const PORTAL_OB_CSS = `
-.cwp .cwp-ob { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 32px; max-width: 800px; margin: 8px auto 0; align-items: start; }
+.cwp .cwp-ob { display: block; max-width: 520px; margin: 8px auto 0; }
 .cwp .cwp-ob-main { min-width: 0; max-width: 520px; }
 .cwp .cwp-ob-card { background: #fff; border: 1px solid var(--c-line); border-radius: 14px; padding: 24px 24px 20px; }
 .cwp .cwp-ob-h { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; color: var(--c-ink); margin: 0 0 6px; line-height: 1.25; }
@@ -945,8 +1019,79 @@ const PORTAL_OB_CSS = `
 .cwp .cwp-ob-btns { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
 .cwp .cwp-ob-check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 14px; color: var(--c-text); line-height: 1.5; }
 .cwp .cwp-ob-check input { margin-top: 3px; }
-.cwp .cwp-ob-prefix { display: grid; place-items: center; padding: 0 12px; border: 1px solid var(--c-line-strong); border-right: 0; border-radius: 6px 0 0 6px; background: var(--c-surface-2); color: var(--c-text-2); font-size: 13px; }
-.cwp .cwp-ob-found { margin-top: 6px; font-size: 12.5px; color: var(--c-text-2); display: flex; flex-direction: column; gap: 1px; }
+.cwp .cwp-ob-co { display: flex; flex-direction: column; gap: 1px; padding: 10px 12px; margin: 0 0 16px; background: var(--c-surface-2); border-radius: 8px; font-size: 12.5px; color: var(--c-text-2); }
+.cwp .cwp-ob-co b { font-size: 14px; font-weight: 600; color: var(--c-ink); }
+.cwp .cwp-ob-co-k { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--c-text-3); margin-bottom: 2px; }
+.cwp .cwp-ob-rules { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12.5px; line-height: 1.6; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+.cwp .cwp-ob-terms { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--c-line); }
+.cwp .cwp-ob-fine { font-size: 12.5px; color: var(--c-text-2); line-height: 1.6; margin: 12px 0 0; }
+.cwp .cwp-ob-sec { border: 0; margin: 18px 0 0; padding: 16px 0 0; border-top: 1px solid var(--c-line); min-width: 0; }
+.cwp .cwp-ob-sec-first { border-top: 0; margin-top: 0; padding-top: 0; }
+.cwp .cwp-ob-sec-fold { border-top: 0; padding-top: 0; }
+.cwp .cwp-ob-sub { padding: 0; font-size: 14px; font-weight: 600; color: var(--c-ink); margin: 0 0 10px; }
+.cwp fieldset.cwp-ob-sec > legend.cwp-ob-sub { float: left; width: 100%; }
+.cwp fieldset.cwp-ob-sec > legend.cwp-ob-sub + * { clear: both; }
+.cwp .cwp-ob-cw { width: 100%; justify-content: center; gap: 10px; margin-top: 22px; background: #fff; border: 1px solid var(--c-line-strong); color: var(--c-ink); font-weight: 600; }
+.cwp .cwp-ob-cw:hover:not(:disabled) { background: var(--c-surface-2); }
+.cwp .cwp-ob-cw:disabled { background: var(--c-surface-2); border-color: var(--c-line); color: var(--c-text-3); cursor: not-allowed; opacity: 1; }
+.cwp .cwp-ob-cw:disabled .cwx-logo-mark { opacity: .45; }
+.cwp .cwp-ob-cwnote { margin: 12px 0 0; text-align: center; font-size: 12.5px; line-height: 1.5; color: var(--c-text-2); }
+.cwp .cwp-ob-cw .cwx-logo-mark { width: 22px; height: 22px; font-size: 11px; }
+.cwp .cwp-ob-who { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin: 0 0 10px; font-size: 13px; color: var(--c-text-2); }
+.cwp .cwx { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100vh; background: #fff; }
+.cwp.cwp-preview .cwx { min-height: 680px; }
+.cwp .cwp-main-cw { background: #fff; }
+.cwp .cwp-obdemo { margin-top: 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; border: 1px dashed var(--c-line-strong); border-radius: 10px; font-size: 12.5px; color: var(--c-text-3); }
+.cwp .cwp-obdemo-l { margin-right: 4px; }
+.cwp .cwp-obdemo-btn { border: 1px dashed var(--c-line-strong); background: transparent; border-radius: 999px; padding: 4px 11px; min-height: 28px; font: inherit; font-size: 12.5px; color: var(--c-text-2); cursor: pointer; }
+.cwp .cwp-obdemo-btn:hover { border-color: var(--c-text-3); color: var(--c-ink); }
+.cwp .cwp-obdemo-btn[aria-pressed=true] { border-style: solid; border-color: var(--c-ink); background: #fff; color: var(--c-ink); }
+@media (max-width: 600px) { .cwp .cwp-obdemo-btn { min-height: 40px; } }
+.cwp .cwp-main-cw ~ .cwp-demo .cwp-demo-fill { background: rgba(255, 255, 255, 0.9); border-radius: 999px; color: var(--c-text-2); }
+.cwp .cwx-demo-opts { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.cwp .cwx-demo-opts label { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--c-text-2); min-height: 24px; }
+.cwp .cwx-fixed { background: var(--c-surface-2); color: var(--c-text-2); }
+.cwp .cwx-pw-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.cwp .cwx-spin { width: 14px; height: 14px; margin-right: 8px; border-color: rgba(255,255,255,0.4); border-top-color: #fff; }
+.cwp .cwx-back { margin-top: 14px; font-size: 14px; align-self: flex-start; }
+.cwp .cwp-ob-user { display: flex; flex-direction: column; gap: 18px; }
+.cwp .cwp-ob-user .cwp-ob-h { margin: 0; }
+.cwp .cwp-ob-user .cwp-ob-co { margin: 0; }
+.cwp .cwp-ob-user .field { margin: 0; }
+.cwp .cwp-ob-cwgo { display: flex; flex-direction: column; gap: 10px; }
+.cwp .cwp-ob-cwgo p { margin: 0; text-align: center; font-size: 13px; color: var(--c-text-2); }
+.cwp .cwp-ob-cwbtn { display: flex; align-items: center; justify-content: center; gap: 10px; height: 44px; border: 1px solid var(--c-ink); border-radius: 8px; background: #fff; color: var(--c-ink); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+.cwp .cwp-ob-cwbtn:hover { background: var(--c-surface-2); }
+.cwp .cwp-ob-cwbtn .cwx-logo-mark { width: 20px; height: 20px; font-size: 9px; border-radius: 5px; background: var(--c-primary); }
+.cwp .cwp-ob-whobox { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #bfe3c6; background: var(--c-success-bg); border-radius: 8px; }
+.cwp .cwp-ob-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--c-primary); color: #fff; font-weight: 700; font-size: 13px; display: grid; place-items: center; flex-shrink: 0; }
+.cwp .cwp-ob-whobox-t { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: var(--c-ink); }
+.cwp .cwp-ob-whobox-s { font-size: 13px; color: var(--c-text-2); overflow-wrap: anywhere; }
+.cwp .cwp-ob-ok { width: 16px; height: 16px; padding: 2px; border-radius: 50%; background: var(--c-success); color: #fff; flex-shrink: 0; box-sizing: border-box; }
+.cwp .cwp-ob-wait-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--c-text-2); padding: 2px; }
+.cwp .cwp-ob-cofields { display: grid; grid-template-columns: minmax(0, 1fr) 140px; gap: 12px; }
+.cwp .cwp-ob-note { margin: 0; font-size: 14px; line-height: 1.5; color: var(--c-text-2); }
+.cwp .cwp-ob-rule { height: 1px; background: var(--c-line); }
+@media (max-width: 520px) { .cwp .cwp-ob-cofields { grid-template-columns: 1fr; } }
+.cwp .cwx-left { display: flex; flex-direction: column; padding: 18px 32px 32px; min-width: 0; }
+.cwp .cwx-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.cwp .cwx-logo { display: inline-flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; color: #2b4c7e; }
+.cwp .cwx-logo-mark { width: 26px; height: 26px; border-radius: 6px; background: #4a8fd8; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.cwp .cwx-form { width: 100%; max-width: 360px; margin: auto; padding: 32px 0 24px; }
+.cwp .cwx-demo { margin: 0 0 14px; padding: 8px 10px; border: 1px dashed var(--c-line-strong); border-radius: 8px; font-size: 12px; color: var(--c-text-3); line-height: 1.45; }
+.cwp .cwx-ctx { margin: 0 0 18px; padding: 10px 12px; background: #eef4fb; border-radius: 8px; font-size: 13px; color: var(--c-text); line-height: 1.5; }
+.cwp .cwx-h { font-size: 20px; font-weight: 600; color: var(--c-ink); margin: 0 0 16px; letter-spacing: -0.01em; }
+.cwp .cwx-req { color: #e5484d; margin-right: 3px; }
+.cwp .cwx-right { position: relative; display: grid; place-items: center; padding: 32px; background: linear-gradient(165deg, #dbe8f5 0%, #b4cbe3 45%, #7f9dbd 75%, #5b7896 100%); }
+.cwp .cwx-claim { max-width: 360px; padding: 22px 26px; background: rgba(255, 255, 255, 0.78); border-radius: 4px; font-size: 22px; font-weight: 600; line-height: 1.35; color: #1d2a3a; }
+@media (max-width: 760px) {
+  .cwp .cwx { grid-template-columns: 1fr; min-height: 0; }
+  .cwp .cwx-right { display: none; }
+  .cwp .cwx-left { padding: 14px 16px 24px; }
+  .cwp .cwx-form { padding-top: 20px; }
+}
+.cwp .cwp-ob-notice { margin: 0 0 16px; padding: 10px 12px; background: var(--c-surface-2); border: 1px solid var(--c-line-strong); border-radius: 8px; font-size: 13px; color: var(--c-text); line-height: 1.55; outline: none; }
+.cwp .cwp-ob-wait { margin: 14px 0 0; font-size: 13px; color: var(--c-text-2); line-height: 1.55; }
 .cwp .cwp-ob-opt { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--c-line); border-radius: 8px; cursor: pointer; background: #fff; }
 .cwp .cwp-ob-opt.on { border-color: var(--c-primary); }
 .cwp .cwp-ob-systems { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -989,4 +1134,4 @@ const PORTAL_OB_CSS = `
 }
 `;
 
-Object.assign(window, { PortalAuth, PortalOnboarding, PortalErpSetup, PortalErpRun, PortalPvStepNav, PortalPvNote, PV_SCREENS, pvScreenLabel, pvCustomerWhere, obDemoSkip, obSharingText, obMonthEnd, obLastMonth, obFmt, OB_DEMO_PW, obPwHash, PORTAL_OB_CSS });
+Object.assign(window, { PortalCwAuth, PortalObDemo, obDemoStage, obDemoState, obDemoLabel, PortalOnboarding, PortalErpSetup, PortalErpRun, PortalPvStepNav, PortalPvNote, PV_SCREENS, pvScreenLabel, obDemoSkip, obSharingText, obMonthEnd, obLastMonth, obFmt, OB_DEMO_PW, obPwHash, PORTAL_OB_CSS });

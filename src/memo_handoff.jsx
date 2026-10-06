@@ -280,6 +280,27 @@ function hoGuideMarkdown() {
   });
   p('');
 
+  // Rådgiverens interne noter til materialet (aldrig set af kunden); står på dansk, som rådgiveren skrev dem
+  const inotes = (() => {
+    try {
+      const all = (CW.KEYS && CW.KEYS.internalNotes && JSON.parse(localStorage.getItem(CW.KEYS.internalNotes) || '{}')) || {};
+      return Object.keys(all).map(id => {
+        const it = CW.itemById ? CW.itemById(id) : null;
+        const st = CW.itemState ? CW.itemState(id) : null;
+        return { id, label: it ? it.label : id, status: st && st.status, ...all[id] };
+      }).filter(n => n.text && String(n.text).trim());
+    } catch (e) { return []; }
+  })();
+  if (inotes.length) {
+    p('## Adviser notes on the material', '');
+    p('Internal notes the adviser wrote in Crediwire on individual items. The customer has not seen them. They are in Danish. Treat them as the adviser own comments and take them into account in the memo.', '');
+    inotes.forEach(n => {
+      const st = n.status === 'approved' ? 'approved by the adviser' : n.status === 'received' || n.status === 'noted' ? 'received, not yet reviewed' : n.status === 'rejected' ? 'rejected, customer asked to resend' : 'not received';
+      p('- **' + n.label + '** (' + st + (n.by ? '; ' + n.by : '') + (n.at ? ', ' + String(n.at).slice(0, 10) : '') + '): ' + String(n.text).replace(/\s+/g, ' ').trim());
+    });
+    p('');
+  }
+
   p('## Reading the figures', '');
   p('- Amounts are in DKK. The financial table (Regnskabstabel) is in DKK thousands; the annual reports use t.DKK (thousands).');
   p('- 2026E = January-August actuals plus budget for September-December. 2027B = budget for Q1-Q3 2027 only (9 months), so it is not comparable with a full year.');

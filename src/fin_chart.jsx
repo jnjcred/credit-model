@@ -1,11 +1,17 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   Regnskab v2: grafen "Omsætning og EBITDA" (5. oktober)
+   Regnskab v2: grafen over regnskabstabellen (5.-6. oktober)
 
    Bygget efter designet "Virksomheden v2" fra Claude Design
-   (design_handoff_regnskab_graf), men tegnet med prototypens eget
-   designsystem (farver, skrift, knapper). Grafen står i sit eget kort over
-   tabellen: [detaljefelt] 2023 · 2024 · 2025 · 2026 · 2027. Tabellen er
-   uændret bortset fra, at 2026 og 2027 følger det leverede.
+   (design_handoff_regnskab_graf, seneste udgave "Graph redesign without
+   takt"), men tegnet med prototypens eget designsystem (farver, skrift,
+   knapper). Grafen står i sit eget kort over tabellen, og kolonnerne følger
+   tabellens: [detaljefelt] 2023 · 2024 · 2025 · 2026 · 2027.
+
+   Serier: Omsætning, Bruttofortjeneste og EBITDA kan slås til og fra i
+   kortets hoved (standard: Omsætning og EBITDA). Titlen følger de viste
+   serier. Oplyser årsrapporterne ikke omsætningen (små virksomheder må
+   udelade den), slås Omsætning fra med en forklaring, og Bruttofortjeneste
+   vises i stedet; i tabellen står "Ikke oplyst", og tallet kan indtastes.
 
    Grafen følger, hvad kunden faktisk har leveret (finDataState i
    financials.jsx): budget ja/nej og måneder med periodetal. Fire tilstande:
@@ -13,8 +19,9 @@
    2. Budget uden periodetal: 2026E = budgettet alene.
    3. Periodetal uden budget: 2026 = periodetal plus lineær fremskrivning;
       2027 beder rådgiveren om et budget.
-   4. Ingen af delene: ingen prognose; kortet beder om budget og bogføring.
-   Ingen menuer, forvalg eller andet end det, designet viser.
+   4. Ingen af delene: ingen prognose; kortet beder om budget og periodetal.
+   EBITDA-margin-strimlen er taget ud efter designets beslutning; marginerne
+   står i detaljefeltet og i tabellen.
    ──────────────────────────────────────────────────────────────────────── */
 
 const FIN_CHART_KEY = 'kabul:fin-chart';
@@ -36,69 +43,49 @@ function finRest(n) { return t(n <= 0 ? 'jan-dec' : n === 11 ? 'dec' : FIN_MONTH
 const finPctUnit = () => (window.CW_LANG === 'en' ? '%' : ' %');
 function finPct1(v) { return v == null || !isFinite(v) ? '–' : formatNum(v, { decimals: 1 }) + finPctUnit(); }
 
-/** Grafens tal ud fra modellen (med rettelser) og det, kunden har leveret. */
-function finChartPeriods(model, data, fmt) {
+// Serierne i den rækkefølge, de står i kortets hoved. Søjlerne tegnes omvendt
+// (EBITDA, Bruttofortjeneste, Omsætning), så den vigtigste står yderst til højre.
+const FIN_SERIES = [
+  { k: 'rev', row: 'Nettoomsætning', name: 'Omsætning' },
+  { k: 'bf', row: 'Bruttofortjeneste', name: 'Bruttofortjeneste' },
+  { k: 'eb', row: 'EBITDA', name: 'EBITDA' },
+];
+
+/** Perioderne (2023-2027) og en funktion, der giver en series lag i en periode. */
+function finChartModel(model, data) {
   const N = data.months, B = data.hasBudget;
   const val = (label, col) => { const r = model.byLabel[label]; if (!r) return null; const x = finRawValue(r, col); return x == null || isNaN(x) ? null : x; };
-  const getter = (col) => (label) => val(label, col);
   // Realiseret jan-N: summen af de realiserede kvartaler
   const ytd = (label) => {
     const xs = FIN_ACTUAL_Q.map((p, i) => val(label, { kind: 'q', idx: i }));
     if (xs.some(x => x == null)) return null;
     return xs.reduce((a, b) => a + b, 0);
   };
-  const REV = 'Nettoomsætning', EB = 'EBITDA';
-  const per = finPer(N), rest = finRest(N);
-  const P = FIN_ANNUAL_YEARS.map((y, i) => {
-    const g = getter({ kind: 'annual', idx: i });
-    const edited = !!(model.map && model.map[REV + '|y' + i]);
-    const rev = g(REV);
-    // Årsrapporten oplyser ikke omsætningen: rådgiveren kan indtaste den eller bede om en intern årsrapport
-    if (rev == null) return { year: y, g, rev: null, real: null, eb: g(EB), ebKind: 'act', kind: 'annual', norev: true, colIdx: i,
-      facts: [[t('Kilde'), t('Årsrapport uden omsætning')]],
-      note: t('Årsrapporten oplyser ikke omsætningen. Små virksomheder må udelade den. Indtast den fra en intern årsrapport, eller bed kunden om årsrapporten med omsætning.') };
-    return { year: y, g, rev, real: rev, eb: g(EB), ebKind: 'act', kind: 'annual',
-      facts: [[t('Kilde'), edited ? t('Årsrapport, rettet manuelt') : t('Årsrapport')]] };
-  });
-  P.forEach((p, i) => { if (i > 0) p.cmp = { base: P[i - 1].rev, label: finFill(t('mod {aar}'), { aar: P[i - 1].year }) }; });
-  const last = P[P.length - 1];
+  const P = FIN_ANNUAL_YEARS.map((y, i) => ({ year: y, kind: 'annual', idx: i, g: (l) => val(l, { kind: 'annual', idx: i }) }));
+  // 2026: periodetal + budget, budget alene, periodetal alene (fremskrevet) eller intet
+  if (B && N) P.push({ year: '2026E', kind: 'fc26', kilde: true, g: (l) => val(l, { kind: 'est' }) });
+  else if (B) P.push({ year: '2026E', kind: 'bud26', kilde: true, yearSub: t('sep-dec budget'), g: (l) => val(l, { kind: 'est', mode: 'budget' }),
+    note: t('Der er ingen bogføring for 2026 endnu, og budgettet dækker kun sep-dec. Året vises alene ud fra budgettet.') });
+  else if (N) P.push({ year: '2026', kind: 'ytd', kilde: true, showYtd: true, g: (l) => ytd(l),
+    note: finFill(N === 1 ? t('Lineær fremskrivning af {n} måned. Sæsonudsving er ikke medregnet.') : t('Lineær fremskrivning af {n} måneder. Sæsonudsving er ikke medregnet.'), { n: N })
+      + (N <= 3 ? ' ' + t('Få måneder giver et usikkert skøn.') : '') });
+  else P.push({ year: '2026', kind: 'none', blank: true, g: () => null });
+  // 2027: budget for Q1-Q3, ellers "Intet budget" (med periodetal) eller intet
+  if (B) P.push({ year: '2027B', kind: 'b9', g: (l) => val(l, { kind: 'b9' }) });
+  else P.push({ year: '2027', kind: 'none', empty: N > 0, blank: !N, g: () => null });
 
-  // 2026
-  if (B && N) {
-    const g = getter({ kind: 'est' });
-    const rev = g(REV), real = ytd(REV);
-    P.push({ year: '2026E', g, rev, real, bud: rev != null && real != null ? rev - real : rev, eb: g(EB), ebKind: 'fc', kind: 'fc', kilde: true,
-      cmp: { base: last.rev, label: finFill(t('mod {aar}'), { aar: last.year }) },
-      facts: [[finFill(t('Periodetal ({per})'), { per }), fmt(real, {})], [finFill(t('Budget ({per})'), { per: rest }), fmt(rev - real, {})]] });
-  } else if (B) {
-    // Budgettet dækker kun sep-dec 2026 (budget v3), så året står som budget alene
-    const g = getter({ kind: 'est', mode: 'budget' });
-    const rev = g(REV);
-    P.push({ year: '2026E', yearSub: t('sep-dec budget'), g, rev, real: 0, bud: rev, eb: g(EB), ebKind: 'fc', kind: 'fc', kilde: true,
-      facts: [[t('Periodetal'), t('Ingen')], [finFill(t('Budget ({per})'), { per: t('sep-dec') }), fmt(rev, {})]],
-      note: t('Der er ingen bogføring for 2026 endnu, og budgettet dækker kun sep-dec. Året vises alene ud fra budgettet.') });
-  } else if (N) {
-    const g = (label) => ytd(label);
-    const real = ytd(REV), annual = real != null ? real / N * 12 : null;
-    const ebY = ytd(EB);
-    P.push({ year: '2026', g, rev: annual, real, ghost: annual != null ? annual - real : null, showYtd: true, kind: 'ytd', kilde: true,
-      eb: ebY, ebAnnual: ebY != null ? ebY / N * 12 : null, ebKind: 'ytd',
-      cmp: { base: last.rev, label: finFill(t('fremskrevet mod {aar}'), { aar: last.year }), base2: annual },
-      facts: [[finFill(t('Periodetal ({per})'), { per }), fmt(real, {})], [t('Fremskrevet helår'), '≈ ' + fmt(annual, {})]],
-      note: finFill(N === 1 ? t('Lineær fremskrivning af {n} måned. Sæsonudsving er ikke medregnet.') : t('Lineær fremskrivning af {n} måneder. Sæsonudsving er ikke medregnet.'), { n: N })
-        + (N <= 3 ? ' ' + t('Få måneder giver et usikkert skøn.') : '') });
-  } else {
-    P.push({ year: '2026', g: () => null, rev: null, blank: true, kind: 'none', facts: [[t('Kilde'), t('Ingen periodetal eller budget')]] });
-  }
-  // 2027
-  if (B) {
-    const g = getter({ kind: 'b9' });
-    const rev = g(REV);
-    P.push({ year: '2027B', g, rev, real: 0, bud: rev, eb: g(EB), ebKind: 'fc', kind: 'fc', facts: [[t('Kilde'), t('9 mdr. budget')]] });
-  } else {
-    P.push({ year: '2027', g: () => null, rev: null, empty: !!N, blank: !N, kind: 'none', facts: [[t('Kilde'), t('Intet budget')]] });
-  }
-  return P;
+  // En series lag i en periode: realiseret (fyldt), budget (skraveret), fremskrevet (stiplet)
+  const stack = (label, q) => {
+    if (q.blank || q.empty) return null;
+    let s = null;
+    if (q.kind === 'annual') { const v = q.g(label); s = v == null ? null : { real: v, bud: 0, ghost: 0 }; }
+    else if (q.kind === 'fc26') { const tot = q.g(label), r = ytd(label); s = tot == null ? null : { real: r || 0, bud: tot - (r || 0), ghost: 0 }; }
+    else if (q.kind === 'bud26' || q.kind === 'b9') { const v = q.g(label); s = v == null ? null : { real: 0, bud: v, ghost: 0 }; }
+    else if (q.kind === 'ytd') { const r = ytd(label); s = r == null ? null : { real: r, bud: 0, ghost: r / N * 12 - r }; }
+    if (s) s.tot = s.real + s.bud + s.ghost;
+    return s;
+  };
+  return { P, stack, N, B };
 }
 
 /** Bed kunden om et punkt: vælg det i "Anmod om materiale" og åbn dialogen på Overblik. */
@@ -110,16 +97,20 @@ function finAskCustomer(itemId, go) {
 
 // Grafens faste mål (designets mål, en anelse tættere som resten af appen)
 const FIN_PLOT_H = 360;      // søjlefeltet
-const FIN_STRIP_H = 96;      // EBITDA-margin
 const FIN_PX_PER_T = 0.0056; // px pr. DKK t. (50.000 ≈ 280 px)
-const FIN_SAREA_H = 60;      // strimlens tegneflade: 96 - 26 (top) - 10 (bund)
-// Søjlernes bredde: omsætning 40 px og EBITDA 16 px, men smallere når tabellens
-// årskolonner er smalle (smal skærm), så etiketterne bliver i deres egen kolonne.
-function finBarSizes(colPx) {
-  const rev = Math.max(18, Math.min(40, Math.round(colPx * 0.36)));
-  const eb = Math.max(8, Math.min(16, Math.round(colPx * 0.15)));
-  const gap = colPx < 90 ? 3 : 4;
-  return { rev, eb, gap, off: rev + gap + eb / 2 };
+
+/* Søjlebredder efter designet: én stor serie 48 px og EBITDA 20 px; Omsætning og
+   Bruttofortjeneste sammen 26 px hver og EBITDA 16 px; EBITDA alene 48 px.
+   Er tabellens årskolonner smalle (smal skærm), skaleres alt ned, så søjlerne
+   bliver i deres egen kolonne. */
+function finBarWidths(keys, colPx, pad) {
+  const big = keys.filter(k => k !== 'eb').length;
+  const want = keys.map(k => (k === 'eb' ? (big === 0 ? 48 : big === 2 ? 16 : 20) : (big === 2 ? 26 : 48)));
+  const gap = keys.length > 2 ? 6 : 4;
+  const total = want.reduce((a, b) => a + b, 0) + gap * Math.max(0, keys.length - 1);
+  // Plads til venstre for søjlerne, så EBITDA-tallet (højrestillet over søjlen) bliver i kolonnen
+  const f = Math.min(1, Math.max(0.3, (colPx - pad - 30) / total));
+  return { ws: want.map(w => Math.max(6, Math.round(w * f))), gap: Math.max(2, Math.round(gap * f)) };
 }
 
 /* Tabellens kolonner, så årene i grafen står lige over årene i tabellen.
@@ -153,31 +144,47 @@ function useFinTableCols(deps) {
 function FinChart({ model, unit, fmt, data, locked, go, onImport }) {
   const [hidden, setHidden] = React.useState(() => !!finChartLoad().hidden);
   const [hover, setHover] = React.useState(null);
-  const B = data.hasBudget, N = data.months;
+  const [userSeries, setUserSeries] = React.useState(() => finChartLoad().series || {});
+  const [tipOn, setTipOn] = React.useState(false);
+  const { P, stack, N, B } = finChartModel(model, data);
   const hasForecast = B || N > 0;
-  const P = finChartPeriods(model, data, fmt);
+  const sel = hover != null ? hover : 2;
+  const unitShort = unit === 'mio' ? t('DKK mio.') : t('DKK t.');
+
+  // Omsætning mangler i årsrapporterne? Alle år: Omsætning kan ikke vises.
+  // Nogle år: Bruttofortjeneste vises som standard ved siden af.
+  const annualRev = P.slice(0, 3).map(q => q.g('Nettoomsætning'));
+  const noRevAll = annualRev.every(v => v == null);
+  const noRevAny = annualRev.some(v => v == null);
+  const on = {
+    rev: !noRevAll && (userSeries.rev != null ? userSeries.rev : true),
+    bf: userSeries.bf != null ? userSeries.bf : noRevAny,
+    eb: userSeries.eb != null ? userSeries.eb : true,
+  };
+  const toggleSeries = (k) => {
+    if (k === 'rev' && noRevAll) return;
+    const next = { ...userSeries, [k]: !on[k] };
+    setUserSeries(next); finChartStore({ series: next });
+  };
+  const visKeys = ['eb', 'bf', 'rev'].filter(k => on[k]);     // søjlernes rækkefølge fra venstre
+  const rowOf = (k) => FIN_SERIES.find(s => s.k === k).row;
+  const nameOf = (k) => t(FIN_SERIES.find(s => s.k === k).name);
+
+  // Titlen følger de viste serier: "Omsætning, bruttofortjeneste og EBITDA"
+  const titleNames = FIN_SERIES.filter(s => on[s.k]).map((s, j) => (j === 0 || s.k === 'eb' ? t(s.name) : t(s.name).toLowerCase()));
+  const title = titleNames.length === 0 ? t('Ingen serier valgt')
+    : titleNames.length === 1 ? titleNames[0]
+    : titleNames.slice(0, -1).join(', ') + ' ' + t('og') + ' ' + titleNames[titleNames.length - 1];
+
   // Kolonnerne efter tabellen (årene flugter); ellers fem lige brede kolonner
   const geom = useFinTableCols([unit, window.CW_LANG, hidden, data.hasBudget, data.months, model]);
   const ws = geom ? geom.ws : [1, 1, 1, 1, 1];
-  const tot = ws.reduce((a, b) => a + b, 0);
-  const edges = ws.map((w, i) => ws.slice(0, i + 1).reduce((a, b) => a + b, 0) / tot);   // kolonnernes højre kant (0-1)
+  const totW = ws.reduce((a, b) => a + b, 0);
+  const edges = ws.map((w, i) => ws.slice(0, i + 1).reduce((a, b) => a + b, 0) / totW);
   const pad = geom ? geom.pad : 16;
-  const bars = finBarSizes(geom ? Math.min(...geom.ws) : 140);
-  const dotX = pad + bars.off;
+  const bw = finBarWidths(visKeys, geom ? Math.min(...geom.ws) : 150, pad);
   const fcLeft = (edges[2] * 100) + '%';
   const colTpl = ws.map(w => w + 'fr').join(' ');
-  const sel = hover != null ? hover : 2;
-  const yearsRef = React.useRef(null);
-  const [yearX, setYearX] = React.useState(null);   // årstallenes midte som brøkdel af bredden
-  React.useLayoutEffect(() => {
-    const box = yearsRef.current;
-    if (!box) return;
-    const b = box.getBoundingClientRect();
-    if (!b.width) return;
-    const xs = [...box.querySelectorAll('.fcv2-year > span')].map(sp => { const r = sp.getBoundingClientRect(); return Math.round(((r.left + r.right) / 2 - b.left) / b.width * 10000) / 10000; });
-    if (xs.length === 5 && JSON.stringify(xs) !== JSON.stringify(yearX)) setYearX(xs);
-  });
-  const unitShort = unit === 'mio' ? t('DKK mio.') : t('DKK t.');
 
   const toggle = () => {
     const h = !hidden;
@@ -186,99 +193,96 @@ function FinChart({ model, unit, fmt, data, locked, go, onImport }) {
   };
 
   // Skala: designets 0,0056 px pr. DKK t., men aldrig højere end feltet
-  const maxT = Math.max(1, ...P.map(p => (p.rev || 0) * 1000));
+  const maxT = Math.max(1, ...P.flatMap(q => visKeys.map(k => { const s = stack(rowOf(k), q); return s ? s.tot * 1000 : 0; })));
   const pxPer = Math.min(FIN_PX_PER_T, 270 / maxT);
   const H = (v) => Math.max(0, Math.round((v || 0) * 1000 * pxPer));
 
-  const ebMargin = (p) => {
-    if (p.blank || p.empty) return null;
-    const r = p.g('Nettoomsætning'), e = p.g('EBITDA');
-    return r == null || e == null || !r ? null : e / r * 100;
-  };
-  const margins = P.map(ebMargin);
-
-  // Detaljefeltet: den valgte periode (standard 2025)
-  const p = P[sel];
-  const shown = p.showYtd ? p.real : p.rev;
-  const rev = p.g('Nettoomsætning');
+  // Detaljefeltet: den valgte periode (standard 2025) for den første viste serie
+  const q = P[sel];
+  const pk = on.rev ? 'rev' : on.bf ? 'bf' : on.eb ? 'eb' : (noRevAll ? 'bf' : 'rev');
+  const ps = stack(rowOf(pk), q);
+  const big = ps == null ? '–' : fmt(q.showYtd ? ps.real : ps.tot, {});
+  const ebS = stack('EBITDA', q);
+  const per = finPer(N), rest = finRest(N);
+  let facts;
+  if (q.kind === 'annual') {
+    const edited = !!(model.map && model.map['Nettoomsætning|y' + q.idx]);
+    facts = [[t('Kilde'), edited ? t('Årsrapport, rettet manuelt') : t('Årsrapport')]];
+    if (q.g('Nettoomsætning') == null) facts.unshift([t('Omsætning'), t('Ikke oplyst')]);
+  } else if (q.kind === 'fc26') facts = ps ? [[finFill(t('Periodetal ({per})'), { per }), fmt(ps.real, {})], [finFill(t('Budget ({per})'), { per: rest }), fmt(ps.bud, {})]] : [];
+  else if (q.kind === 'bud26') facts = [[t('Periodetal'), t('Ingen')], [finFill(t('Budget ({per})'), { per: t('sep-dec') }), ps ? fmt(ps.tot, {}) : '–']];
+  else if (q.kind === 'ytd') facts = ps ? [[finFill(t('Periodetal ({per})'), { per }), fmt(ps.real, {})], [t('Fremskrevet helår'), '≈ ' + fmt(ps.tot, {})]] : [];
+  else if (q.kind === 'b9') facts = [[t('Kilde'), t('9 mdr. budget')]];
+  else facts = [[t('Kilde'), q.year.startsWith('2027') ? t('Intet budget') : t('Ingen periodetal eller budget')]];
+  const rev = q.g('Nettoomsætning');
   const pc = (x) => (rev == null || x == null || !rev ? '–' : finPct1(x / rev * 100));
-  const pers = p.g('Personaleomkostninger');
+  const pers = q.g('Personaleomkostninger');
   const selMargins = [
-    [t('Dækningsgrad'), pc(p.g('Bruttofortjeneste'))],
+    [t('Dækningsgrad'), pc(q.g('Bruttofortjeneste'))],
     [t('Løn % af omsætning'), pc(pers == null ? null : -pers)],
-    [t('EBITDA-margin'), pc(p.g('EBITDA'))],
+    [t('EBITDA-margin'), pc(q.g('EBITDA'))],
   ];
-
-  // Margin-strimlen: punkterne står lige under årstallene
-  const maxM = Math.max(10, ...margins.filter(m => m != null));
-  const my = (m) => Math.max(22, Math.min(FIN_SAREA_H - 4, FIN_SAREA_H - 6 - (m / maxM) * 30));
-  const fcIdx = (i) => B && i >= 3;
-  // Før målingen: et skøn ud fra kolonnernes højre kant
-  const xAt = (i) => (yearX ? yearX[i] : edges[i] - 0.03);
-  const solid = [], dash = [];
-  margins.forEach((m, i) => {
-    if (m == null) return;
-    const pt = (xAt(i) * 1000).toFixed(2) + ',' + my(m).toFixed(2);
-    if (!fcIdx(i)) solid.push(pt);
-    if (B && i >= 2) dash.push(pt);
-  });
-
-  const legend = (
-    <div className="fcv2-legend">
-      <span><i className="sw act"/>{t('Omsætning')}</span>
-      {B && <span><i className="sw bud"/>{t('Budget')}</span>}
-      {!B && N > 0 && <span><i className="sw ghost"/>{t('Fremskrevet helår')}</span>}
-      <span><i className="sw eb"/>{t('EBITDA')}</span>
-      <span><i className="sw line"/>{t('EBITDA-margin %')}</span>
-      <button id="fin-chart-toggle" type="button" className="btn-ghost-sm fcv2-toggle" onClick={toggle} aria-expanded={!hidden}>{hidden ? t('Vis graf') : t('Skjul graf')}</button>
-    </div>
-  );
+  const capOf = (k) => (q.showYtd ? finFill(t('{serie} {per} 2026'), { serie: nameOf(k), per }) : finFill(t('{serie} {aar}'), { serie: nameOf(k), aar: q.year }));
 
   const ask = (id) => () => finAskCustomer(id, go);
-  // Indtast omsætningen: åbn cellen i tabellen
-  const enterRevenue = (i) => () => {
-    const td = document.querySelector('[data-fin-cell="Nettoomsætning|y' + i + '"]');
-    if (!td) return;
-    td.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    setTimeout(() => td.click(), 250);
+  const colLabel = (qq) => {
+    if (qq.blank || qq.empty) return finFill(t('{aar}: ingen tal'), { aar: qq.year });
+    return qq.year + ': ' + visKeys.slice().reverse().map(k => { const s = stack(rowOf(k), qq); return nameOf(k) + ' ' + (s ? (s.ghost ? '≈ ' : '') + fmt(s.tot, {}) : t('ikke oplyst')); }).join(', ') + ' ' + unitShort;
   };
-  const colLabel = (q, i) => {
-    if (q.blank || q.empty) return finFill(t('{aar}: ingen tal'), { aar: q.year });
-    return q.year + ': ' + t('Omsætning') + ' ' + (q.ghost ? '≈ ' : '') + fmt(q.rev, {}) + ' ' + unitShort
-      + (q.eb != null ? ', ' + t('EBITDA') + ' ' + fmt(q.eb, {}) : '')
-      + (margins[i] != null ? ', ' + t('EBITDA-margin') + ' ' + finPct1(margins[i]) : '');
-  };
+  const chipTip = t('Omsætningen er ikke oplyst i årsrapporterne. Upload kundens interne årsrapport, eller klik på "Ikke oplyst" i tabellen og indtast omsætningen, så vises den i grafen.');
 
   return (
     <div id="fin-chart" className="card fcv2">
       <div className="fcv2-head">
-        <h3>{t('Omsætning og EBITDA')}</h3>
-        {legend}
+        <h3>{title}</h3>
+        <div className="fcv2-chips" role="group" aria-label={t('Serier i grafen')}>
+          {FIN_SERIES.map(s => {
+            const dis = s.k === 'rev' && noRevAll;
+            return (
+              <span key={s.k} className="fcv2-chipw">
+                <button type="button" className={'fcv2-chip ' + s.k + (on[s.k] ? ' on' : '') + (dis ? ' dis' : '')}
+                  aria-pressed={on[s.k]} aria-disabled={dis || undefined} aria-describedby={dis ? 'fcv2-chiptip' : undefined}
+                  onClick={() => toggleSeries(s.k)}
+                  onMouseEnter={() => dis && setTipOn(true)} onMouseLeave={() => dis && setTipOn(false)}
+                  onFocus={() => dis && setTipOn(true)} onBlur={() => dis && setTipOn(false)}>
+                  <i className="sw" aria-hidden="true"/>{t(s.name)}
+                </button>
+                {dis && <span id="fcv2-chiptip" role="tooltip" className={'fcv2-tip' + (tipOn ? ' show' : '')}>{chipTip}</span>}
+              </span>
+            );
+          })}
+        </div>
+        <div className="fcv2-legend">
+          {B && <span><i className="sw bud"/>{t('Budget')}</span>}
+          {!B && N > 0 && <span><i className="sw ghost"/>{t('Fremskrevet helår')}</span>}
+          <button id="fin-chart-toggle" type="button" className="btn-ghost-sm fcv2-toggle" onClick={toggle} aria-expanded={!hidden}>{hidden ? t('Vis graf') : t('Skjul graf')}</button>
+        </div>
       </div>
       {!hidden && (
         <div className="fcv2-scroll">
           <div className="fcv2-grid" onMouseLeave={() => setHover(null)}
-            style={Object.assign({ '--fcv2-rev': bars.rev + 'px', '--fcv2-eb': bars.eb + 'px', '--fcv2-gap': bars.gap + 'px' },
-              geom ? { gridTemplateColumns: geom.c1 + 'px minmax(0, 1fr)', minWidth: 0, '--fcv2-pad': pad + 'px' } : {})}>
+            style={geom ? { gridTemplateColumns: geom.c1 + 'px minmax(0, 1fr)', minWidth: 0, '--fcv2-pad': pad + 'px' } : undefined}>
             {/* Detaljefeltet */}
             <div className="fcv2-side" aria-live="polite" style={geom ? { width: geom.c1 } : undefined}>
               <div className="fcv2-top">
-                <div className="fcv2-cap"><i className="sw act"/>{p.showYtd ? finFill(t('Omsætning {per} 2026'), { per: finPer(N) }) : finFill(t('Omsætning {aar}'), { aar: p.year })}</div>
-                <div className="fcv2-big"><b>{p.blank || p.empty || shown == null ? '–' : fmt(shown, {})}</b><span>{unitShort}</span></div>
+                <div className="fcv2-cap"><i className={'sw ' + pk}/>{capOf(pk)}</div>
+                <div className="fcv2-big"><b>{big}</b><span>{unitShort}</span></div>
               </div>
-              <div className="fcv2-top">
-                <div className="fcv2-cap"><i className="sw eb"/>{p.showYtd ? finFill(t('EBITDA {per} 2026'), { per: finPer(N) }) : finFill(t('EBITDA {aar}'), { aar: p.year })}</div>
-                <div className="fcv2-big eb"><b>{p.blank || p.empty || p.eb == null ? '–' : fmt(p.eb, {})}</b><span>{unitShort}</span></div>
+              {pk !== 'eb' && (
+                <div className="fcv2-top">
+                  <div className="fcv2-cap"><i className="sw eb"/>{capOf('eb')}</div>
+                  <div className="fcv2-big eb"><b>{ebS == null ? '–' : fmt(q.showYtd ? ebS.real : ebS.tot, {})}</b><span>{unitShort}</span></div>
+                </div>
+              )}
+              <div className="fcv2-list">
+                {q.kilde && <div className="fcv2-lbl">{t('Kilde')}</div>}
+                {facts.map(([k, v], j) => <div key={j} className="fcv2-row"><span>{k}</span><b>{v}</b></div>)}
               </div>
               <div className="fcv2-list">
-                {p.kilde && <div className="fcv2-lbl">{t('Kilde')}</div>}
-                {p.facts.map(([k, v], j) => <div key={j} className="fcv2-row"><span>{k}</span><b>{v}</b></div>)}
-              </div>
-              <div className="fcv2-list">
-                <div className="fcv2-lbl">{p.showYtd ? finFill(t('Marginer {per}'), { per: finPer(N) }) : t('Marginer')}</div>
+                <div className="fcv2-lbl">{q.showYtd ? finFill(t('Nøgletal {per}'), { per }) : t('Nøgletal')}</div>
                 {selMargins.map(([k, v]) => <div key={k} className="fcv2-row"><span>{k}</span><b>{v}</b></div>)}
               </div>
-              {p.note && <p className="fcv2-note">{p.note}</p>}
+              {q.note && <p className="fcv2-note">{q.note}</p>}
               {B && !N && (
                 <div className="fcv2-ask">
                   <span>{t('Der er ingen periodetal for 2026.')}</span>
@@ -296,48 +300,36 @@ function FinChart({ model, unit, fmt, data, locked, go, onImport }) {
                 {[292, 236, 180, 124, 68].map(b => <div key={b} className="fcv2-gl" style={{ bottom: b }}/>)}
                 <div className="fcv2-gl base" style={{ bottom: 12 }}/>
                 <div className="fcv2-cols" style={{ gridTemplateColumns: colTpl }}>
-                  {P.map((q, i) => {
-                    const on = i === sel;
-                    const rh = H(q.real), bh = H(q.bud), gh = H(q.ghost);
-                    const ebV = q.eb != null && q.eb > 0 ? q.eb : 0;
-                    const ebH = H(ebV) || (ebV ? 2 : 0);
-                    const ebGh = q.ebKind === 'ytd' && q.ebAnnual != null ? Math.max(0, H(q.ebAnnual) - ebH) : 0;
-                    const fc = q.ebKind === 'fc';
-                    return (
-                      <div key={q.year} className={'fcv2-col' + (on ? ' on' : '')} tabIndex={0} aria-label={colLabel(q, i)}
-                        onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onBlur={() => setHover(null)}>
-                        {q.norev && (
-                          <div className="fcv2-empty norev">
-                            <span>{t('Omsætning ikke oplyst')}</span>
-                            {!locked && <button type="button" className="btn btn-primary btn-sm fcv2-cta-sm" onClick={enterRevenue(q.colIdx)}>{t('Indtast omsætning')}</button>}
-                            <button type="button" className="btn-link fcv2-link" onClick={ask('m-annual')}>{t('Anmod om intern årsrapport')}</button>
-                          </div>
-                        )}
-                        {q.empty && (
-                          <div className="fcv2-empty">
-                            <span>{t('Intet budget')}</span>
-                            <button type="button" className="btn btn-primary btn-sm fcv2-cta-sm" onClick={ask('m-budget')}>{t('Anmod kunden om budget')}</button>
-                          </div>
-                        )}
-                        <span className="fcv2-val">{q.empty || q.blank || q.rev == null ? '' : (q.ghost ? '≈ ' : '') + fmt(q.rev, {})}</span>
-                        <div className="fcv2-bars">
-                          <div className="fcv2-ebw">
-                            <span className="fcv2-ebl">{q.empty || q.blank || q.eb == null ? '' : ebGh ? '≈' + fmt(q.ebAnnual, {}) : fmt(q.eb, {})}</span>
-                            <div className="fcv2-ebstack">
-                              {ebGh > 0 && <div className="eb-ghost" style={{ height: ebGh }}/>}
-                              <div className={'eb' + (fc ? ' fc' : '') + (ebGh ? ' flat' : '')} style={{ height: ebH }}/>
-                            </div>
-                          </div>
-                          <div className="fcv2-rev">
-                            {gh > 0 && <div className="rv-ghost" style={{ height: gh }}/>}
-                            {bh > 0 && <div className={'rv-bud' + (gh ? ' flat' : '')} style={{ height: bh }}/>}
-                            {rh > 0 && <div className={'rv-act' + (bh || gh ? ' flat' : '')} style={{ height: rh }}/>}
-                            {q.ghost && gh > 22 && <span className="rv-inner" style={{ bottom: rh + 4 }}>{fmt(q.real, {})}</span>}
-                          </div>
+                  {P.map((qq, i) => (
+                    <div key={qq.year} className={'fcv2-col' + (i === sel ? ' on' : '')} tabIndex={0} aria-label={colLabel(qq)}
+                      onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} onBlur={() => setHover(null)}>
+                      {qq.empty && (
+                        <div className="fcv2-empty">
+                          <span>{t('Intet budget')}</span>
+                          <button type="button" className="btn btn-primary btn-sm fcv2-cta-sm" onClick={ask('m-budget')}>{t('Anmod kunden om budget')}</button>
                         </div>
+                      )}
+                      <div className="fcv2-bars" style={{ gap: bw.gap }}>
+                        {visKeys.map((k, j) => {
+                          const s = stack(rowOf(k), qq);
+                          const w = bw.ws[j];
+                          if (!s) return <div key={k} className="fcv2-bar" style={{ width: w }}/>;
+                          let rh = H(s.real), bh = H(s.bud), gh = H(s.ghost);
+                          if (s.tot > 0 && rh + bh + gh === 0) { if (s.bud) bh = 2; else rh = 2; }
+                          return (
+                            <div key={k} className={'fcv2-bar ' + k} style={{ width: w }}>
+                              <span className={'fcv2-bl' + (w >= 40 ? ' lg' : '')}>{(s.ghost ? '≈' : '') + fmt(s.tot, {})}</span>
+                              <div className="fcv2-stack">
+                                {gh > 0 && <div className="ghost" style={{ height: gh }}/>}
+                                {bh > 0 && <div className={'bud' + (gh ? ' flat' : '')} style={{ height: bh }}/>}
+                                {rh > 0 && <div className={'act' + (bh || gh ? ' flat' : '')} style={{ height: rh }}/>}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
                 {hasForecast && <div className="fcv2-div" style={{ left: fcLeft }}/>}
                 {!hasForecast && (
@@ -354,46 +346,15 @@ function FinChart({ model, unit, fmt, data, locked, go, onImport }) {
               </div>
 
               {/* Årstallene */}
-              <div className="fcv2-years" ref={yearsRef} style={{ gridTemplateColumns: colTpl }}>
+              <div className="fcv2-years" style={{ gridTemplateColumns: colTpl }}>
                 {hasForecast && <div className="fcv2-zone" style={{ left: fcLeft }}/>}
                 {hasForecast && <div className="fcv2-div" style={{ left: fcLeft }}/>}
-                {P.map((q, i) => (
-                  <div key={q.year} className={'fcv2-year' + (i === sel ? ' on' : '')} onMouseEnter={() => setHover(i)}>
-                    <span>{q.year}</span>
-                    {q.yearSub && <small>{q.yearSub}</small>}
+                {P.map((qq, i) => (
+                  <div key={qq.year} className={'fcv2-year' + (i === sel ? ' on' : '')} onMouseEnter={() => setHover(i)}>
+                    <span>{qq.year}</span>
+                    {qq.yearSub && <small>{qq.yearSub}</small>}
                   </div>
                 ))}
-              </div>
-
-              {/* EBITDA-margin */}
-              <div className="fcv2-strip" style={{ height: FIN_STRIP_H }}>
-                {hasForecast && <div className="fcv2-zone" style={{ left: fcLeft }}/>}
-                {hasForecast && <div className="fcv2-div top" style={{ left: fcLeft }}/>}
-                <div className="fcv2-slbl strip">{t('EBITDA-margin')}</div>
-                <div className="fcv2-sarea">
-                  <svg viewBox={'0 0 1000 ' + FIN_SAREA_H} preserveAspectRatio="none" aria-hidden="true" style={{ left: 0, height: FIN_SAREA_H }}>
-                    {solid.length > 1 && <polyline points={solid.join(' ')} fill="none" stroke="#334155" strokeWidth="1.5" vectorEffect="non-scaling-stroke"/>}
-                    {dash.length > 1 && <polyline points={dash.join(' ')} fill="none" stroke="#334155" strokeWidth="1.5" strokeDasharray="4 4" vectorEffect="non-scaling-stroke"/>}
-                  </svg>
-                  {margins.map((m, i) => m == null ? null : (
-                    <React.Fragment key={i}>
-                      <div className={'fcv2-dot' + (fcIdx(i) ? ' hollow' : '') + (i === sel ? ' on' : '')}
-                        style={{ left: (xAt(i) * 100) + '%', top: my(m) }}/>
-                      <div className={'fcv2-dlbl' + (i === sel ? ' on' : '')} style={{ left: (xAt(i) * 100) + '%', top: my(m) - 26 }}>{finPct1(m)}</div>
-                    </React.Fragment>
-                  ))}
-                </div>
-                {!hasForecast && (
-                  <div className="fcv2-shint" style={{ left: 'calc(' + fcLeft + ' + 12px)' }}>
-                    <span>{t('Ingen margin for 2026 og 2027 endnu.')}</span>
-                    <button type="button" className="btn-link fcv2-link" onClick={ask('m-budget')}>{t('Anmod kunden om budget')}</button>
-                  </div>
-                )}
-                {!B && N > 0 && (
-                  <div className="fcv2-shint col" style={{ left: (edges[3] * 100) + '%', right: 0 }}>
-                    <button type="button" className="btn-link fcv2-link" onClick={ask('m-budget')}>{t('Anmod kunden om budget')}</button>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -403,4 +364,4 @@ function FinChart({ model, unit, fmt, data, locked, go, onImport }) {
   );
 }
 
-Object.assign(window, { FinChart, finChartPeriods, finAskCustomer });
+Object.assign(window, { FinChart, finChartModel, finAskCustomer });

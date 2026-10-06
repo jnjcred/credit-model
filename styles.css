@@ -1344,11 +1344,9 @@ a.ws-mat-fname:hover { text-decoration: underline; text-underline-offset: 2px; }
 .fcv2-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 12px; line-height: 18px; color: var(--c-text-3); }
 .fcv2-legend > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .fcv2 .sw { display: inline-block; flex-shrink: 0; width: 10px; height: 10px; border-radius: 2px; box-sizing: border-box; }
-.fcv2 .sw.act { background: var(--c-primary); }
 .fcv2 .sw.bud { border: 1px solid var(--c-primary); background: repeating-linear-gradient(135deg, rgba(29,78,216,0.75) 0 1.3px, rgba(29,78,216,0.12) 1.3px 3.6px); }
 .fcv2 .sw.ghost { border: 1.5px dashed var(--c-primary); }
 .fcv2 .sw.eb { background: #64748b; }
-.fcv2 .sw.line { width: 14px; height: 0; border-radius: 0; border-top: 1.5px solid #334155; }
 .fcv2-toggle { margin-right: -8px; }
 
 .fcv2-scroll { overflow-x: auto; }
@@ -1395,23 +1393,8 @@ a.ws-mat-fname:hover { text-decoration: underline; text-underline-offset: 2px; }
 .fcv2-col { position: relative; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end; gap: 6px; padding-right: var(--fcv2-pad, 16px); cursor: default; outline: none; transition: background 0.25s ease; }
 .fcv2-col.on { background: rgba(29,78,216,0.04); }
 .fcv2-col:focus-visible { box-shadow: inset 0 0 0 2px var(--c-primary); }
-.fcv2-val { font-size: 12.5px; font-weight: 500; color: var(--c-text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.fcv2-col.on .fcv2-val { font-weight: 600; color: var(--c-ink); }
 .fcv2-bars { display: flex; align-items: flex-end; gap: var(--fcv2-gap, 4px); opacity: 0.55; transition: opacity 0.25s ease; }
 .fcv2-col.on .fcv2-bars { opacity: 1; }
-.fcv2-ebw { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; width: var(--fcv2-eb, 16px); }
-.fcv2-ebl { align-self: flex-end; font-size: 11px; font-weight: 500; color: #475569; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.fcv2-ebstack { display: flex; flex-direction: column; width: var(--fcv2-eb, 16px); }
-.fcv2-ebstack .eb { background: #64748b; border-radius: 2px 2px 0 0; }
-.fcv2-ebstack .eb.fc { background: #e2e8f0; border: 1px solid #64748b; border-bottom: 0; }
-.fcv2-ebstack .eb.flat { border-radius: 0; }
-.fcv2-ebstack .eb-ghost { border: 1.5px dashed #64748b; border-bottom: 0; border-radius: 2px 2px 0 0; }
-.fcv2-rev { position: relative; width: var(--fcv2-rev, 40px); display: flex; flex-direction: column; }
-.fcv2-rev .rv-act { background: var(--c-primary); border-radius: 3px 3px 0 0; }
-.fcv2-rev .rv-bud { border: 1px solid var(--c-primary); border-bottom: 0; border-radius: 3px 3px 0 0; background: repeating-linear-gradient(135deg, rgba(29,78,216,0.7) 0 1.6px, rgba(29,78,216,0.1) 1.6px 5px); }
-.fcv2-rev .rv-ghost { border: 1.5px dashed var(--c-primary); border-bottom: 0; border-radius: 3px 3px 0 0; }
-.fcv2-rev .flat { border-radius: 0; }
-.fcv2-rev .rv-inner { position: absolute; left: -8px; right: -8px; text-align: center; font-size: 11.5px; font-weight: 500; color: var(--c-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .fcv2-empty { position: absolute; left: 6px; right: 6px; bottom: 40px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 8px; border: 1px dashed var(--c-line-strong); border-radius: 8px; background: var(--c-surface); text-align: center; }
 .fcv2-empty > span { font-size: 12.5px; line-height: 18px; font-weight: 500; color: var(--c-text-2); }
 .fcv2-cta-sm { height: auto; min-height: 26px; max-width: 100%; padding: 4px 6px; white-space: normal; overflow-wrap: anywhere; line-height: 16px; }
@@ -1431,26 +1414,14 @@ a.ws-mat-fname:hover { text-decoration: underline; text-underline-offset: 2px; }
 .fcv2-year.on span { font-weight: 600; color: var(--c-ink); }
 
 /* EBITDA-margin */
-.fcv2-strip { position: relative; border-top: 1px solid var(--c-line-2); overflow: hidden; }
-.fcv2-div.top { z-index: 2; }
-.fcv2-sarea { position: absolute; left: 0; right: 0; top: 26px; height: 60px; }
-.fcv2-sarea svg { position: absolute; top: 0; width: 100%; overflow: visible; }
-.fcv2-dot { position: absolute; width: 8px; height: 8px; transform: translate(-50%, -50%); border-radius: 50%; background: #334155; border: 1.5px solid #334155; box-shadow: 0 0 0 2px var(--c-surface); box-sizing: border-box; transition: width 0.25s ease, height 0.25s ease; }
-.fcv2-dot.hollow { background: var(--c-surface); }
-.fcv2-dot.on { width: 11px; height: 11px; }
-.fcv2-dlbl { position: absolute; transform: translateX(-50%); font-size: 11.5px; font-weight: 500; color: var(--c-text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.fcv2-dlbl.on { color: var(--c-ink); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) {
-  .fcv2-col, .fcv2-bars, .fcv2-year, .fcv2-dot { transition: none; }
+  .fcv2-col, .fcv2-bars, .fcv2-year { transition: none; }
 }
 
-.fcv2-empty.norev { left: 6px; right: 6px; bottom: 56px; gap: 6px; }
 .fcv2-empty .fcv2-link { align-self: center; font-size: 12px; white-space: normal; text-align: center; line-height: 16px; }
 .fcv2-ask { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: 10px; border-top: 1px solid var(--c-line-2); font-size: 12px; line-height: 18px; color: var(--c-text-3); }
 .fcv2-empty .fcv2-link { max-width: 100%; overflow-wrap: anywhere; }
 @media (max-width: 1180px) {
-  .fcv2-val { font-size: 11.5px; }
-  .fcv2-ebl { font-size: 10px; }
   .fcv2-empty > span { font-size: 11.5px; }
   .fcv2-empty .fcv2-link, .fcv2-cta-sm { font-size: 11px; }
 }
@@ -1465,6 +1436,69 @@ a.ws-mat-fname:hover { text-decoration: underline; text-underline-offset: 2px; }
   .fin-tbl:not(.fin-q) thead th.fin-c1 { min-width: 200px; }
 }
 .fcv2-big.eb b { font-size: 22px; line-height: 30px; }
-.fcv2-shint { position: absolute; top: 30px; right: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; font-size: 12px; line-height: 17px; color: var(--c-text-3); }
-.fcv2-shint.col { top: 34px; align-items: flex-end; padding-right: var(--fcv2-pad, 16px); }
-.fcv2-shint .fcv2-link { font-size: 12px; white-space: normal; text-align: inherit; }
+
+/* Regnskab v2, 6. oktober: serier som knapper i kortets hoved og søjler pr. serie.
+   Omsætning er primærblå, Bruttofortjeneste lys blå (en del af omsætningen),
+   EBITDA skifer. Budget er skraveret, fremskrevet stiplet. */
+.fcv2 .sw.rev { background: var(--c-primary); }
+.fcv2 .sw.bf { background: #7fa0e8; }
+.fcv2-head { flex-wrap: wrap; }
+.fcv2-head h3 { flex: 1 1 auto; min-width: 180px; }
+.fcv2-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.fcv2-chipw { position: relative; display: inline-flex; }
+.fcv2-chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border: 1px solid var(--c-line-2); border-radius: 999px; background: transparent; font: inherit; font-size: 12px; font-weight: 500; color: var(--c-text-3); cursor: pointer; white-space: nowrap; }
+.fcv2-chip .sw { width: 10px; height: 10px; border-radius: 2px; background: transparent !important; border: 1px solid var(--c-line-strong); }
+.fcv2-chip.on { background: var(--c-surface); border-color: var(--c-line-strong); color: var(--c-ink); }
+.fcv2-chip.on .sw { border: 0; }
+.fcv2-chip.on.rev .sw { background: var(--c-primary) !important; }
+.fcv2-chip.on.bf .sw { background: #7fa0e8 !important; }
+.fcv2-chip.on.eb .sw { background: #64748b !important; }
+.fcv2-chip:hover:not(.dis) { border-color: var(--c-line-strong); color: var(--c-ink); }
+.fcv2-chip:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 1px; }
+.fcv2-chip.dis { background: var(--c-surface-2); border-color: var(--c-line-2); color: var(--c-text-4); cursor: not-allowed; opacity: 0.8; }
+.fcv2-chip.dis .sw { border-style: dashed; }
+.fcv2-tip { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: 280px; padding: 6px 8px; border-radius: 6px; background: rgba(13, 17, 23, 0.88); color: #fff; font-size: 12.5px; line-height: 18px; font-weight: 400; white-space: normal; pointer-events: none; opacity: 0; transform: translateY(-2px); transition: opacity 0.15s ease, transform 0.15s ease; }
+.fcv2-tip.show { opacity: 1; transform: none; }
+
+.fcv2-bar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; }
+.fcv2-bl { align-self: flex-end; font-size: 11px; font-weight: 500; color: var(--c-text-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.fcv2-bl.lg { font-size: 12.5px; }
+.fcv2-col.on .fcv2-bar.rev .fcv2-bl, .fcv2-col.on .fcv2-bar.bf .fcv2-bl { color: var(--c-ink); font-weight: 600; }
+.fcv2-bar.eb .fcv2-bl { color: #475569; }
+.fcv2-stack { position: relative; width: 100%; display: flex; flex-direction: column; }
+.fcv2-stack .act { border-radius: 3px 3px 0 0; }
+.fcv2-stack .bud { border: 1px solid; border-bottom: 0; border-radius: 3px 3px 0 0; }
+.fcv2-stack .ghost { border: 1.5px dashed; border-bottom: 0; border-radius: 3px 3px 0 0; }
+.fcv2-stack .flat { border-radius: 0; }
+.fcv2-bar.rev .act { background: var(--c-primary); }
+.fcv2-bar.rev .bud { border-color: var(--c-primary); background: repeating-linear-gradient(135deg, rgba(29,78,216,0.7) 0 1.6px, rgba(29,78,216,0.1) 1.6px 5px); }
+.fcv2-bar.rev .ghost { border-color: var(--c-primary); }
+.fcv2-bar.bf .act { background: #7fa0e8; }
+.fcv2-bar.bf .bud { border-color: #7fa0e8; background: repeating-linear-gradient(135deg, rgba(127,160,232,0.85) 0 1.6px, rgba(127,160,232,0.15) 1.6px 5px); }
+.fcv2-bar.bf .ghost { border-color: #7fa0e8; }
+.fcv2-bar.eb .act { background: #64748b; }
+.fcv2-bar.eb .bud { border-color: #64748b; background: #e2e8f0; }
+.fcv2-bar.eb .ghost { border-color: #64748b; }
+.fcv2-stack .inner { position: absolute; left: -10px; right: -10px; text-align: center; font-size: 11.5px; font-weight: 500; color: var(--c-ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 1180px) {
+  .fcv2-bl { font-size: 10px; }
+  .fcv2-bl.lg { font-size: 11px; }
+}
+/* Tabellen: omsætning, årsrapporten ikke oplyser */
+.fin-tbl .fin-na { color: var(--c-text-3); font-family: var(--font); font-size: 12px; }
+
+/* Intern note på et punkt: samme udtryk som kommentarerne i regnskabstabellen (hvid boks, grå kant, orange mærke) */
+.ws-inote-btn { display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--c-text-4); cursor: pointer; opacity: 0; }
+.ws-inote-btn.has { color: var(--c-warn); opacity: 1; }
+.ws-mat-row:hover .ws-inote-btn, .ws-inote-btn:focus-visible, .ws-inote-btn[aria-expanded="true"] { opacity: 1; }
+.ws-inote-btn:hover, .ws-inote-btn:focus-visible { background: var(--c-surface-2); color: var(--c-ink); }
+.ws-inote-btn.has:hover, .ws-inote-btn.has:focus-visible { color: var(--c-warn); }
+.ws-inote-head { padding: 4px 8px 0; font-size: 11.5px; color: var(--c-text-3); }
+.ws-inote-edit { position: fixed; z-index: 1200; width: 288px; max-width: calc(100vw - 16px); box-sizing: border-box; padding: 4px; background: var(--c-surface); border: 1px solid var(--c-line); border-radius: 8px; box-shadow: 0 4px 14px rgba(15, 17, 20, .08); font-size: 13px; }
+.ws-inote-edit textarea { display: block; width: 100%; box-sizing: border-box; margin: 0; padding: 6px 8px; border: 0; border-radius: 5px; background: transparent; font: inherit; font-size: 13px; line-height: 1.45; color: var(--c-ink); resize: vertical; }
+.ws-inote-edit textarea::placeholder { color: var(--c-text-3); }
+.ws-inote-edit textarea:focus { outline: none !important; background: var(--c-surface-2); }
+.ws-inote-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--c-line-2); }
+.ws-inote-foot button { padding: 1px 6px; border: 0; border-radius: 4px; background: transparent; font: inherit; font-size: 11.5px; color: var(--c-text-2); cursor: pointer; }
+.ws-inote-foot button:hover, .ws-inote-foot button:focus-visible { background: var(--c-surface-2); color: var(--c-ink); }
+.ws-inote-foot button.on { font-weight: 600; color: var(--c-ink); }
