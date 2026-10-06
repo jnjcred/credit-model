@@ -236,9 +236,12 @@ CW.downloadDoc gemmer .md som tekst. Test: `scratchpad\guide_test.js` i session 
 (sagshovedets knapper, WSCustomerPreview i workspace.jsx → CustomerPortal med
 `flow`):
 - **Kundeside** åbner altid på kundens oversigt uden skærmrækken. Har kunden ikke
-  gjort opstarten færdig, står PortalPvObStatus øverst: "Kunden er ikke færdig
-  med opstarten: trin n af 6, …", pvCustomerWhere(), trinene som en kort række og
-  knappen "Se trinnet i Kundeflow", der skifter til Kundeflow på kundens trin.
+  gjort opstarten færdig, står PortalPvObStatus øverst som én kort linje (efter
+  Jespers skitse 6. oktober): prik, "Kunden er ikke startet endnu" (eller "Kunden
+  er i gang med opstarten"), "Står ved opret bruger · trin 1 af 2", en stille knap
+  "Se hvad kunden ser" (Kundeflow på kundens trin; uden bruger er det
+  landingssiden) og knappen "Send invitation igen" (hvornår den sidst blev sendt,
+  står som tooltip). Ingen tidslinje og ingen forklarende tekst.
 - **Kundeflow** (demo) er gennemgangen af kundens skærme fra "Opret bruger" med
   skærmrækken (PV_SCREENS) og forrige/næste under kortet. Den mørke bjælke siger
   "Kundeflow (demo)".
@@ -913,3 +916,136 @@ er rettet til den nuværende tabel, med budget og periodetal leveret i testdata:
 Den gamle version af testene ligger som `.foer-v2.bak`.
 
 Backup før ændringen: `..\credit-model_backup_2026-10-05_foer-regnskab-v2`.
+
+**Opdatering 6. oktober** (designet "Graph redesign without takt", Downloads):
+- *Serier som knapper* i kortets hoved: Omsætning, Bruttofortjeneste og EBITDA.
+  - Standard: Omsætning og EBITDA tændt. Valget huskes i `kabul:fin-chart`
+    (`series`).
+  - Titlen følger de viste serier, fx "Omsætning, bruttofortjeneste og EBITDA".
+  - Søjlerne står i rækkefølgen EBITDA, Bruttofortjeneste, Omsætning med
+    designets bredder (48/20, 26/26/16, EBITDA alene 48). Er tabellens kolonner
+    smalle, skaleres søjlerne ned.
+  - Farver: Omsætning er primærblå, Bruttofortjeneste lys blå (#7fa0e8), EBITDA
+    skifer.
+- *Reserve uden omsætning* (små virksomheder må udelade omsætningen):
+  - Mangler den i alle årsrapporter, kan Omsætning ikke vælges, og knappen viser
+    designets forklaring ved hover eller fokus.
+  - Mangler den i ét eller flere år, er Bruttofortjeneste tændt som standard.
+  - Detaljefeltet viser "Omsætning: Ikke oplyst", og marginerne står som "–".
+  - Tabellen viser "Ikke oplyst" i omsætningscellen. Klik på den åbner feltet,
+    så tallet kan indtastes (`finFillable`).
+  - Boksen "Omsætning ikke oplyst" i grafen fra 5. oktober er taget ud.
+- *EBITDA-margin-strimlen er taget ud* efter designets beslutning. Marginerne står
+  i detaljefeltet og i tabellen.
+- *Tabellens nøgletal* har nu de samme marginer som grafen: Dækningsgrad %
+  (afløser Bruttomargin % og regnes på samme måde), Løn % af omsætning og
+  EBITDA-margin %. Derefter Soliditetsgrad, Gæld / EBITDA og Likviditetsgrad.
+- *Beholdt efter Jespers tidligere ønsker:* ingen procentændring i detaljefeltet,
+  EBITDA vist i feltet, og knappen "Anmod kunden om periodetal".
+- Test: `v2_test.js` er udvidet til 83 kontroller pr. sprog.
+
+## Landingsside, Crediwires login og opstart på to skærme (6. oktober)
+
+Jesper ville have den gamle landingsside tilbage og færre skridt i opstarten. Det
+gik i to omgange: først blev de seks trin plus velkomsten lagt sammen til to skærme.
+Derefter blev oprettelse og login flyttet ud til Crediwires egen side, så vi ikke
+bygger vores eget login. Backup før ændringen: scratchpad for session 2e448e6b,
+mappen `backup_onboarding_0958`.
+
+**Kundens vej nu:**
+1. *Landingsside* (`PortalLanding` i new_case_portal.jsx, efter backuppen fra
+   30. september): "Anmodning fra EIFO · dato", "Kære {fornavn},", frist, boksen
+   "Hvorfor crediwire.app?", kortet "Sådan foregår det" og "Kom i gang". Den vises,
+   når der ikke er en bruger. Har virksomheden en bruger, går linket direkte til
+   Crediwires login.
+2. *Bruger, før login* (`ObUser` med `pre`, design "Bruger trin" fra Claude Design,
+   runde 2, variant 2a): "Log ind eller opret bruger", virksomheden fra anmodningen og
+   én knap, "Fortsæt med Crediwire". Returnerende kunder (logget ud) kommer også hertil.
+3. *Crediwires egen side* (`PortalCwAuth`, en demo af omstillingen): hele skærmen
+   uden portalens top, formular til venstre og budskab til højre. Mailen kommer fra
+   invitationen og kan ikke rettes. Crediwire viser selv *Opret bruger*
+   (adgangskoderegler) eller *Log ind* ("Glemt adgangskode?") ud fra mailen. Der er
+   ingen "Har du allerede en bruger?"-link og ingen vilkår her. Knappen viser
+   "Opretter bruger…"/"Logger ind…". "Tilbage til Materiale til EIFO" går tilbage
+   til trinnet. Demonoten har to kryds: "Mailen har allerede en bruger" og "Brugeren
+   har allerede virksomheden". I produktion er det en rigtig omstilling med retur.
+   *Tilbage på Bruger* kommer en af tre visninger:
+   - *Ny bruger*: "Færdiggør dine oplysninger". Grøn boks "Bruger oprettet." med
+     "Skift bruger", Dit navn, Virksomhedsnavn og CVR (skal være sagens), brugsvilkår
+     (knappen "Fortsæt til datadeling" er grå, indtil der er sat kryds) og nyheder.
+   - *Kendt bruger uden virksomheden*: "Du er logget ind", "Logget ind som {navn}",
+     "Virksomheden findes ikke på din bruger endnu …" og navn og CVR.
+   - *Kendt bruger med virksomheden*: "Tjekker, om {virksomhed} findes på din
+     bruger…" og derefter direkte videre til Datadeling.
+   *Demo:* under kortet på Bruger står en stiplet række (`PortalObDemo`): "Før login",
+   "Ny bruger", "Kendt bruger uden virksomheden" og "Kendt bruger med virksomheden".
+   I portalen sætter knappen kundens tilstand (som efter en tur til Crediwire). I
+   Kundeflow vises stadiet kun, og intet gemmes. Test: `demo.js da|en 1400|420`.
+   **Ændret:** "Jeg er revisor eller rådgiver" er ikke med i designet og er fjernet.
+   Fuldmagtskrydset på Datadeling vises derfor ikke længere. En revisor bruges via
+   "Få hjælp fra revisor eller bank".
+   En første version (navn og vilkår før Crediwire) blev bygget af en anden session
+   kl. 12.39-12.50. Den er afløst af runde 2. Backup: scratchpad for session
+   2e448e6b, mappen `backup_runde1_1314`.
+4. *Del regnskabstal med EIFO* (`ObData`): løbende eller til og med en måned,
+   regnskabssystem, folden "Hvilke data deler I?", "Ja, vi accepterer …" (og
+   fuldmagt for revisoren) og "Forbind {system}". "Vi sender tallene selv" og
+   "Vi venter på vores revisor" afslutter opstarten (det sidste vises ikke for
+   revisoren selv). Aftalen og valget gemmes, før systemets login åbner.
+5. *Oversigten*. Velkomsten efter opstarten (`PortalWelcome`) er fjernet, og portalen
+   åbner aldrig på 'welcome' (gamle gemte skærme går til oversigten). Valgte kunden
+   "Vi venter på vores revisor", står der et kort med "Bed revisoren om hjælp" og
+   "Forbind nu".
+
+**Tilstand:** samme felter i `CW.onboarding()`. `CW.ONBOARDING_STEPS` er
+`['account', 'data']`, og `onboardingStep()` giver 'account' (mangler bruger,
+vilkår eller virksomhed), 'data' eller null. En bruger fra før uden vilkår får
+vilkårskrydset på trinnet Bruger. `PortalErpSetup` (punktet Periodetal og
+oversigten) bruger det samme datadelingskort uden "send selv" og "vent på revisor".
+Log ud (også "Ikke dig?") fører til Crediwires login. Gamle demotilstande uden bruger
+får Opret bruger.
+
+**Tekster, der er rettet, så de passer til flowet:**
+- Invitationsmailen: "Første gang opretter I en bruger hos Crediwire. Har I
+  allerede en, logger I bare ind."
+- Landingssiden nævner brugeren hos Crediwire.
+- Fanens titel og Kundeflow-knappens hjælpetekst.
+- "Hændelser fra kunden" skelner mellem "venter på revisor" med og uden ja til
+  datadeling.
+
+**Rådgiveren:** Kundeflow starter på landingssiden (eller på trinnet, kunden er
+nået til). Skærmrækken er Landingsside, Crediwire: Opret bruger, Crediwire: Log ind,
+Bruger, Datadeling og Oversigt. Statusboksen på Kundeside og "Hændelser fra kunden"
+tæller "trin x af 2" (Opret bruger, før der er en bruger, ellers Bruger).
+
+**Test** (scratchpad for session 2e448e6b, mappen `ob`):
+- `flow3.js da|en 1400|420` (50 kontroller, runde 2): Bruger før login, Crediwire
+  (ny bruger, log ind, forkert adgangskode, tilbage), "Færdiggør dine oplysninger"
+  med forkert CVR og vilkår, kendt bruger med og uden virksomheden, "Skift bruger",
+  Kundeside og Kundeflow. `flow2.js` er forældet.
+- `later.js`: forbind senere fra Periodetal.
+
+Alle er grønne. Blind slutrunde (kunde og kode) før omstillingen til Crediwires side:
+ingen Høj-fund. Mellem-fundene er rettet (venter på revisor på oversigten,
+revisorens tekster, dialogen ved forbind fra oversigten, falsk "ja" i hændelserne).
+**Forældet:** `flow.js` her og `ob_e2e.js`, `ob_paths.js` og `ob_fixes.js` fra
+2. oktober tester de gamle skærme.
+
+Ikke lavet (lave fund fra blindrunden): trinlisten viser Materiale som tredje punkt,
+mens mobilen siger "Trin x af 2". Escape i regnskabssystemets login giver fokus til
+overskriften og ikke til knappen. "Ca. 10 minutter" og "Kun Mette …" på
+landingssiden er beholdt fra den side, Jesper bad om.
+
+## Kundens oversigt: kortere tekster og mærkater (6. oktober)
+
+Jesper syntes, de grå linjer på punkterne forvirrede mere, end de hjalp (fx "Mette har
+tilføjet 1 fil for jer · 06-10-2026"). I `PortalHubRow` (new_case_portal.jsx) har et
+punkt nu kun én grå linje, når den hjælper kunden: beskrivelsen (mangler),
+"Påbegyndt, ikke sendt endnu" (kladde), kilden (fx "Hentet fra e-conomic"),
+"Bemærkning sendt", rådgiverens note (afvist) eller "Hos jeres revisor: {navn}".
+Datoer, antal filer og hvem der tilføjede dem står kun i detaljerne (pilen til højre).
+Status står som en mærkat i designsystemets `.pill`: "Afventer godkendelse af EIFO"
+(sendt eller bemærkning, ikke gennemgået endnu) og "Godkendt". Årsrapporterne fra CVR
+står som ét punkt pr. år med en grøn mærkat "Hentet automatisk", fordi rådgiveren ikke
+godkender dem. På mobil står mærkaten under titlen. Test: `hub.js da|en 1400|420`
+(scratchpad for session 2e448e6b, mappen `ob`).

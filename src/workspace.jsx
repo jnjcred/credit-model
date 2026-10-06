@@ -732,8 +732,8 @@ function WorkspaceShell({ tab: routeTab, go, openMemo, caseId }) {
                 <button className="btn btn-sm" onClick={() => setShowCustomerStatus(true)} title={t("Se kundens side")}>
                   <I.Eye className="ic"/> {t('Kundeside')}
                 </button>
-                {/* Demo: kundens vej gennem opstarten, fra Opret bruger */}
-                <button className="btn btn-sm" onClick={() => setShowCustomerStatus('flow')} title={t('Demo: de skærme, kunden kommer igennem, fra Opret bruger')} style={{ borderStyle: 'dashed', borderColor: 'var(--c-line-strong)', background: 'transparent' }}>
+                {/* Demo: kundens vej gennem opstarten, fra landingssiden */}
+                <button className="btn btn-sm" onClick={() => setShowCustomerStatus('flow')} title={t('Demo: de skærme, kunden kommer igennem, fra landingssiden')} style={{ borderStyle: 'dashed', borderColor: 'var(--c-line-strong)', background: 'transparent' }}>
                   {t('Kundeflow')}
                 </button>
               </>
@@ -2184,13 +2184,13 @@ function WSCustomerEvents() {
   if (CW.request() && !c) {
     const step = CW.onboardingStep(ob);
     const legacy = !ob.account && (() => { try { return !!JSON.parse(localStorage.getItem('kabul:portal:nordhavn') || '{}').accepted; } catch (e) { return false; } })();
-    if (!legacy && !ob.account) rows.push({ k: 'ob', at: null, text: t('Kunden har ikke oprettet en bruger i portalen endnu.') });
+    if (!legacy && !ob.account) { /* ingen række: at kunden endnu ikke har oprettet en bruger står ikke i Afventer kunden */ }
     else if (!legacy && step) rows.push({ k: 'ob', at: null, text: wsFill(t('Kunden er i gang med opstarten i portalen: {step} (trin {n} af {m}).'), { step: typeof obLabel === 'function' ? obLabel(step) : step, n: CW.ONBOARDING_STEPS.indexOf(step) + 1, m: CW.ONBOARDING_STEPS.length }) });
     else if (ob.agreement && ob.agreement.declined) rows.push({ k: 'ob', at: ob.agreement.at, text: wsFill(t('Kunden sagde nej til datadeling {when} og sender tallene selv.'), { when: wsDay(ob.agreement.at) }) });
+    else if (ob.erp && ob.erp.waiting && !ob.sharing) rows.push({ k: 'ob', at: ob.erp.at, text: t('Kunden venter på sin revisor med regnskabssystemet og har ikke taget stilling til datadeling endnu.') });
     else if (ob.erp && ob.erp.waiting) rows.push({ k: 'ob', at: ob.erp.at, text: wsFill(t('Kunden har sagt ja til datadeling ({sharing}), men venter på sin revisor med at forbinde regnskabssystemet.'), { sharing: wsSharingText(ob.sharing) }) });
     else if (ob.sharing && !(ob.erp && ob.erp.system)) rows.push({ k: 'ob', at: ob.sharing.at, text: wsFill(t('Kunden har sagt ja til datadeling ({sharing}), men har ikke forbundet regnskabssystemet endnu.'), { sharing: wsSharingText(ob.sharing) }) });
   }
-  if (cs.customerSubmittedAt) rows.push({ k: 'sub', at: cs.customerSubmittedAt, text: wsFill(t('Kunden meldte {when}, at alt er sendt.'), { when: wsDay(cs.customerSubmittedAt) }) });
   if (c) {
     const scope = (c.scope || []).map(s => t(s).toLowerCase()).join(', ');
     const until = c.until === 'løbende' ? t('løbende') : c.mode === 'until' ? wsFill(t('tal til og med {date}'), { date: CW.fmtDate(c.until + 'T12:00:00') }) : c.until ? wsFill(t('gælder til {date}'), { date: CW.fmtDate(c.until) }) : '';
@@ -2365,12 +2365,6 @@ function WSMaterialCard({ go, caseId, locked }) {
           <div className="ws-mat-head">
             <h3 id="ws-cust-title" className="ws-mat-h">{t('Fra kunden')}{request && <> <span className="n">({approved})</span></>}</h3>
           </div>
-          {inReview > 0 && (
-            <div className="ws-mat-empty" style={{ marginBottom: kept.length ? 8 : 0 }}>
-              {wsFill(inReview === 1 ? t('1 punkt fra kunden venter på din gennemgang under {sted}. Det står her, når det er godkendt.') : t('{n} punkter fra kunden venter på din gennemgang under {sted}. De står her, når de er godkendt.'), { n: inReview, sted: t('Afventer kunden') })}
-              {' '}<button type="button" className="btn-link" onClick={() => CW.focusSoon('#ws-outstanding-title')}>{t('Gå til gennemgang')}</button>
-            </div>
-          )}
           {!request ? <div className="ws-mat-empty">{t('Kunden er ikke bedt om materiale endnu.')}</div>
             : !kept.length ? (inReview ? null : <div className="ws-mat-empty">{t('Intet godkendt endnu. Det, du godkender under Afventer kunden, kommer til at stå her.')}</div>)
             : <WSItemList entries={kept} locked={locked} labelledBy="ws-cust-title"/>}
@@ -2545,13 +2539,57 @@ function WSRejectModal({ it, onClose, onDone }) {
   );
 }
 
+/* Intern note som en note i Excel: en gul boks, der popper ud ved punktet og ikke skubber andet. Klik udenfor gemmer; Esc lukker uden at gemme. */
+function WSInotePop({ anchor, initial, note, label, onSave, onDelete, onClose }) {
+  const ref = React.useRef(null);
+  const [txt, setTxt] = React.useState(initial || '');
+  const [pos, setPos] = React.useState(null);
+  const txtRef = React.useRef(txt);
+  txtRef.current = txt;
+  const done = React.useRef(false);
+  const finish = (fn) => { if (done.current) return; done.current = true; fn(); };
+  const place = () => {
+    const r = anchor.getBoundingClientRect(), w = 300, h = (ref.current && ref.current.offsetHeight) || 150;
+    const left = Math.min(Math.max(8, r.left), window.innerWidth - w - 8);
+    const top = r.bottom + 6 + h > window.innerHeight ? Math.max(8, r.top - 6 - h) : r.bottom + 6;
+    setPos({ left, top });
+  };
+  React.useLayoutEffect(() => {
+    place();
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => { window.removeEventListener('scroll', place, true); window.removeEventListener('resize', place); };
+  }, []);
+  React.useEffect(() => {
+    const down = (e) => { if (ref.current && !ref.current.contains(e.target) && !anchor.contains(e.target)) finish(() => onSave(txtRef.current)); };
+    document.addEventListener('mousedown', down, true);
+    return () => document.removeEventListener('mousedown', down, true);
+  }, []);
+  React.useEffect(() => { const i = pos && ref.current && ref.current.querySelector('textarea'); if (i) i.focus({ preventScroll: true }); }, [!!pos]);
+  return ReactDOM.createPortal(
+    <div ref={ref} className="ws-inote-edit" role="dialog" aria-label={wsFill(t('Intern note til {item}'), { item: label })}
+      style={pos ? { left: pos.left, top: pos.top } : { visibility: 'hidden' }}
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(onClose); } }}>
+      <div className="ws-inote-head">{t('Intern note')}</div>
+      <textarea rows={4} value={txt} onChange={e => setTxt(e.target.value)} placeholder={t('Skriv en note. Kunden ser den ikke.')} aria-label={wsFill(t('Intern note til {item}'), { item: label })}/>
+      <div className="ws-inote-foot">
+        {note ? <button type="button" onClick={() => finish(onDelete)}>{t('Slet noten')}</button> : <span/>}
+        <button type="button" className="on" onClick={() => finish(() => onSave(txt))}>{t('Gem note')}</button>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStart, onRemind }) {
   const fileRef = React.useRef(null);
   const [rejecting, setRejecting] = React.useState(false);
   const [note, setNote] = React.useState('');
   const [drag, setDrag] = React.useState(false);
+  const [noting, setNoting] = React.useState(null);   // knappen, den interne note er åbnet fra (null = lukket)
   const status = s ? s.status : 'pending';
   const label = t(it.label);
+  const inote = CW.internalNote(it.id);
   const files = (s && s.files) || [];
   const byAdvisor = s && s.by === 'rådgiver';
   const adv = wsAdvisor();
@@ -2689,6 +2727,12 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
         <div className="ws-mat-row-title" title={tipParts.length ? tipParts.join(' · ') : undefined} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {icon}
           <span>{label}</span>
+          <button type="button" className={'ws-inote-btn' + (inote ? ' has' : '')} aria-expanded={!!noting} aria-haspopup="dialog"
+            title={inote ? t('Intern note') + ': ' + inote.text : t('Intern note')}
+            aria-label={wsFill(t('Intern note til {item}'), { item: label })}
+            onClick={(e) => { if (!noting) setNoting(e.currentTarget); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>{inote ? <path d="M8.5 11h7M8.5 14h4"/> : <path d="M12 9v6M9 12h6"/>}</svg>
+          </button>
         </div>
           {!locked && !rejecting && !quiet && (
             <span className="ws-mat-row-actions">
@@ -2786,6 +2830,11 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
             <span style={{ color: 'var(--c-text-2)' }}>{s.noteKind === 'system' ? t('Kilde:') : byAdvisor && !s.viaPreview ? t('Din bemærkning ved upload:') : t('Kundens bemærkning:')}</span> {s.noteKind === 'system' ? t(s.note) : s.note}
           </div>
         )}
+
+        {noting && <WSInotePop anchor={noting} initial={inote ? inote.text : ''} note={inote} label={label}
+          onSave={(txt) => { CW.setInternalNote(it.id, txt, adv.name); setNoting(null); }}
+          onDelete={() => { CW.setInternalNote(it.id, '', adv.name); setNoting(null); }}
+          onClose={() => setNoting(null)}/>}
 
         {rejecting && <WSRejectModal it={it} onClose={() => setRejecting(false)} onDone={doReject}/>}
       </div>

@@ -593,8 +593,11 @@ function finEstimate2026(row, q4) {
    `ann` er 4 for kvartalskolonner, så EBITDA annualiseres i gearingsnøgletallet,
    og 1 for helårskolonner. */
 const FIN_RATIOS = [
-  { label: 'Bruttomargin %',   percent: true,
+  // Samme marginer som i grafens detaljefelt (6. oktober): dækningsgrad, løn % og EBITDA-margin
+  { label: 'Dækningsgrad %',   percent: true,
     calc: (c) => ratio(c['Bruttofortjeneste'], c['Nettoomsætning'], 100) },
+  { label: 'Løn % af omsætning', percent: true,
+    calc: (c) => ratio(c['Personaleomkostninger'] == null ? null : -c['Personaleomkostninger'], c['Nettoomsætning'], 100) },
   { label: 'EBITDA-margin %',  percent: true,
     calc: (c) => ratio(c['EBITDA'], c['Nettoomsætning'], 100) },
   { label: 'Soliditetsgrad %', percent: true,
@@ -1308,14 +1311,11 @@ function AnnualReportSection({ go, unit, setUnit }) {
     if (!outside) CW.focusSoon(r.then && document.contains(r.then) ? r.then : cellEl(r.ref, r.col));
   };
 
-  // Nulstil ét tal til det oprindelige; Fortryd i beskeden sætter rettelsen (og begrundelsen) tilbage
+  // Nulstil ét tal til det oprindelige (ingen besked: tallet står at se i cellen, og ændringen står i aktivitetsloggen)
   const resetCell = (x) => {
     const from = x.value;
     finRemoveEdits([x]);
     finLogChanges([{ rowRef: x.rowRef, colKey: x.colKey, from, to: finOrigOf(x), removed: true }]);
-    CW.toast(finFill(t('{post} er nulstillet til {tal}'), { post: finEditName(x.rowRef, x.colKey), tal: (fmtU(finOrigOf(x)) || '-') }), {
-      action: { label: t('Fortryd'), onClick: () => { const d = finSaveEdits([{ rowRef: x.rowRef, colKey: x.colKey, value: from }], x.reason || ''); finLogChanges(d); } },
-    });
     CW.focusSoon(cellEl(x.rowRef, x.colKey));
   };
 
@@ -1392,7 +1392,7 @@ function AnnualReportSection({ go, unit, setUnit }) {
             }}
             onBlur={() => commitEdit('blur')}
           />
-        </>) : (display || '-')}
+        </>) : (display || (finFillable(ref, col.key) ? <span className="fin-na" title={t('Ikke oplyst i årsrapporten. Klik for at indtaste omsætningen.')}>{t('Ikke oplyst')}</span> : '-'))}
       </td>
     );
   };
@@ -1651,7 +1651,9 @@ function AnnualReportSection({ go, unit, setUnit }) {
                       </td>
                       {cols.map((col, ci) => {
                         const ref = e.ref || e.label;
-                        if (!e.sum && !e.derive && canEdit(ref, col)) return editCell(ref, e.label, col, entryVal(e, col, ci));
+                        // En post med detaljer er summen af dem i årstallene: ret detaljerne, ikke summen (undtagen en omsætning, der mangler)
+                        const isTotal = col.kind === 'annual' && (e.children || []).length > 0 && !finFillable(ref, col.key);
+                        if (!e.sum && !e.derive && !isTotal && canEdit(ref, col)) return editCell(ref, e.label, col, entryVal(e, col, ci));
                         return numCell(col, ci, fmt(entryVal(e, col, ci), {}));
                       })}
                     </tr>

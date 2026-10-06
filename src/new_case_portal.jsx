@@ -1,4 +1,4 @@
-// Ny sag-guiden og kundeportalen (det kunden ser på crediwire.app).
+// Ny sag-guiden og kundeportalen (det kunden ser på Crediwire).
 // Begge læser materialekataloget og punkternes tilstand fra window.CW
 // (src/case_state.js), så portalen, kundens statusside, "Udestående fra
 // kunden" og Dokumenter altid viser det samme.
@@ -556,7 +556,7 @@ function NewCaseModal({ close, go, prefill }) {
 // og sprogskift og nulstilles sammen med resten af demoen.
 const PORTAL_KEY = 'kabul:portal:nordhavn';
 const PORTAL_SESSION_KEY = 'kabul:portal-session';
-const PORTAL_DEFAULTS = { screen: 'welcome', itemId: null, accepted: false, trustedUntil: null };
+const PORTAL_DEFAULTS = { screen: 'hub', itemId: null, accepted: false, trustedUntil: null };
 function portalMem() {
   try { return Object.assign({}, PORTAL_DEFAULTS, JSON.parse(localStorage.getItem(PORTAL_KEY) || '{}')); }
   catch (e) { return Object.assign({}, PORTAL_DEFAULTS); }
@@ -826,10 +826,24 @@ const PORTAL_CSS = `
 .cwp .cwp-lang button { min-height: 24px !important; min-width: 32px !important; font-size: 11.5px !important; }
 .cwp .cwp-row-meta { font-size: 12.5px; color: var(--c-text-2); margin-top: 2px; line-height: 1.45; }
 .cwp .cwp-row-cat { font-size: 12px; color: var(--c-text-3); white-space: nowrap; margin-top: 3px; }
+.cwp .cwp-row-pill { white-space: nowrap; margin-right: 4px; }
+.cwp .cwp-row-pill-in { display: none; margin-top: 6px; }
+@media (max-width: 600px) {
+  .cwp .cwp-row-pill-in { display: block; }
+  .cwp .cwp-row-pill-side { display: none; }
+}
 .cwp .cwp-demo { position: fixed; left: 18px; right: 18px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; pointer-events: none; z-index: 50; }
 .cwp .cwp-demo > * { pointer-events: auto; }
 .cwp .cwp-demo-back { background: var(--c-primary); color: #fff; border: none; padding: 8px 12px; min-height: 32px; border-radius: 999px; cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; box-shadow: var(--shadow-lg); font-family: inherit; }
 .cwp .cwp-demo-fill { background: transparent; color: var(--c-text-4); border: none; padding: 4px 8px; min-height: 28px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: inherit; }
+/* Stiplet kant: kortet er kun for rådgiveren i forhåndsvisningen; kunden ser det ikke (som demopanelet) */
+.cwp .cwp-pvob { max-width: 760px; margin: 0 auto 16px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; border: 1px solid rgba(183, 121, 31, 0.28); border-radius: 12px; background: var(--c-warn-bg); }
+.cwp .cwp-pvob-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c-warn); flex-shrink: 0; }
+.cwp .cwp-pvob-text { flex: 1; min-width: 0; }
+.cwp .cwp-pvob-title { margin: 0; font-size: 14.5px; font-weight: 600; color: var(--c-ink); }
+.cwp .cwp-pvob-sub { margin-top: 2px; font-size: 13px; color: var(--c-text-2); }
+.cwp .cwp-pvob .btn { background: #fff; flex-shrink: 0; }
+.cwp .cwp-pv-upnote { margin: 0 0 12px; padding: 10px 14px; border: 1.5px dashed var(--c-line-strong); border-radius: 10px; font-size: 13px; line-height: 1.5; color: var(--c-text-2); }
 .cwp .cwp-demo-right { display: flex; align-items: center; gap: 4px; position: relative; }
 .cwp .cwp-demo-fill[aria-expanded="true"] { color: var(--c-ink); background: var(--c-surface-2); }
 .cwp .cwp-demo-panel { position: absolute; right: 0; bottom: calc(100% + 8px); width: 380px; max-width: calc(100vw - 36px); max-height: min(60vh, 520px); overflow: auto; padding: 6px; background: var(--c-surface); border: 1px dashed var(--c-line-strong); border-radius: 10px; box-shadow: var(--shadow-lg); }
@@ -840,8 +854,18 @@ const PORTAL_CSS = `
 .cwp .cwp-demo-item-file { font-size: 11.5px; color: var(--c-text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cwp .cwp-demo-item-done { font-size: 12px; color: var(--c-success); white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
 @keyframes cwp-spin { to { transform: rotate(360deg); } }
+.cwp .cwp-land { max-width: 560px; margin: 24px auto 0; text-align: left; }
+.cwp .cwp-land-pill { display: inline-block; padding: 4px 10px; background: var(--c-surface-2); border-radius: 999px; font-size: 12px; color: var(--c-text-2); font-weight: 500; }
+.cwp .cwp-land-h { font-size: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--c-ink); margin: 18px 0 10px; line-height: 1.15; }
+.cwp .cwp-land-lead { font-size: 15px; color: var(--c-text-2); line-height: 1.55; margin: 0 0 18px; }
+.cwp .cwp-land-why { background: var(--c-surface-2); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; display: flex; gap: 12px; font-size: 13px; color: var(--c-text); line-height: 1.55; }
+.cwp .cwp-land-how { background: #fff; border: 1px solid var(--c-line); border-radius: 12px; padding: 20px; margin-bottom: 24px; }
+.cwp .cwp-land-how ul { list-style: none; margin: 0; padding: 0; }
+.cwp .cwp-land-how li { display: flex; gap: 12px; padding: 8px 0; align-items: center; font-size: 13.5px; }
+.cwp .cwp-land-ic { width: 28px; height: 28px; border-radius: 7px; background: var(--c-surface-2); display: grid; place-items: center; color: var(--c-text-2); flex-shrink: 0; }
 @media (max-width: 600px) {
   .cwp .cwp-main { padding: 18px 16px 24px !important; }
+  .cwp .cwp-main.cwp-main-cw { padding: 0 !important; }
   .cwp .cwp-head-inner { padding: 10px 16px !important; gap: 10px !important; }
   .cwp .cwp-hide-sm { display: none !important; }
   .cwp .cwp-stack { flex-direction: column !important; align-items: stretch !important; }
@@ -856,6 +880,9 @@ const PORTAL_CSS = `
   .cwp .cw-fold { min-height: 44px; }
   .cwp .cwp-menuitem { min-height: 44px; }
   .cwp .cwp-lang button { min-height: 44px !important; min-width: 44px !important; }
+  .cwp .cwp-pvob { padding: 14px 16px; flex-wrap: wrap; }
+  .cwp .cwp-land { margin-top: 4px; }
+  .cwp .cwp-land-how { padding: 16px; }
   .cwp .cwp-demo { position: static; padding: 8px 16px 24px; flex-wrap: wrap; }
   .cwp .cwp-demo-back, .cwp .cwp-demo-fill { min-height: 44px; }
 }
@@ -863,9 +890,9 @@ const PORTAL_CSS = `
 
 // External customer-facing upload portal - multi-screen flow
 //
-// Kunden: opret bruger eller log ind (PortalAuth), opstarten (PortalOnboarding:
-// vilkår, virksomhed, aftalen med EIFO, datadeling, regnskabssystem), derefter
-// velkomsten, oversigten og punkterne.
+// Kunden: landingssiden fra invitationslinket (PortalLanding), Crediwires egen
+// side til opret bruger eller log ind (PortalCwAuth, demo af omstillingen), så
+// portalens trin Bruger og Datadeling (PortalOnboarding), derefter oversigten.
 //
 // Forhåndsvisningen (preview, rådgiverens "Kundeside"): rådgiveren kan gå mellem
 // alle kundens skærme med bjælken øverst og knapperne under kortet, men intet
@@ -874,7 +901,7 @@ const PORTAL_CSS = `
 // To spor i forhåndsvisningen: Kundeside (flow = false) åbner altid på kundens
 // oversigt med en statusboks øverst, hvis kunden ikke er færdig med opstarten.
 // Kundeflow (flow = true, demo) viser de skærme, kunden kommer igennem, fra
-// "Opret bruger" (eller flowStart) med skærmrækken øverst.
+// landingssiden (eller flowStart) med skærmrækken øverst.
 function CustomerPortal({ back, preview = false, flow = false, flowStart = null, onOpenFlow = null }) {
   CW.useCase();
   const rootRef = React.useRef(null);
@@ -885,7 +912,16 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   const legacy = !ob.account && !!portalMem().accepted;
   const [authed, setAuthed] = React.useState(() => portalTrusted());
   const loggedIn = !preview && authed && (!!ob.account || legacy);
-  const [authMode, setAuthMode] = React.useState(() => ob.account ? 'login' : 'signup');
+  // Landingssiden ("Kære …") vises først, indtil der er en bruger; har kunden en, går linket til Log ind
+  const [landed, setLanded] = React.useState(false);
+  // Fra trinnet Bruger ("Fortsæt med Crediwire") sendes kunden til Crediwires side; "Tilbage til Materiale til EIFO" lukker den
+  const [cwAuth, setCwAuth] = React.useState(false);
+  // Kendt Crediwire-bruger, der allerede har virksomheden: Bruger viser "tjekker" og sender videre til datadeling
+  const [obArrive, setObArrive] = React.useState(false);
+  // Demoknapperne på trinnet Bruger: i Kundeflow et stadie, der kun vises; demoKey tegner trinnet forfra
+  const [obDemo, setObDemo] = React.useState(null);
+  const [demoKey, setDemoKey] = React.useState(0);
+  const landing = !preview && !loggedIn && !ob.account && !legacy && !landed;
   // Afslået eller indstillet sag: kunden kan ikke længere sende noget
   const lock = CW.customerLock();
   // Opstarten: det trin, kunden mangler, eller et tidligere, kunden er gået tilbage til
@@ -896,9 +932,10 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   // Forhåndsvisningen starter, hvor kunden er: ingen bruger endnu, et trin i opstarten, eller oversigten
   const [pvOb, setPvOb] = React.useState(() => {
     if (!preview || !flow || lock === 'declined') return null;
-    const k = flowStart || 'signup';
-    if (k === 'account') return ob.account ? 'login' : 'signup';
-    return ['welcome', 'hub', 'material'].includes(k) ? null : k;
+    const k = flowStart || 'landing';
+    // Har kunden ingen bruger endnu, starter Kundeflow på landingssiden
+    if (k === 'account' && !ob.account) return 'landing';
+    return ['hub', 'material'].includes(k) ? null : k;
   });
   const [pvNote, setPvNote] = React.useState(null);
   // Spærren sættes, før noget i portalen tegnes (fx dialogen, der ellers markerer beskeder som læst af kunden)
@@ -909,15 +946,14 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   const initial = React.useMemo(() => {
     const m = portalMem();
     const itemScreens = ['upload', 'connect', 'trade', 'erp'];
-    let s = ['welcome', 'hub', 'status'].concat(itemScreens).includes(m.screen) ? m.screen : 'welcome';
+    let s = ['hub', 'status'].concat(itemScreens).includes(m.screen) ? m.screen : 'hub';
     let id = null;
     if (itemScreens.includes(s) && s !== 'erp') {
       if (!preview && m.itemId && CW.requestedItems().some(it => it.id === m.itemId)) id = m.itemId; else s = 'hub';
     }
-    if (preview && !['welcome', 'hub', 'status'].includes(s)) s = 'hub';
-    // Kundeside åbner altid på oversigten; Kundeflow på velkomsten, hvis det starter dér
+    // Forhåndsvisningen (Kundeside og Kundeflow) åbner på oversigten
+    if (preview && s !== 'status') s = 'hub';
     if (preview && !flow) s = 'hub';
-    if (preview && flow && flowStart === 'welcome') s = 'welcome';
     return { s, id };
   }, []);
   const [screen, setScreenRaw] = React.useState(initial.s);
@@ -927,11 +963,9 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   const [justSubmitted, setJustSubmitted] = React.useState(false);
   const returnTo = React.useRef(null);
 
-  // visited: kunden har selv været videre end velkomsten. Først derefter hedder det
-  // "Velkommen tilbage" (at rådgiveren har uploadet noget, tæller ikke som et besøg).
   const go = (s, itemId = null, backTo = null) => {
     returnTo.current = backTo;
-    if (!preview) setPortalMem(Object.assign({ screen: s, itemId }, s !== 'welcome' ? { visited: true } : {}));
+    if (!preview) setPortalMem({ screen: s, itemId });
     setActiveId(itemId);
     setScreenRaw(s);
   };
@@ -947,6 +981,8 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   }, [preview]);
   // Stopper klik, slip og formularer på alt, der er kundens handling (data-cust-act)
   const pvStop = (e, fallback) => {
+    // Uploadfelterne i punkterne (og knappen, der sender filerne) virker: rådgiveren uploader på kundens vegne
+    if (e.target && e.target.closest && e.target.closest('[data-pv-allow]')) return;
     // Links i teksten (fx "brugsvilkår") er ikke kundens handling, selv om de står i en afkrydsning
     const link = e.type === 'click' && e.target && e.target.closest && e.target.closest('.cwp-linkbtn');
     if (link && !link.hasAttribute('data-cust-act')) return;
@@ -981,10 +1017,11 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
 
   // Sidetitel pr. trin, fx "Intern årsrapport · Materiale til EIFO"
   const pageName = !hasReq && lock !== 'declined' ? t('Ingen aktiv anmodning')
-    : !loggedIn ? (authMode === 'signup' ? t('Opret jeres bruger') : t('Log ind'))
+    : landing ? t('Anmodning fra EIFO')
+    : !loggedIn ? (!cwAuth ? ncFill(t('Opstart: {step}'), { step: pvScreenLabel('account') }) : ob.account ? t('Crediwire: Log ind') : t('Crediwire: Opret bruger'))
     : lock === 'declined' ? t('Sagen er afsluttet')
     : obStep ? ncFill(t('Opstart: {step}'), { step: pvScreenLabel(obStep) })
-    : view === 'welcome' ? t('Velkommen') : view === 'hub' ? t('Oversigt')
+    : view === 'hub' ? t('Oversigt')
     : view === 'status' ? t('Status') : view === 'erp' ? t('Regnskabssystem') : active ? t(active.label) : t('Oversigt');
   // Titlen sættes ikke tilbage, når portalen lukkes: appen sætter selv titlen for den nye rute
   // (en tilbagesætning her kom efter appens og gav fx "Kundeportal" på en sag)
@@ -1006,7 +1043,7 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
       if (backTo) el.scrollIntoView({ block: 'center' });
     }, 40);
     return () => clearTimeout(id);
-  }, [view, activeId, loggedIn, obStep, pvOb, authMode]);
+  }, [view, activeId, loggedIn, obStep, pvOb, cwAuth, landing]);
 
   const openItem = (id) => go(portalKind(id), id);
   const toHub = (fromId) => go('hub', null, fromId || null);
@@ -1014,13 +1051,17 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   // Kunden afslutter et uploadpunkt: filerne registreres i CW og punktet markeres som sendt
   const finish = (id, files, note) => {
     const prev = CW.itemState(id);
-    const metas = (files || []).map(f => (f instanceof File ? CW.putFiles([f], { by: 'kunde', itemId: id })[0] : f));
+    // På Kundeside (forhåndsvisning) uploader rådgiveren på kundens vegne: filen står som rådgiverens
+    const by = CW.isPreview() ? 'rådgiver' : 'kunde';
+    const metas = (files || []).map(f => (f instanceof File ? CW.putFiles([f], { by, itemId: id })[0] : f));
     csClearDraft(id);
     const changed = metas.length || (prev && prev.status === 'received' && (note || '') !== (prev.note || ''));
     if (changed) {
       const stale = prev && (prev.status === 'noted' || prev.status === 'rejected' || prev.status === 'delegated');
-      CW.markReceived(id, { by: 'kunde', files: metas, note: note != null ? note : (stale ? '' : undefined) });
-      CW.toast(ncFill(t('{item} er sendt til {name}'), { item: t(CW.itemById(id).label), name: PORTAL_CONTACT.first }));
+      CW.markReceived(id, { by, files: metas, note: note != null ? note : (stale ? '' : undefined) });
+      CW.toast(by === 'rådgiver'
+        ? ncFill(t('{item} er uploadet på kundens vegne'), { item: t(CW.itemById(id).label) })
+        : ncFill(t('{item} er sendt til {name}'), { item: t(CW.itemById(id).label), name: PORTAL_CONTACT.first }));
     }
     toHub(id);
   };
@@ -1058,65 +1099,87 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   };
 
   // Logget ind: "Husk mig" husker enheden i 30 dage, ellers gælder det fanen
-  const onAuthed = (remember) => {
+  const onAuthed = (remember, arrive) => {
     if (remember) setPortalMem({ trustedUntil: new Date(Date.now() + 30 * 864e5).toISOString() });
     else { try { sessionStorage.setItem(PORTAL_SESSION_KEY, '1'); } catch (e) {} }
-    setObView(null);
+    setCwAuth(false);
+    setObArrive(!!arrive);
+    setObView(arrive ? 'account' : null);
     setAuthed(true);
   };
   const logout = () => {
     setPortalMem({ trustedUntil: null });
     try { sessionStorage.removeItem(PORTAL_SESSION_KEY); } catch (e) {}
-    setAuthMode('login');
+    // Tilbage til trinnet Bruger; Crediwire afgør selv, om det er Opret bruger eller Log ind
+    setCwAuth(false);
+    setObArrive(false);
+    setObView(null);
     setAuthed(false);
   };
-  // Opstarten er færdig (eller kunden sendte tallene selv): velkomsten med materialet
-  const onboardingDone = () => { setObView(null); go('welcome'); };
+  // Opstarten er færdig (eller kunden sendte tallene selv): oversigten med materialet
+  const onboardingDone = () => { setObView(null); go('hub'); };
   // Demo (præsentatoren er kunden): log ind og spring opstarten over
   const demoSkip = () => {
     if (!ob.doneAt && !legacy) obDemoSkip();
     try { sessionStorage.setItem(PORTAL_SESSION_KEY, '1'); } catch (e) {}
     setObView(null);
     setAuthed(true);
-    go('welcome');
+    go('hub');
   };
 
   // Forhåndsvisningens navigation: opstartens skærme eller portalens egne
   const pvGo = (k) => {
     setPvNote(null);
-    if (k === 'account') k = ob.account ? 'login' : 'signup';
-    if (k === 'material') k = 'welcome';
-    if (['welcome', 'hub'].includes(k)) { setPvOb(null); go(k); }
+    setObDemo(null);
+    if (k === 'material') k = 'hub';
+    if (k === 'hub') { setPvOb(null); go(k); }
     else setPvOb(k);
   };
-  const pvCurrent = pvOb || (['welcome', 'hub'].includes(view) ? view : null);
+  const pvCurrent = pvOb || (view === 'hub' ? view : null);
 
-  const mem = portalMem();
-  const trustedUntil = !preview && mem.trustedUntil && mem.trustedUntil > new Date().toISOString() ? mem.trustedUntil : null;
   const Main = preview ? 'div' : 'main';
   const Header = preview ? 'div' : 'header';
   // Sagsnummer, produkt og beløb står først i toppen, når kunden er logget ind (eller i forhåndsvisningen)
   const showMeta = preview ? !pvOb : loggedIn && !obStep;
   const pvNav = null;   // forrige/næste-bjælken (PortalPvStepNav) er fjernet; sæt den tilbage her, hvis den skal bruges igen
+  // Crediwires egen login-side: hele skærmen, uden portalens top (kunden er "sendt videre")
+  const cwPage = hasReq && lock !== 'declined' && (preview ? (pvOb === 'signup' || pvOb === 'login') : (!loggedIn && !landing && cwAuth));
+
+  // Demo: spring mellem stadierne i trinnet Bruger. I portalen gemmes stadiet (som om kunden var
+  // kommet tilbage fra Crediwire); i Kundeflow vises det kun
+  const pickObDemo = (k) => {
+    setDemoKey(n => n + 1);
+    if (preview) { setObDemo(k); setPvNote(null); setPvOb('account'); return; }
+    if (CW.setOnboarding(obDemoState(k), ncFill(t('Demo: trinnet Bruger som "{stage}"'), { stage: obDemoLabel(k) })) === false) return;
+    setCwAuth(false);
+    if (k === 'pre') { logout(); return; }
+    onAuthed(false, k === 'knownCo');
+  };
+  const obDemoBar = <PortalObDemo preview={preview} current={preview && obDemo ? obDemo : obDemoStage(ob, preview ? !!ob.account : loggedIn)} onPick={pickObDemo}/>;
 
   let content;
   if (!hasReq && lock !== 'declined') content = <PortalNoRequest/>;
-  else if (preview && pvOb && lock !== 'declined' && (pvOb === 'signup' || pvOb === 'login')) content = <>
-    <PortalAuth key={pvOb} mode={pvOb} setMode={pvGo} preview onAuthed={() => {}}/>
-    <div style={{ maxWidth: 440, margin: '0 auto' }}>{pvNav}</div>
-  </>;
-  else if (preview && pvOb && lock !== 'declined') content = <PortalOnboarding step={pvOb} setStep={pvGo} preview onFinished={() => pvGo('welcome')} footer={pvNav} onJump={pvGo}/>;
+  else if (preview && pvOb === 'landing' && lock !== 'declined') content = <PortalLanding onStart={() => pvGo('account')}/>;
+  else if (cwPage && preview) content = <PortalCwAuth key={pvOb} mode={pvOb} preview onAuthed={() => {}} onBack={() => pvGo('account')}/>;
+  else if (preview && pvOb && lock !== 'declined') content = <PortalOnboarding key={'pv' + demoKey} step={pvOb} setStep={pvGo} preview
+    pre={obDemo ? obDemo === 'pre' : !ob.account} demo={obDemo ? obDemoState(obDemo) : undefined} arrive={obDemo === 'knownCo'}
+    onContinue={() => pvGo((obDemo ? obDemo !== 'pre' : !!ob.account) ? 'login' : 'signup')} onFinished={() => pvGo('hub')} onJump={pvGo}
+    footer={pvOb === 'account' ? obDemoBar : pvNav}/>;
   else if (lock === 'declined') content = <PortalClosed/>;
-  else if (!preview && !loggedIn) content = <PortalAuth key={authMode} mode={authMode} setMode={setAuthMode} onAuthed={onAuthed}/>;
-  else if (obStep) content = <PortalOnboarding step={obStep} setStep={setObView} onFinished={onboardingDone}/>;
-  else if (view === 'welcome') content = <PortalWelcome trustedUntil={trustedUntil} onStart={() => go('hub')} onStatus={() => go('status')}/>;
+  else if (landing) content = <PortalLanding onStart={() => setLanded(true)}/>;
+  else if (!preview && !loggedIn && !cwAuth) content = <PortalOnboarding key={'pre' + demoKey} step="account" pre setStep={() => {}} onFinished={() => {}} onContinue={() => setCwAuth(true)} footer={obDemoBar}/>;
+  else if (!preview && !loggedIn) content = <PortalCwAuth onAuthed={onAuthed} onBack={() => setCwAuth(false)}/>;
+  else if (obStep) content = <PortalOnboarding key={obStep + demoKey} step={obStep} arrive={obArrive} setStep={(k) => { setObArrive(false); setObView(k); }} onFinished={onboardingDone} onLogout={logout}
+    footer={obStep === 'account' ? obDemoBar : undefined}/>;
   else if (view === 'upload' && active && !lock) content = <PortalUpload item={active} onBack={() => toHub(active.id)} onFinish={(files, note) => finish(active.id, files, note)} onNoted={() => toHub(active.id)}/>;
   else if (view === 'connect' && active && !lock) content = <PortalConnect item={active} onBack={() => toHub(active.id)} onFinish={(files) => finish(active.id, files)} onNoted={() => toHub(active.id)}/>;
-  else if (view === 'erp' && !lock && !CW.consent()) content = <PortalErpSetup onBack={() => toHub()} onDone={() => toHub()}/>;
+  // Ingen kontrol af samtykket her: det skrives midt i forbindelsen, og dialogen skal blive stående til "Fortsæt"
+  // (PortalErpSetup går selv tilbage, hvis der allerede er forbundet, når den åbnes)
+  else if (view === 'erp' && !lock) content = <PortalErpSetup onBack={() => toHub()} onDone={() => toHub()}/>;
   else if (view === 'trade' && active && !lock) content = <PortalTradeScreen item={active} onBack={() => toHub(active.id)} onDone={() => toHub(active.id)}/>;
   else if (view === 'status') content = <PortalStatus justSubmitted={justSubmitted} onBack={() => go('hub')}/>;
   else content = <PortalHub requested={requested} fresh={fresh} lock={lock} onOpen={openItem} onOpenBundle={(preselect) => setBundle({ preselect: preselect || null })} onOther={() => setOtherOpen(true)} onSubmit={submit} onStatus={() => { setJustSubmitted(false); go('status'); }} onErp={() => go('erp')}/>;
-  if (preview && !pvOb && pvNav && ['welcome', 'hub'].includes(view)) content = <>{content}<div style={{ maxWidth: 760, margin: '0 auto' }}>{pvNav}</div></>;
+  if (preview && !pvOb && pvNav && view === 'hub') content = <>{content}<div style={{ maxWidth: 760, margin: '0 auto' }}>{pvNav}</div></>;
   // Kundeside: hvor kunden er i opstarten, øverst på oversigten
   if (preview && !flow && req && !lock && view === 'hub') content = <><PortalPvObStatus onOpenFlow={onOpenFlow}/>{content}</>;
 
@@ -1133,7 +1196,7 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
             <b style={{ fontWeight: 600 }}>{flow ? t('Kundeflow (demo)') : t('Forhåndsvisning af kundens side')}</b>
             <span style={{ color: 'rgba(255,255,255,0.75)' }}>
               {flow ? t('De skærme, kunden kommer igennem. Du kan klikke rundt, men intet gemmes.')
-                : req ? t('Du kan se og klikke rundt, men intet gemmes, og du kan ikke handle for kunden.') : t('Anmodningen er ikke sendt endnu. Sådan ser siden ud, når den er sendt.')}
+                : req ? t('Du kan se og klikke rundt. Filer, du uploader i punkterne, sendes på kundens vegne. Alt andet gemmes ikke.') : t('Anmodningen er ikke sendt endnu. Sådan ser siden ud, når den er sendt.')}
             </span>
             <div style={{ flex: 1 }}/>
             <button type="button" onClick={back} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', minHeight: 28, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 6, color: '#fff', cursor: 'pointer', fontSize: 12.5, fontFamily: 'inherit' }}>
@@ -1150,7 +1213,7 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
           </div>
         )}
         {/* K9: kun afsender og firmanavn; ingen "sikker"-mærker */}
-        <Header style={{ borderBottom: '1px solid var(--c-line)', background: '#fff' }}>
+        {!cwPage && <Header style={{ borderBottom: '1px solid var(--c-line)', background: '#fff' }}>
           <div className="cwp-head-inner" style={{ maxWidth: 760, margin: '0 auto', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 14 }}>
             <div className="brand-mark" aria-hidden="true" style={{ background: 'var(--c-primary)' }}>cw</div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -1163,10 +1226,10 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
             {!preview && loggedIn && <button type="button" className="cwp-head-logout" onClick={logout}>{t('Log ud')}</button>}
             {!preview && <div className="cwp-lang"><LanguageSwitcher compact/></div>}
           </div>
-        </Header>
+        </Header>}
       </div>
 
-      <Main id={preview ? undefined : 'cwp-main'} className="cwp-main" tabIndex={preview ? undefined : -1} style={{ flex: 1, padding: '32px 24px 96px', outline: 'none' }}>
+      <Main id={preview ? undefined : 'cwp-main'} className={'cwp-main' + (cwPage ? ' cwp-main-cw' : '')} tabIndex={preview ? undefined : -1} style={{ flex: 1, padding: cwPage ? 0 : '32px 24px 96px', outline: 'none' }}>
         {content}
       </Main>
 
@@ -1289,107 +1352,59 @@ function PortalConsentBox() {
 }
 
 /**
- * Velkomsten skifter efter, hvor kunden er: første besøg, i gang, afvist, klar,
- * færdigmeldt, hos kreditkomitéen. Første besøg afgøres af, om kunden selv har
- * været inde (portalens hukommelse), ikke af, om rådgiveren har tilføjet noget.
- * K4: én titel, én sætning, én knap. Brugsvilkårene accepteres i opstarten
- * (portal_onboarding.jsx), før kunden kommer hertil.
+ * Landingssiden: det første, kunden ser fra invitationslinket, før der er en
+ * bruger. Hvem der spørger, hvorfor siden ligger på Crediwire, og hvordan
+ * det foregår. "Kom i gang" sender kunden til Crediwires side (opret bruger eller
+ * log ind) og derfra tilbage til trinnet Bruger. Efter opstarten går kunden
+ * direkte til oversigten (der er ingen særskilt velkomst).
  */
-function PortalWelcome({ onStart, onStatus, trustedUntil }) {
+function PortalLanding({ onStart }) {
   const req = CW.request();
   const draft = CW.draft();
   const rcp = portalRecipient();
   const first = ncFirstName(rcp.name);
-  const prog = CW.progress();
-  const cs = CW.caseState() || {};
-  const lock = CW.customerLock();
   const requested = CW.requestedItems();
   const adv = PORTAL_CONTACT.first;
   const deadline = (req && req.deadline) || (!req && draft && draft.deadline) || null;
-  const rejectedItems = requested.filter(it => portalStatus(it.id) === 'rejected');
-  const missingItems = requested.filter(it => ['pending', 'rejected', 'delegated'].includes(portalStatus(it.id)));
-  // "Mangler" tæller kun påkrævede punkter; valgfrie nævnes for sig (L68)
-  const missingReq = missingItems.filter(it => it.tag !== 'Valgfri' || portalStatus(it.id) !== 'pending');
-  const missingOpt = missingItems.filter(it => !missingReq.includes(it));
-  // Hentet fra regnskabssystemet i opstarten tæller ikke som et besøg, men nævnes på velkomsten
-  const bySystem = requested.filter(it => { const s = CW.itemState(it.id); return s && s.by === 'kunde' && s.noteKind === 'system' && ['received', 'approved'].includes(s.status); });
-  const byCustomer = requested.some(it => { const s = CW.itemState(it.id); return s && s.by === 'kunde' && !bySystem.includes(it); });
   const byAdvisor = requested.filter(it => { const s = CW.itemState(it.id); return s && s.by === 'rådgiver' && ['received', 'approved'].includes(s.status); });
-  const mem = portalMem();
-  // Accept af vilkårene sker nu på velkomsten selv og tæller derfor ikke som et besøg
-  const visited = !!(mem.visited || byCustomer || cs.customerSubmittedAt);
-  const variant = lock === 'submitted' ? 'committee'
-    : !visited ? 'first'
-    : cs.customerSubmittedAt && !rejectedItems.length && prog.requiredMissing === 0 ? 'submitted'
-    : rejectedItems.length ? 'rejected'
-    : prog.total > 0 && prog.requiredMissing === 0 ? 'ready'
-    : 'progress';
-  const dlDate = deadline ? CW.fmtDate(deadline + 'T12:00:00') : '';
-  const dl = deadline ? <> <b style={{ color: 'var(--c-ink)' }}>{ncFill(t('Frist: {date}.'), { date: dlDate })}</b></> : null;
-  // Samme punkter i tal og navne; valgfrie punkter nævnes med "(valgfri)"
   const names = (list) => list.map(it => t(it.label) + (it.tag === 'Valgfri' ? ' (' + t('valgfri') + ')' : '')).join(', ');
   const advFiles = byAdvisor.reduce((n, it) => n + ((CW.itemState(it.id).files || []).length || 1), 0);
   const advNote = byAdvisor.length ? ' ' + ncFill(advFiles === 1 ? t('{adv} har allerede tilføjet 1 fil for jer: {items}.') : t('{adv} har allerede tilføjet {n} filer for jer: {items}.'), { adv, n: advFiles, items: names(byAdvisor) }) : '';
-
-  // Samme tal som oversigtens "{n} mangler": de påkrævede punkter (valgfrie står som valgfri i listen)
-  const n = Math.max(0, (prog.required || requested.length) - bySystem.length);
-  const consentNow = CW.consent();
-  const obNow = CW.onboarding();
-  const sysNote = bySystem.length ? ' ' + ncFill(t('{items} er allerede hentet fra {src}.'), { items: names(bySystem), src: (consentNow && consentNow.system) || t('regnskabssystemet') }) + (consentNow && consentNow.mode === 'until' ? ' ' + t('Adgangen lukker, når sagen er afgjort.') : '')
-    : obNow.erp && obNow.erp.waiting && !consentNow ? ' ' + t('I venter på jeres revisor med regnskabssystemet. Brug "Få hjælp fra revisor eller bank" på oversigten for at sende revisoren et link.') : '';
-  const title = variant === 'committee' ? t('Materialet er hos kreditkomitéen')
-    : variant === 'first' ? ncFill(n === 1 ? t('EIFO har brug for 1 dokument fra {company}') : t('EIFO har brug for {n} dokumenter fra {company}'), { n, company: DATA.COMPANY.name })
-    : variant === 'ready' ? (first ? ncFill(t('Alt er på plads, {name}'), { name: first }) : t('Alt er på plads'))
-    : variant === 'submitted' ? (first ? ncFill(t('Tak, {name}'), { name: first }) : t('Tak'))
-    : (first ? ncFill(t('Velkommen tilbage, {name}'), { name: first }) : t('Velkommen tilbage'));
-
-  const lead = variant === 'committee'
-    ? ncFill(t('{adv} har sendt jeres ansøgning videre til kreditkomitéen hos EIFO. I skal ikke sende mere, og I hører fra {adv}, når der er en afgørelse.'), { adv })
-    : variant === 'first'
-    ? (deadline ? ncFill(t('Frist {date}. Det tager ca. 10 minutter, og det, I sender, bliver gemt undervejs.'), { date: dlDate }) : t('Det tager ca. 10 minutter, og det, I sender, bliver gemt undervejs.')) + sysNote + advNote
-    : variant === 'rejected'
-      ? <>{ncFill(rejectedItems.length === 1 ? t('{adv} har bedt jer sende 1 punkt igen: {items}.') : t('{adv} har bedt jer sende {n} punkter igen: {items}.'), { adv, n: rejectedItems.length, items: names(rejectedItems) })}{dl}</>
-      : variant === 'ready'
-        ? ncFill(t('Alt, EIFO har bedt om, er sendt, og {adv} kan se det. Sig til {adv}, når I er færdige.'), { adv })
-        : variant === 'submitted'
-          ? ncFill(t('I sagde {date}, at I var færdige. {adv} gennemgår materialet og vender tilbage senest {date2}.'), { date: CW.fmtDate(cs.customerSubmittedAt), adv, date2: CW.fmtDate(csAddWorkdays(new Date(cs.customerSubmittedAt), 2)) })
-          : <>{ncFill(missingReq.length === 1 ? t('I mangler 1 af {m} påkrævede punkter: {items}.') : t('I mangler {n} af {m} påkrævede punkter: {items}.'), { n: missingReq.length, m: prog.required, items: names(missingReq) })}{missingOpt.length ? ' ' + ncFill(t('Valgfrit og ikke sendt: {items}.'), { items: names(missingOpt) }) : ''}{byCustomer ? ' ' + t('Det, I har sendt, er gemt.') : ''}{dl}</>;
-
-  const cta = variant === 'first' ? t('Kom i gang') : variant === 'rejected' ? t('Send det igen') : variant === 'submitted' ? t('Se status') : variant === 'committee' ? t('Se oversigten') : variant === 'ready' ? t('Gå til oversigten') : t('Fortsæt, hvor I slap');
-
-  const doc = (name) => (e) => { e.preventDefault(); e.stopPropagation(); CW.notInDemo(name); };
-  const go = (fn) => () => fn();
-
+  const steps = [
+    { ic: <I.Clock size={14}/>, t: t('Ca. 10 minutter samlet. Det meste er upload.') },
+    { ic: <I.Refresh size={14}/>, t: t('I opretter en bruger hos Crediwire, så I kan holde pause og vende tilbage. Det, I har sendt, er gemt.') },
+    { ic: <I.Database size={14}/>, t: t('Periodetal kan I forbinde direkte fra jeres regnskabssystem med få klik. I vælger selv, hvilken type samtykke I vil give.') },
+    { ic: <I.Lock size={14}/>, t: t('Krypteret forbindelse. Linket er personligt og gælder kun jeres ansøgning.') },
+  ];
   return (
-    <div style={{ maxWidth: 560, margin: '24px auto 0', textAlign: 'left' }}>
-      <h1 style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--c-ink)', margin: '0 0 10px', lineHeight: 1.2 }}>{title}</h1>
-      <p style={{ fontSize: 15, color: 'var(--c-text-2)', lineHeight: 1.55, margin: '0 0 22px' }}>{lead}</p>
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" onClick={go(variant === 'submitted' ? onStatus : onStart)} className="btn btn-primary btn-lg" style={{ padding: '0 22px', background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
-          {cta} <I.ArrowRight className="ic"/>
-        </button>
-        {variant === 'submitted' && <button type="button" onClick={go(onStart)} className="btn btn-lg btn-ghost">{t('Gå til oversigten')}</button>}
-      </div>
-
-      {variant === 'first' && (
-        <CWFold label={t('Hvorfor ligger siden på crediwire.app?')} id="cwp-why" style={{ marginTop: 22 }}>
-          <p style={{ fontSize: 13.5, color: 'var(--c-text-2)', lineHeight: 1.6, margin: 0 }}>
-            {ncFill(t('EIFO bruger Crediwire til at indsamle materialet, derfor ligger siden på crediwire.app. Kun {adv} og hendes kolleger hos EIFO ser det, I sender.'), { adv })}{' '}
-            {t('EIFO er dataansvarlig, og Crediwire behandler oplysningerne på vegne af EIFO og kun til jeres ansøgning.')}{' '}
-            {t('Læs hvordan personoplysninger behandles i')} <button type="button" className="cwp-linkbtn" onClick={doc(t('Privatlivspolitik'))}>{t('Crediwires privatlivspolitik')}</button>.
-          </p>
-        </CWFold>
-      )}
-
-      <div style={{ marginTop: variant === 'first' ? 14 : 18, fontSize: 12.5, color: 'var(--c-text-3)', lineHeight: 1.6 }}>
-        {ncFill(t('Spørgsmål? Skriv til {name} på'), { name: PORTAL_CONTACT.first })} <a href={'mailto:' + PORTAL_CONTACT.email} style={{ color: 'var(--c-ink)', fontWeight: 600 }}>{PORTAL_CONTACT.email}</a> {t('eller ring på')} <a href={'tel:' + PORTAL_CONTACT.phone.replace(/\s/g, '')} style={{ color: 'var(--c-ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>{PORTAL_CONTACT.phone}</a>
-      </div>
-      {trustedUntil && (
-        <div style={{ marginTop: 6, fontSize: 12.5, color: 'var(--c-text-3)' }}>
-          {ncFill(t('Genkendt enhed. I bliver ikke bedt om at logge ind igen før {date}.'), { date: CW.fmtDate(trustedUntil) })}
+    <div className="cwp-land">
+      <h1 className="cwp-land-h">{first ? ncFill(t('Kære {name},'), { name: first }) : t('Velkommen')}</h1>
+      <p className="cwp-land-lead">
+        {ncFill(t('Tak for jeres ansøgning hos EIFO. For at vi kan behandle den, har vi brug for noget materiale fra {company}.'), { company: DATA.COMPANY.name })}
+      </p>
+      <div className="cwp-land-why">
+        <I.Lock size={15} aria-hidden="true" style={{ color: 'var(--c-text-2)', flexShrink: 0, marginTop: 2 }}/>
+        <div>
+          <b>{t('Hvorfor Crediwire?')}</b> {ncFill(t('EIFO bruger Crediwire til sikker indsamling af materiale, derfor ligger siden hos Crediwire. Kun {adv} og hendes kolleger hos EIFO ser det, I sender.'), { adv })}
         </div>
-      )}
+      </div>
+      <section className="cwp-land-how" aria-labelledby="cwp-land-how-h">
+        <h2 id="cwp-land-how-h" className="label-mini" style={{ margin: '0 0 10px' }}>{t('Sådan foregår det')}</h2>
+        <ul>
+          {steps.map((x, i) => (
+            <li key={i}>
+              <div aria-hidden="true" className="cwp-land-ic">{x.ic}</div>
+              <div>{x.t}</div>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <button type="button" onClick={onStart} className="btn btn-primary btn-lg" style={{ padding: '0 22px', background: 'var(--c-primary)', borderColor: 'var(--c-primary)' }}>
+        {t('Kom i gang')} <I.ArrowRight className="ic"/>
+      </button>
+      <div style={{ marginTop: 14, fontSize: 12.5, color: 'var(--c-text-3)', lineHeight: 1.6 }}>
+        {ncFill(t('Spørgsmål? Skriv til {name} på'), { name: adv })} <a href={'mailto:' + PORTAL_CONTACT.email} style={{ color: 'var(--c-ink)', fontWeight: 600 }}>{PORTAL_CONTACT.email}</a> {t('eller ring på')} <a href={'tel:' + PORTAL_CONTACT.phone.replace(/\s/g, '')} style={{ color: 'var(--c-ink)', fontWeight: 600, whiteSpace: 'nowrap' }}>{PORTAL_CONTACT.phone}</a>
+      </div>
     </div>
   );
 }
@@ -1399,9 +1414,17 @@ function PortalWelcome({ onStart, onStatus, trustedUntil }) {
  * der er et (K12), hjælp fra revisor eller bank og andre filer som ghost-knapper
  * (K11), og til sidst folde med det, der ligger hos EIFO (K10), og beskederne.
  */
-/* Kundeside: hvor kunden er i opstarten (opret bruger, vilkår, virksomhed, aftale,
-   datadeling, regnskabssystem). Står øverst på oversigten, indtil kunden er færdig,
-   med trinene som en kort række og et link til Kundeflow på det trin, kunden er på. */
+/* Kundeside: hvor kunden er i opstarten, som én kort linje øverst på oversigten,
+   indtil opstarten er gjort (opret bruger og datadeling). Rådgiveren kan sende
+   invitationen igen (en påmindelse i sagens historik). */
+function pvDaysAgo(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), now = new Date();
+  const days = Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5);
+  if (days <= 0) return t('i dag');
+  if (days === 1) return t('i går');
+  return ncFill(t('for {n} dage siden'), { n: days });
+}
 function PortalPvObStatus({ onOpenFlow }) {
   CW.useCase();
   const ob = CW.onboarding();
@@ -1410,31 +1433,26 @@ function PortalPvObStatus({ onOpenFlow }) {
   if (legacy || !current) return null;
   const steps = OB_ORDER.filter(k => k !== 'material');
   const n = steps.indexOf(current) + 1;
+  const req = CW.request();
+  const to = (req && req.to) || {};
+  const last = CW.lastReminder();
+  const lastAt = (last && last.at) || (req && req.sentAt);
+  // Har kunden en bruger, mangler kun oplysningerne på trinnet Bruger
+  const step = !ob.account ? t('Opret bruger') : obLabel(current);
+  const resend = () => {
+    CW.remind([], { by: PORTAL_CONTACT.name });
+    CW.toast(ncFill(t('Invitationen er sendt igen til {to}'), { to: to.email || to.name || t('kunden') }));
+  };
   return (
-    <section aria-labelledby="cwp-pvob-h" style={{ maxWidth: 760, margin: '0 auto 16px', padding: '14px 18px', borderRadius: 12, border: '1px solid var(--c-warn)', background: 'var(--c-warn-bg)' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 320px', minWidth: 0 }}>
-          <h2 id="cwp-pvob-h" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--c-ink)' }}>
-            {ncFill(t('Kunden er ikke færdig med opstarten: trin {n} af {m}, {step}'), { n, m: steps.length, step: obLabel(current) })}
-          </h2>
-          <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 2 }}>{pvCustomerWhere()} {t('Materialet herunder kan kunden først sende, når opstarten er gjort.')}</div>
-        </div>
-        {onOpenFlow && <button type="button" className="btn btn-sm" onClick={() => onOpenFlow(current)}>{t('Se trinnet i Kundeflow')} <I.ArrowRight size={12}/></button>}
+    <section className="cwp-pvob" aria-labelledby="cwp-pvob-h">
+      <span className="cwp-pvob-dot" aria-hidden="true"/>
+      <div className="cwp-pvob-text">
+        <h2 id="cwp-pvob-h" className="cwp-pvob-title">{!ob.account ? t('Kunden er ikke startet endnu') : t('Kunden er i gang med opstarten')}</h2>
+        <div className="cwp-pvob-sub">{ncFill(t('Står ved {step}'), { step: step.charAt(0).toLowerCase() + step.slice(1) })}</div>
       </div>
-      <ol aria-label={t('Trin i opstarten')} style={{ listStyle: 'none', margin: '12px 0 0', padding: 0, display: 'flex', flexWrap: 'wrap', gap: '6px 14px', fontSize: 12.5 }}>
-        {steps.map(k => {
-          const done = obDone(ob, k), cur = k === current;
-          return (
-            <li key={k} aria-current={cur ? 'step' : undefined} style={{ display: 'flex', alignItems: 'center', gap: 5, color: done || cur ? 'var(--c-ink)' : 'var(--c-text-3)', fontWeight: cur ? 600 : 400 }}>
-              <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: '50%', display: 'grid', placeItems: 'center', boxSizing: 'border-box', background: done ? 'var(--c-ink)' : '#fff', border: done ? 'none' : cur ? '2px solid var(--c-ink)' : '1.5px solid var(--c-text-4)', color: '#fff' }}>
-                {done ? <I.Check size={7}/> : null}
-              </span>
-              {obLabel(k)}
-              <span style={ncHidden}>{done ? ': ' + t('færdig') : cur ? ': ' + t('kunden er her') : ''}</span>
-            </li>
-          );
-        })}
-      </ol>
+      {/* Kundeflow på det trin, kunden står på: det, kunden ser lige nu */}
+      {onOpenFlow && <button type="button" className="btn-ghost-sm" onClick={() => onOpenFlow(current)}>{t('Se hvad kunden ser')}</button>}
+      {req && <button type="button" className="btn btn-sm" onClick={resend} title={lastAt ? ncFill(t('Sidst sendt {when}'), { when: pvDaysAgo(lastAt) }) : undefined}>{t('Send invitation igen')}</button>}
     </section>
   );
 }
@@ -1463,21 +1481,23 @@ function PortalSteps() {
   const steps = [
     { k: 'mat', label: t('Materiale'), state: mat.state, sub: mat.state === 'done' ? t('Afsluttet') : mat.state === 'active' ? mat.sub : '' },
     { k: 'vurd', label: t('EIFO vurderer sagen'), state: vurdState, sub: vurdState === 'active' ? t('I gang') : vurdState === 'done' ? t('Afsluttet') : '' },
-    { k: 'afg', label: t('Afgørelse'), state: afg.state, sub: afg.state === 'done' ? afg.sub : afg.date ? ncFill(t('senest {date}'), { date: CW.fmtDate(afg.date) }) : '' },
+    { k: 'afg', label: t('Afgørelse'), state: afg.state, sub: afg.state === 'done' ? afg.sub : '' },
   ];
   const word = (s) => s === 'done' ? t('afsluttet') : s === 'active' ? t('i gang') : t('kommer senere');
   // Egen boks under kortene: prik over teksten, en linje imellem, højst én kort linje pr. trin.
   // Under 600 px står trinene under hinanden.
   return (
-    <section className="card cwp-steps-card" aria-labelledby="cwp-steps-h" style={{ padding: '18px 22px 20px', marginBottom: 16 }}>
+    <section className="card cwp-steps-card" aria-labelledby="cwp-steps-h" style={{ marginBottom: 16, overflow: 'hidden' }}>
       <style>{`@media (max-width: 600px) {
         .cwp-steps-card .cwp-steps { flex-direction: column !important; gap: 12px; }
         .cwp-steps-card .cwp-steps > li { flex-direction: row !important; align-items: center !important; gap: 10px; text-align: left !important; }
         .cwp-steps-card .cwp-step-line { display: none; }
         .cwp-steps-card .cwp-step-text { margin-top: 0 !important; }
       }`}</style>
-      <h2 id="cwp-steps-h" className="label-mini" style={{ margin: '0 0 16px' }}>{t('Behandlingsstatus')}</h2>
-      <ol className="cwp-steps" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', alignItems: 'flex-start' }}>
+      <div className="card-head" style={{ borderBottom: '1px solid var(--c-line-2)', justifyContent: 'flex-start' }}>
+        <h2 id="cwp-steps-h" className="card-title" style={{ margin: 0 }}>{t('Behandlingsstatus')}</h2>
+      </div>
+      <ol className="cwp-steps" style={{ listStyle: 'none', margin: 0, padding: '18px 22px 20px', display: 'flex', alignItems: 'flex-start' }}>
         {steps.map((s, i) => {
           const done = s.state === 'done', active = s.state === 'active';
           return (
@@ -1532,9 +1552,11 @@ function PortalNeedCard({ locked, deadline, submittedAt }) {
 function PortalContactCard() {
   const c = PORTAL_CONTACT;
   return (
-    <section className="card cwp-contact" aria-labelledby="cwp-contact-h" style={{ padding: '16px 18px' }}>
-      <h2 id="cwp-contact-h" className="label-mini" style={{ margin: 0 }}>{t('Jeres kontakt')}</h2>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 10 }}>
+    <section className="card cwp-contact" aria-labelledby="cwp-contact-h" style={{ overflow: 'hidden' }}>
+      <div className="card-head" style={{ borderBottom: '1px solid var(--c-line-2)', justifyContent: 'flex-start' }}>
+        <h2 id="cwp-contact-h" className="card-title" style={{ margin: 0 }}>{t('Jeres kontakt')}</h2>
+      </div>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 18px 16px' }}>
         <div className="avatar" aria-hidden="true" style={{ width: 36, height: 36, fontSize: 12, flexShrink: 0 }}>{c.initials}</div>
         <div style={{ minWidth: 0, fontSize: 13, lineHeight: 1.6 }}>
           <div><span style={{ fontWeight: 600, color: 'var(--c-ink)' }}>{c.name}</span><span style={{ color: 'var(--c-text-2)' }}> · {t(c.title)}, {c.org}</span></div>
@@ -1569,12 +1591,13 @@ function PortalHub({ requested, fresh, lock, onOpen, onOpenBundle, onOther, onSu
   const adv = PORTAL_CONTACT.first;
   const loose = CW.allUploads().filter(f => !f.itemId && f.by === 'kunde');
   const years = portalAutoDocs();
-  const yearsText = years.length > 1 ? years.slice(0, -1).join(', ') + ' ' + t('og') + ' ' + years[years.length - 1] : years.join('');
   // Regnskabssystemet: forbindelsen står for sig, når den findes. Er Periodetal ikke
   // bedt om, og har kunden ikke sagt nej til datadeling, kan den forbindes herfra.
   const consent = CW.consent();
   const ob = CW.onboarding();
   const erpOffer = !consent && onErp && !requested.some(it => it.id === 'm-interim') && !(ob.agreement && ob.agreement.declined);
+  // Kunden valgte "Vi venter på vores revisor" i opstarten: vejen videre står her
+  const waitingErp = !consent && !locked && onErp && !!(ob.erp && ob.erp.waiting);
 
   // Banneret om nye beskeder ruller til dialogen, som altid står nederst på siden
   const openDialog = () => {
@@ -1588,21 +1611,48 @@ function PortalHub({ requested, fresh, lock, onOpen, onOpenBundle, onOther, onSu
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
       <h1 style={ncHidden}>{t('Status for jeres ansøgning')}</h1>
-      <div className="grid g-2" style={{ gap: 12, marginBottom: 12 }}>
-        <PortalNeedCard locked={locked} deadline={deadline} submittedAt={submittedAt}/>
-        <PortalContactCard/>
-      </div>
+      {/* "Det mangler vi"-kortet (PortalNeedCard) er fjernet; kontaktkortet står nederst på siden */}
       <PortalSteps/>
 
-      <CWCustomerBanner fresh={fresh} onDialog={openDialog}/>
       {locked && <div style={{ marginBottom: 16 }}><PortalConsentBox/></div>}
 
-      <section aria-labelledby="cwp-items-h" style={{ background: '#fff', borderRadius: 12, border: '1px solid var(--c-line)', overflow: 'hidden' }}>
-        <h2 id="cwp-items-h" style={ncHidden}>{t('Det har vi bedt om')}</h2>
+      <section className="card" aria-labelledby="cwp-items-h" style={{ overflow: 'hidden' }}>
+        <div className="card-head" style={{ borderBottom: '1px solid var(--c-line-2)', justifyContent: 'flex-start' }}>
+          <h2 id="cwp-items-h" className="card-title" style={{ margin: 0 }}>{t('Materiale')}</h2>
+        </div>
         {requested.map((it, i) => (
           <PortalHubRow key={it.id} it={it} first={i === 0} status={portalStatus(it.id)} onOpen={onOpen} readOnly={locked}/>
         ))}
+        {/* Det, EIFO selv har hentet (årsrapporterne fra CVR): ét afkrydset punkt pr. år */}
+        {years.map((y, i) => (
+          <div key={y} className="cwp-row" data-row={'auto-' + y} style={{ borderTop: requested.length || i > 0 ? '1px solid var(--c-line-2)' : 'none', padding: '14px 18px', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+            <div aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--c-primary)', color: '#fff', display: 'grid', placeItems: 'center', flexShrink: 0, boxSizing: 'border-box' }}><I.Check size={12}/></div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14.5, fontWeight: 600, color: 'var(--c-text-2)' }}>
+                {t('Årsrapport') + ' ' + y}
+                <span style={ncHidden}>{': ' + t('Hentet automatisk')}</span>
+              </div>
+              {/* EIFO godkender ikke årsrapporterne; de er hentet fra CVR. Mærkaten er grøn som Godkendt */}
+              <div className="cwp-row-pill-in"><span className="pill success cwp-row-pill" aria-hidden="true"><span className="pill-dot"/>{t('Hentet automatisk')}</span></div>
+            </div>
+            {/* Samme højre kant som mærkaterne på punkterne, der har en pil til detaljerne */}
+            <span className="cwp-row-pill-side" style={{ marginRight: 30 }}><span className="pill success cwp-row-pill" aria-hidden="true"><span className="pill-dot"/>{t('Hentet automatisk')}</span></span>
+          </div>
+        ))}
       </section>
+
+      {waitingErp && (
+        <div className="cw-row cwp-hub-wait" style={{ marginTop: 12, padding: '12px 16px', background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, alignItems: 'center' }}>
+          <div className="cw-row-main">
+            <span className="cw-row-title" style={{ fontSize: 13.5 }}>{t('I venter på jeres revisor med regnskabssystemet')}</span>
+            <span className="cw-row-meta" style={{ fontSize: 12.5 }}>{t('Send revisoren et link, eller forbind selv, når I har adgang.')}</span>
+          </div>
+          <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {canDelegate && <button type="button" className="btn btn-sm" data-cust-act="delegate" onClick={() => onOpenBundle(null)}>{t('Bed revisoren om hjælp')}</button>}
+            <button type="button" className="btn btn-sm" data-cust-act="erp" onClick={onErp}>{t('Forbind nu')}</button>
+          </span>
+        </div>
+      )}
 
       {consent && !locked && (
         <div className="cw-row" style={{ marginTop: 12, padding: '12px 16px', background: '#fff', border: '1px solid var(--c-line)', borderRadius: 12, alignItems: 'center' }}>
@@ -1626,27 +1676,18 @@ function PortalHub({ requested, fresh, lock, onOpen, onOpenBundle, onOther, onSu
       {!locked && (
         <div style={{ marginTop: 12, display: 'flex', gap: 4, flexWrap: 'wrap', marginLeft: -8 }}>
           {canDelegate && <button type="button" className="btn-ghost-sm" data-cust-act="delegate" onClick={() => onOpenBundle(null)}>{t('Få hjælp fra revisor eller bank')}</button>}
-          {erpOffer && <button type="button" className="btn-ghost-sm" data-cust-act="erp" onClick={onErp}>{t('Forbind regnskabssystem')}</button>}
+          {erpOffer && !waitingErp && <button type="button" className="btn-ghost-sm" data-cust-act="erp" onClick={onErp}>{t('Forbind regnskabssystem')}</button>}
           <button type="button" className="btn-ghost-sm" data-cust-act={loose.length ? undefined : 'upload'} onClick={onOther}>{loose.length ? ncFill(t('Andre filer ({n})'), { n: loose.length }) : t('Send en anden fil')}</button>
-        </div>
-      )}
-
-      {years.length > 0 && (
-        <div style={{ marginTop: 12 }}>
-          <CWFold label={ncFill(t('Ligger allerede hos EIFO ({n})'), { n: years.length })} id="cwp-auto">
-            <div className="cw-row" style={{ padding: '4px 0 6px' }}>
-              <div className="cw-row-main">
-                <span className="cw-row-title">{(years.length > 1 ? t('Årsrapporter') : t('Årsrapport')) + ' ' + yearsText}</span>
-                <span className="cw-row-meta">{t('Hentet automatisk fra CVR-registret. I skal ikke gøre noget.')}</span>
-              </div>
-            </div>
-          </CWFold>
         </div>
       )}
 
       {/* Dialogen med rådgiveren står altid synlig som en chat */}
       <div style={{ marginTop: 16 }}>
-        <CWDialogCard idPrefix="cwp" readOnly={locked || CW.isPreview()}/>
+        <CWDialogCard idPrefix="cwp" readOnly={locked}/>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <PortalContactCard/>
       </div>
     </div>
   );
@@ -1670,9 +1711,6 @@ function PortalHubRow({ it, first, status: realStatus, onOpen, readOnly }) {
   const clickable = status === 'pending';
   const kind = portalKind(it.id);
   const draft = status === 'pending' ? csDraft(it.id) : null;
-  // Har rådgiveren tilføjet alle filerne for kunden? Så siger rækken det
-  const advFiles = files.filter(f => (f.by || (s && s.by)) === 'rådgiver');
-  const byAdvisor = !!s && (files.length ? advFiles.length === files.length : s.by === 'rådgiver');
   const consent = CW.consent();
   const sourceText = csSourceText(s);
   const answers = csAnswersText(s);
@@ -1696,37 +1734,26 @@ function PortalHubRow({ it, first, status: realStatus, onOpen, readOnly }) {
     return () => { clearTimeout(id); document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
   }, [menu]);
 
-  // Leveret i forhåndsvisningen af kundesiden: det var rådgiveren (D11, samme som loggen)
-  const viaPreview = !!(s && s.viaPreview);
-  const previewBy = ncFill(t('Tilføjet i forhåndsvisning af {name}'), { name: PORTAL_CONTACT.name });
-  const source = !s ? '' : sourceText ? sourceText + (consent ? ' (' + t('kun læseadgang') + ')' : '')
-    : viaPreview ? previewBy
-    : s.by === 'rådgiver' ? ncFill(t('Tilføjet af {adv} for jer'), { adv })
-    : status === 'noted' ? t('Bemærkning fra jer')
-    : answers ? t('Besvaret i spørgeskemaet')
-    : files.length ? t('Uploadet af jer') : t('Sendt af jer');
-
   // Statusikonet bærer informationen; kun et afvist punkt er rødt
   const circle = (bg, color, border, icon) => <div aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', background: bg, color, border, display: 'grid', placeItems: 'center', flexShrink: 0, boxSizing: 'border-box' }}>{icon}</div>;
   const icon = delivered ? circle('var(--c-primary)', '#fff', 'none', <I.Check size={12}/>)
     : status === 'rejected' ? circle('#fff', 'var(--c-danger)', '1.5px solid var(--c-danger)', <I.AlertCircle size={12}/>)
     : status === 'delegated' ? circle('#fff', 'var(--c-text-3)', '1.5px solid var(--c-text-4)', <I.Clock size={11}/>)
     : <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid var(--c-text-4)', flexShrink: 0, boxSizing: 'border-box' }}/>;
-  const statusWord = { pending: t('Mangler'), received: byAdvisor ? ncFill(t('Tilføjet af {adv}'), { adv }) : t('Sendt'), noted: t('Bemærkning sendt'), delegated: s && s.delegate && s.delegate.role === 'bank' ? t('Hos jeres bank') : t('Hos jeres revisor'), approved: t('Godkendt'), rejected: t('Skal sendes igen'), closed: t('Ikke sendt') }[status];
-  const day = (iso) => <span title={CW.fmtWhen(iso)}>{csShortDate(iso)}</span>;
-  const nFiles = (n) => ncFill(n === 1 ? t('1 fil') : t('{n} filer'), { n });
+  const statusWord = { pending: t('Mangler'), received: t('Afventer godkendelse af EIFO'), noted: t('Bemærkning sendt'), delegated: s && s.delegate && s.delegate.role === 'bank' ? t('Hos jeres bank') : t('Hos jeres revisor'), approved: t('Godkendt'), rejected: t('Skal sendes igen'), closed: t('Ikke sendt') }[status];
 
-  // Den ene grå linje
-  const meta = status === 'pending' ? (draft
-      ? <span className="cwp-row-draft">{ncFill(t('Kladde gemt kl. {tid}'), { tid: csHHMM(draft.at) })}{draft.files && draft.files.length ? ' · ' + nFiles(draft.files.length) : ''} · {t('ikke sendt endnu')}</span>
-      : t(it.desc))
+  // Den ene grå linje: kun det, kunden kan bruge. Hvem, hvornår og hvor mange filer står i
+  // detaljerne (pilen til højre); status står som en mærkat (Afventer godkendelse / Godkendt)
+  const meta = status === 'pending' ? (draft ? <span className="cwp-row-draft">{t('Påbegyndt, ikke sendt endnu')}</span> : t(it.desc))
     : status === 'closed' ? t('Ikke sendt')
-    : status === 'received' && byAdvisor ? <>{ncFill(advFiles.length === 1 ? t('{adv} har tilføjet 1 fil for jer') : t('{adv} har tilføjet {n} filer for jer'), { adv, n: advFiles.length })} · {day(s.at)}</>
-    : status === 'received' ? <>{viaPreview ? <>{previewBy} · {day(s.at)}</> : <span title={CW.fmtWhen(s.at)}>{ncFill(t('Sendt {when}'), { when: csShortDate(s.at) })}</span>}{sourceText ? ' · ' + sourceText : answers ? ' · ' + answers : files.length ? ' · ' + nFiles(files.length) : ''}{advFiles.length > 0 && ' · ' + ncFill(advFiles.length === 1 ? t('1 tilføjet af {adv}') : t('{n} tilføjet af {adv}'), { adv, n: advFiles.length })}</>
-    : status === 'noted' ? <>{ncFill(t('Bemærkning sendt {when}'), { when: csShortDate(s.at) })}{viaPreview ? ' (' + previewBy.charAt(0).toLowerCase() + previewBy.slice(1) + ')' : ''}: "{s.note}"</>
-    : status === 'approved' ? ncFill(t('Godkendt af {adv} {when}'), { adv, when: csShortDate(s.reviewedAt) })
+    : status === 'received' || status === 'approved' ? (sourceText || null)
+    : status === 'noted' ? t('Bemærkning sendt')
     : status === 'rejected' ? adv + ': ' + (s.reviewNote || t('Send venligst en ny version.'))
-    : status === 'delegated' && s.delegate ? <>{ncFill(s.delegate.role === 'bank' ? t('Hos jeres bank: {name}') : t('Hos jeres revisor: {name}'), { name: s.delegate.name })} · {day(s.delegate.at || s.at)}{s.reviewNote ? ' · ' + adv + ': ' + s.reviewNote : ''}</>
+    : status === 'delegated' && s.delegate ? ncFill(s.delegate.role === 'bank' ? t('Hos jeres bank: {name}') : t('Hos jeres revisor: {name}'), { name: s.delegate.name })
+    : null;
+  // Mærkaten: sendt, men ikke gennemgået endnu, eller godkendt (skærmlæsere får samme ord fra statusWord)
+  const label = status === 'approved' ? <span className="pill success cwp-row-pill" aria-hidden="true"><span className="pill-dot"/>{t('Godkendt')}</span>
+    : status === 'received' || status === 'noted' ? <span className="pill warn cwp-row-pill" aria-hidden="true"><span className="pill-dot"/>{t('Afventer godkendelse af EIFO')}</span>
     : null;
 
   const body = (
@@ -1738,6 +1765,8 @@ function PortalHubRow({ it, first, status: realStatus, onOpen, readOnly }) {
           <span style={ncHidden}>{': ' + statusWord}</span>
         </div>
         {meta && <div className="cwp-row-meta">{meta}</div>}
+        {/* På smalle skærme står mærkaten under titlen (til højre er der ikke plads) */}
+        {label && <div className="cwp-row-pill-in">{label}</div>}
       </div>
       {it.tag === 'Valgfri' && (status === 'pending' || status === 'closed') && <span className="cwp-row-cat">{t('Valgfri')}</span>}
       {clickable && <I.ChevronRight size={16} style={{ color: 'var(--c-text-3)', flexShrink: 0, marginTop: 3 }}/>}
@@ -1760,67 +1789,41 @@ function PortalHubRow({ it, first, status: realStatus, onOpen, readOnly }) {
                 <button type="button" onClick={() => csConfirmUndo(it.id)} data-cust-act="undo" className="btn-ghost-sm" aria-label={t('Tag tilbage') + ': ' + t(it.label)}>{t('Tag tilbage')}</button>
               </>
             )}
+            {label && <span className="cwp-row-pill-side">{label}</span>}
             {delivered && (
-              <div ref={menuRef} style={{ position: 'relative' }}>
-                <button type="button" onClick={() => setMenu(!menu)} className="btn-ghost-sm" style={{ padding: '0 6px', minWidth: 28 }} aria-haspopup="menu" aria-expanded={menu} aria-label={ncFill(t('Flere handlinger for {item}'), { item: t(it.label) })}>
-                  <I.MoreH size={14}/>
-                </button>
-                {menu && (
-                  <div role="menu" aria-label={ncFill(t('Flere handlinger for {item}'), { item: t(it.label) })} style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, background: '#fff', border: '1px solid var(--c-line)', borderRadius: 8, boxShadow: 'var(--shadow-lg)', zIndex: 20, padding: 4, minWidth: 230 }}>
-                    {status !== 'approved' && !readOnly && (
-                      <button type="button" role="menuitem" className="cwp-menuitem" data-act={status === 'received' && kind !== 'trade' ? 'add-file' : undefined} onClick={() => { setMenu(false); onOpen(it.id); }}>
-                        {editLabel}
-                      </button>
-                    )}
-                    <button type="button" role="menuitem" className="cwp-menuitem" onClick={() => { setMenu(false); setReceipt(true); CW.focusSoon('[data-row="' + it.id + '"] .cwp-receipt'); }}>
-                      {ncFill(t('Se hvad {adv} modtog'), { adv })}
-                    </button>
-                    {files.length > 0 && (
-                      <button type="button" role="menuitem" className="cwp-menuitem" onClick={() => { setMenu(false); downloadFiles(files); }}>
-                        {t('Download')}
-                      </button>
-                    )}
-                    {readOnly && kind === 'connect' && consent && (
-                      <button type="button" role="menuitem" className="cwp-menuitem" data-cust-act="consent" onClick={() => { setMenu(false); portalRevoke(consent); }}>
-                        {t('Træk adgangen tilbage')}
-                      </button>
-                    )}
-                    {csCanUndo(s) && !readOnly && (
-                      <button type="button" role="menuitem" className="cwp-menuitem" data-cust-act="undo" onClick={() => { setMenu(false); csConfirmUndo(it.id); }}>
-                        {status === 'noted' ? t('Fortryd bemærkning') : t('Fortryd')}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
+              <button type="button" onClick={() => setReceipt(!receipt)} className="btn-ghost-sm" style={{ padding: '0 6px', minWidth: 28 }} aria-expanded={receipt}
+                title={receipt ? t('Skjul detaljerne') : t('Vis detaljerne')}
+                aria-label={ncFill(receipt ? t('Skjul detaljerne for {item}') : t('Vis detaljerne for {item}'), { item: t(it.label) })}>
+                <I.ChevronRight size={16} style={{ color: 'var(--c-text-3)', transform: receipt ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}/>
+              </button>
             )}
           </div>
         )}
       </div>
       {receipt && s && (
-        <div className="cwp-receipt" role="region" tabIndex={-1} aria-label={ncFill(t('Kvittering for {item}'), { item: t(it.label) })} style={{ margin: '0 18px 14px 54px', padding: '12px 14px', background: 'var(--c-surface-2)', borderRadius: 8, fontSize: 12.5, color: 'var(--c-text)', outline: 'none' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-            <div style={{ flex: 1 }}>
-              <b>{t('Kvittering')}</b> · {ncFill(t('Modtaget af EIFO {when}'), { when: CW.fmtWhen(s.at) })}
-              <div className="muted" style={{ marginTop: 2 }}>{t('Kilde')}: {source}</div>
-              {sourceText && consent && <div className="muted" style={{ marginTop: 2 }}>{portalConsentUntil(consent)}</div>}
-            </div>
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setReceipt(false)} aria-label={t('Luk kvitteringen')}><I.X className="ic"/></button>
-          </div>
+        <div className="cwp-receipt" role="region" tabIndex={-1} aria-label={ncFill(t('Detaljer for {item}'), { item: t(it.label) })} style={{ margin: '0 18px 14px 54px', fontSize: 13, color: 'var(--c-text)', outline: 'none' }}>
           {files.length > 0 && (
-            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {files.map(f => (
-                <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 500, wordBreak: 'break-all' }}>{f.name}</span>
-                  <span className="muted">{f.sizeLabel} · {CW.fmtWhen(f.at)}{(f.by || s.by) === 'rådgiver' ? ' · ' + ncFill(t('tilføjet af {adv}'), { adv }) : ''}</span>
-                  <button type="button" className="cwp-linkbtn" onClick={() => csOpenFile(f)}>{t('Åbn')}</button>
+                <div key={f.id}>
+                  <button type="button" className="cwp-linkbtn" onClick={() => csOpenFile(f)} style={{ wordBreak: 'break-all', textAlign: 'left' }}>{f.name}</button>
+                  <div className="muted" style={{ fontSize: 12.5 }}>{(f.by || s.by) === 'rådgiver' ? ncFill(t('Tilføjet af {adv}'), { adv }) : t('Uploadet af jer')} {csShortDate(f.at)}</div>
                 </div>
               ))}
             </div>
           )}
-          {answers && <div style={{ marginTop: 6 }}><span className="muted">{t('Jeres svar:')}</span> {answers}</div>}
-          {!files.length && !answers && status !== 'noted' && <div style={{ marginTop: 6 }} className="muted">{t('Ingen filer')}</div>}
+          {answers && <div style={{ marginTop: files.length ? 8 : 0 }}><span className="muted">{t('Jeres svar:')}</span> {answers}</div>}
+          {!files.length && !answers && status !== 'noted' && <div className="muted">{t('Ingen filer')}</div>}
           {s.note && !sourceText && <div style={{ marginTop: 6 }}><span className="muted">{t('Jeres bemærkning:')}</span> {s.note}</div>}
+          {sourceText && consent && <div className="muted" style={{ marginTop: 6 }}>{sourceText} · {portalConsentUntil(consent)}</div>}
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 8, marginLeft: -8 }}>
+            {status !== 'approved' && !readOnly && (
+              <button type="button" className="btn-ghost-sm" data-act={status === 'received' && kind !== 'trade' ? 'add-file' : undefined} onClick={() => onOpen(it.id)}>{editLabel}</button>
+            )}
+            {files.length > 0 && <button type="button" className="btn-ghost-sm" onClick={() => downloadFiles(files)}>{t('Download')}</button>}
+            {readOnly && kind === 'connect' && consent && <button type="button" className="btn-ghost-sm" data-cust-act="consent" onClick={() => portalRevoke(consent)}>{t('Træk adgangen tilbage')}</button>}
+            {csCanUndo(s) && !readOnly && <button type="button" className="btn-ghost-sm" data-cust-act="undo" onClick={() => csConfirmUndo(it.id)}>{status === 'noted' ? t('Fortryd bemærkning') : t('Fortryd')}</button>}
+          </div>
         </div>
       )}
     </div>
@@ -1841,6 +1844,17 @@ function usePortalDraft(itemId, value) {
   return at;
 }
 
+/* Kun på Kundeside: rådgiveren uploader på kundens vegne. Stiplet som de andre
+   ting, kunden ikke ser. */
+function PortalPvUploadNote() {
+  if (!CW.isPreview()) return null;
+  return (
+    <div className="cwp-pv-upnote">
+      {t('Du uploader på kundens vegne. Filen står som uploadet af dig, og punktet går til gennemgang.')}
+    </div>
+  );
+}
+
 function PortalFilePicker({ staged, setStaged, accept = CS_ACCEPT, title, hint, compact, itemId }) {
   const inputRef = React.useRef(null);
   const [drag, setDrag] = React.useState(false);
@@ -1856,7 +1870,7 @@ function PortalFilePicker({ staged, setStaged, accept = CS_ACCEPT, title, hint, 
   const pickFiles = () => inputRef.current && inputRef.current.click();
   return (
     <>
-      <div className="cwp-drop" role="button" tabIndex={0} data-cust-act="upload" aria-label={(title || t('Træk filer hertil, eller vælg filer')) + '. ' + t('Vælg filer')}
+      <div className="cwp-drop" role="button" tabIndex={0} data-cust-act="upload" data-pv-allow="1" aria-label={(title || t('Træk filer hertil, eller vælg filer')) + '. ' + t('Vælg filer')}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickFiles(); } }}
         onDragOver={e => { e.preventDefault(); setDrag(true); }}
         onDragLeave={() => setDrag(false)}
@@ -1978,6 +1992,7 @@ function PortalUpload({ item, onBack, onFinish, onNoted }) {
       ) : (
         <>
           <PortalSentFiles item={item} files={existing}/>
+          <PortalPvUploadNote/>
           <PortalFilePicker staged={staged} setStaged={setStaged} itemId={item.id}/>
 
           {noteOpen ? (
@@ -1996,7 +2011,7 @@ function PortalUpload({ item, onBack, onFinish, onNoted }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', marginLeft: 'auto' }}>
               {draftAt && <span className="muted cwp-draft-at" style={{ fontSize: 12.5 }}>{ncFill(t('Kladde gemt kl. {tid}'), { tid: csHHMM(draftAt) })}</span>}
               {total === 0 && <span id="cwp-up-hint" className="muted" style={{ fontSize: 12.5 }}>{t('Vælg mindst én fil')}</span>}
-              <button type="button" className="btn btn-primary" data-cust-act="send" disabled={total === 0} onClick={() => onFinish(staged, note.trim())} aria-describedby={total === 0 ? 'cwp-up-hint' : undefined}
+              <button type="button" className="btn btn-primary" data-cust-act="send" data-pv-allow="1" disabled={total === 0} onClick={() => onFinish(staged, note.trim())} aria-describedby={total === 0 ? 'cwp-up-hint' : undefined}
                 style={total > 0 ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
                 {t('Færdig med dette punkt')}
               </button>
@@ -2015,7 +2030,7 @@ function portalMonths(end) {
 
 /**
  * Punktet Periodetal: forbind regnskabssystemet (aftalen, datadelingen og valget
- * af system ligger i PortalErpSetup, de samme skærme som i opstarten), eller
+ * af system ligger i PortalErpSetup, samme kort som i opstarten), eller
  * upload en saldobalance selv.
  */
 function PortalConnect({ item, onBack, onFinish, onNoted }) {
@@ -2085,6 +2100,7 @@ function PortalConnect({ item, onBack, onFinish, onNoted }) {
 
       <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)', margin: '0 0 8px' }}>{t('Upload en saldobalance selv')}</h2>
       <PortalSentFiles item={item} files={existing}/>
+      <PortalPvUploadNote/>
       <PortalFilePicker compact staged={staged} setStaged={setStaged} itemId={item.id} accept=".xlsx,.xls,.csv,.pdf"
         title={t('Træk saldobalancen hertil, eller vælg filen')} hint={t('Excel, CSV eller PDF · eksportér den fra jeres bogføringssystem')}/>
       <div className="cwp-stack" style={{ marginTop: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -2092,7 +2108,7 @@ function PortalConnect({ item, onBack, onFinish, onNoted }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', marginLeft: 'auto' }}>
           {connDraftAt && <span className="muted cwp-draft-at" style={{ fontSize: 12.5 }}>{ncFill(t('Kladde gemt kl. {tid}'), { tid: csHHMM(connDraftAt) })}</span>}
           {staged.length === 0 && <span id="cwp-conn-hint" className="muted" style={{ fontSize: 12.5 }}>{total === 0 ? t('Vælg mindst én fil') : t('Vælg en fil for at sende mere')}</span>}
-          <button type="button" className="btn btn-primary" data-cust-act="send" disabled={staged.length === 0} onClick={() => onFinish(staged)} aria-describedby={staged.length === 0 ? 'cwp-conn-hint' : undefined}
+          <button type="button" className="btn btn-primary" data-cust-act="send" data-pv-allow="1" disabled={staged.length === 0} onClick={() => onFinish(staged)} aria-describedby={staged.length === 0 ? 'cwp-conn-hint' : undefined}
             style={staged.length > 0 ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
             {t('Færdig med dette punkt')}
           </button>

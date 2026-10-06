@@ -932,7 +932,7 @@ Object.assign(window.I18N.en, {
   '{aar}: ingen tal': '{aar}: no figures',
   'Ingen sammenligning': 'No comparison',
   'Marginer': 'Margins',
-  'Marginer {per}': 'Margins {per}',
+  'Nøgletal {per}': 'Key ratios {per}',
   'Forbind kundens bogføring': "Connect the customer's bookkeeping",
   'Anmod kunden om budget': 'Ask the customer for a budget',
   'Ingen prognose for 2026 og 2027': 'No forecast for 2026 and 2027',
@@ -971,4 +971,16 @@ Object.assign(window.I18N.en, {
   'EBITDA {aar}': 'EBITDA {aar}',
   'EBITDA {per} 2026': 'EBITDA {per} 2026',
   'Ingen margin for 2026 og 2027 endnu.': 'No margin for 2026 and 2027 yet.',
+});
+
+// Regnskab v2: serier i grafen og omsætning, der ikke er oplyst (6. oktober)
+Object.assign(window.I18N.en, {
+  'Ingen serier valgt': 'No series selected',
+  '{serie} {per} 2026': '{serie} {per} 2026',
+  '{serie} {aar}': '{serie} {aar}',
+  'ikke oplyst': 'not disclosed',
+  'Omsætningen er ikke oplyst i årsrapporterne. Upload kundens interne årsrapport, eller klik på "Ikke oplyst" i tabellen og indtast omsætningen, så vises den i grafen.': 'Revenue is not disclosed in the annual reports. Upload the customer\'s internal annual report, or click "Not disclosed" in the table and enter the revenue, and it will show in the chart.',
+  'Serier i grafen': 'Series in the chart',
+  'Dækningsgrad %': 'Gross margin %',
+  'Ikke oplyst i årsrapporten. Klik for at indtaste omsætningen.': 'Not disclosed in the annual report. Click to enter the revenue.',
 });

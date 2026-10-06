@@ -39,6 +39,7 @@
     owners: 'kabul:owners',                         // { [caseId]: navn } (omfordelinger)
     customItems: 'kabul:custom-items:nordhavn',     // [{ id, label, cat }] materiale rådgiveren selv har tilføjet til anmodningen
     ownersLog: 'kabul:owners-log',                  // [{ at, caseId, name, by }] flytning af andre sager end sag 1
+    internalNotes: 'kabul:internal-notes:nordhavn', // { [itemId]: { text, by, at } } rådgiverens interne noter til et punkt (kunden ser dem aldrig)
     removedDocs: 'kabul:removed-docs:nordhavn',     // { [filnavn]: { at, by } } hentede dokumenter, rådgiveren har slettet (fx forkert årsrapport fra CVR)
   };
   var EVENT = 'cw-case-changed';
@@ -764,7 +765,9 @@
    * }
    * Kun kunden kan ændre den. Forhåndsvisningen kan ikke (previewBlocked).
    */
-  var ONBOARDING_STEPS = ['account', 'terms', 'company', 'agreement', 'access', 'erp'];
+  // Opstarten er kun 'account' (bruger, vilkår og virksomhed). Datadeling og regnskabssystem kommer først,
+  // når kunden selv forbinder sit økonomisystem (fra Periodetal eller oversigten).
+  var ONBOARDING_STEPS = ['account'];
   function onboarding() { var v = read('onboarding', {}); return v && typeof v === 'object' ? v : {}; }
   function setOnboarding(patch, logText) {
     if (previewBlocked('onboarding')) return false;
@@ -787,13 +790,7 @@
   function onboardingStep(ob) {
     ob = ob || onboarding();
     if (ob.doneAt) return null;
-    if (!ob.account) return 'account';
-    if (!ob.terms) return 'terms';
-    if (!ob.company) return 'company';
-    if (!ob.agreement) return 'agreement';
-    if (ob.agreement.declined) return null;
-    if (!ob.sharing) return 'access';
-    if (!ob.erp) return 'erp';
+    if (!ob.account || !ob.terms || !ob.company) return 'account';
     return null;
   }
 
@@ -832,7 +829,7 @@
       deadlineLine: opts.deadline ? t('Send det gerne senest') + ' ' + fmtDate(opts.deadline) + '.' : '',
       buttonLabel: t('Åbn jeres side hos EIFO'),
       link: opts.link ? (/^https?:/.test(opts.link) ? opts.link : 'https://' + opts.link) : 'https://' + requestLink(),
-      trustLine: t('Linket går til crediwire.app, som EIFO bruger til sikker indsamling af materiale. Første gang opretter I en bruger med jeres mail og en adgangskode.'),
+      trustLine: t('Linket går til Crediwire, som EIFO bruger til sikker indsamling af materiale. Første gang opretter I en bruger hos Crediwire. Har I allerede en, logger I bare ind.'),
       caseLine: t('Sagsnr.') + ' ' + (co.caseNr || ''),
       signature: [adv.name, (adv.title ? t(adv.title) + ', ' : '') + (adv.org || 'EIFO'), adv.phone || '', adv.email || ''].filter(Boolean),
     };
@@ -848,7 +845,7 @@
     var q = { id: uid('q'), from: from, text: text, at: now(), itemId: itemId || null, replies: [], readBy: {} };
     q.readBy[from] = q.at;
     // Stillet i forhåndsvisningen af kundesiden: det er rådgiveren, der skriver (vises og logges sådan)
-    if (previewMode) { q.preview = true; q.readBy['rådgiver'] = q.at; }
+    if (previewMode && from === 'kunde') { q.preview = true; q.readBy['rådgiver'] = q.at; }
     write('questions', questions().concat([q]));
     log('question', (from === 'kunde' ? t('Nyt spørgsmål fra kunden') : t('Nyt spørgsmål til kunden')) + ': ' + text.slice(0, 80), { who: from, itemId: itemId });
     return q;
@@ -860,7 +857,7 @@
       if (q.id !== qid) return q;
       var rb = Object.assign({}, q.readBy); rb[from] = ts;
       var r = { from: from, text: text, at: ts };
-      if (previewMode) { r.preview = true; rb['rådgiver'] = ts; } // svar skrevet i forhåndsvisningen
+      if (previewMode && from === 'kunde') { r.preview = true; rb['rådgiver'] = ts; } // svar på kundens plads, skrevet i forhåndsvisningen
       return Object.assign({}, q, { replies: (q.replies || []).concat([r]), readBy: rb });
     }));
     log('reply', (from === 'kunde' ? t('Kunden svarede') : t('Rådgiveren svarede')) + ': ' + text.slice(0, 80), { who: from });
@@ -1204,6 +1201,16 @@
   /* ── Nulstil demo ────────────────────────────────────────────────────────── */
 
   /** Rydder al demotilstand (sag, memo, kommentarer, filer) og genindlæser. Sprog og rute bevares. */
+  /* Intern note til et punkt: kun rådgiveren ser den. Tom tekst sletter den. */
+  function internalNote(id) { return (read('internalNotes', {}) || {})[id] || null; }
+  function setInternalNote(id, text, by) {
+    var all = Object.assign({}, read('internalNotes', {}) || {});
+    var txt = String(text || '').trim();
+    if (txt) all[id] = { text: txt, by: by || '', at: now() }; else delete all[id];
+    write('internalNotes', Object.keys(all).length ? all : null);
+    emit();
+  }
+
   function resetDemo() {
     try {
       Object.keys(localStorage).forEach(function (k) {
@@ -1667,6 +1674,7 @@
     downloadDoc: downloadDoc, demoUploadFile: demoUploadFile, demoUploadName: demoUploadName,
     removedDocs: removedDocs, isDocRemoved: isDocRemoved, canRemoveDoc: canRemoveDoc, removeDoc: removeDoc, restoreDoc: restoreDoc,
     MATERIAL_CATS: MATERIAL_CATS, itemCat: itemCat,
+    internalNote: internalNote, setInternalNote: setInternalNote,
     setPreview: setPreview, isPreview: isPreview, customerLock: customerLock, fmtAgo: fmtAgo,
     useDialog: useDialog, focusSoon: focusSoon,
   };
