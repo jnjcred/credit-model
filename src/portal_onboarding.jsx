@@ -1113,6 +1113,10 @@ const PORTAL_OB_CSS = `
 .cwp .cwp-pv-stepnav { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 10px 12px; background: #1a1d22; color: rgba(255,255,255,0.8); border-radius: 10px; font-size: 12.5px; }
 .cwp .cwp-pv-stepnav button, .cwp .cwp-pv-jump button { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; min-height: 28px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); border-radius: 6px; color: #fff; cursor: pointer; font-size: 12.5px; font-family: inherit; }
 .cwp .cwp-pv-stepnav button:focus-visible, .cwp .cwp-pv-jump button:focus-visible, .cwp .cwp-pv-note button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.cwp .cwp-pv-role { display: inline-flex; align-items: center; gap: 6px; }
+.cwp .cwp-pv-role label { color: rgba(255,255,255,0.75); }
+.cwp .cwp-pv-role select { height: 26px; padding: 0 24px 0 8px; border: 1px solid rgba(255,255,255,0.35); border-radius: 6px; background: #2a2e35; color: #fff; font: inherit; font-size: 12.5px; cursor: pointer; }
+.cwp .cwp-pv-role select:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .cwp .cwp-pv-jump { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 6px 20px 8px; background: #1a1d22; color: rgba(255,255,255,0.7); font-size: 12px; }
 .cwp .cwp-pv-jump > span:first-child { flex-basis: 100%; }
 .cwp .cwp-pv-jump button { min-height: 26px; padding: 2px 9px; font-size: 12px; background: transparent; border-color: rgba(255,255,255,0.2); }

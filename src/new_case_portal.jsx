@@ -901,7 +901,13 @@ const PORTAL_CSS = `
 // To spor i forhåndsvisningen: Kundeside (flow = false) åbner altid på kundens
 // oversigt med en statusboks øverst, hvis kunden ikke er færdig med opstarten.
 // Kundeflow (flow = true, demo) viser de skærme, kunden kommer igennem, fra
-// landingssiden (eller flowStart) med skærmrækken øverst.
+// landingssiden (eller flowStart) med skærmrækken øverst. I begge vælges rollen
+// øverst: Rådgiver (forhåndsvisningen som ovenfor) eller Kunde, hvor portalen virker
+// som for kunden: svar, filer og beskeder gemmes, som om kunden havde sendt dem.
+// Kundeside og Kundeflow: den valgte rolle (huskes i browseren). 'kunde' slår forhåndsvisningens spærre fra
+function portalFlowRole() {
+  try { return localStorage.getItem('kabul:flow-role') === 'kunde' ? 'kunde' : 'rådgiver'; } catch (e) { return 'rådgiver'; }
+}
 function CustomerPortal({ back, preview = false, flow = false, flowStart = null, onOpenFlow = null }) {
   CW.useCase();
   const rootRef = React.useRef(null);
@@ -938,8 +944,14 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
     return ['hub', 'material'].includes(k) ? null : k;
   });
   const [pvNote, setPvNote] = React.useState(null);
+  // Hvem bruger siden? Rådgiveren (forhåndsvisning, spærret) eller kunden (alt virker)
+  const [flowRole, setFlowRoleRaw] = React.useState(() => preview ? portalFlowRole() : 'rådgiver');
+  // Spærren skiftes med det samme (før siden tegnes igen), så alt, der spørger CW.isPreview(),
+  // fx mail-afkrydsningen i dialogen og "Skriv som rådgiver", følger rollen i samme tegning
+  const setFlowRole = (r) => { CW.setPreview(r !== 'kunde'); setFlowRoleRaw(r); setPvNote(null); try { localStorage.setItem('kabul:flow-role', r); } catch (e) {} };
+  const asAdvisor = preview && flowRole !== 'kunde';
   // Spærren sættes, før noget i portalen tegnes (fx dialogen, der ellers markerer beskeder som læst af kunden)
-  React.useState(() => { if (preview) CW.setPreview(true); return true; });
+  React.useState(() => { if (asAdvisor) CW.setPreview(true); return true; });
 
   // Startskærm: kundens egen (overlever genindlæsning). Forhåndsvisningen følger
   // kunden, men husker ikke selv noget.
@@ -973,12 +985,12 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   // Forhåndsvisningen: kundehandlinger afvises, og rådgiverens egne beskeder
   // (toasts) skjules, så længe kundens side vises.
   React.useEffect(() => {
-    if (!preview) return;
+    if (!asAdvisor) return;
     CW.setPreview(true);
     const onBlocked = (e) => setPvNote({ what: e.detail || '', n: Date.now() });
     window.addEventListener('cw-preview-blocked', onBlocked);
     return () => { window.removeEventListener('cw-preview-blocked', onBlocked); CW.setPreview(false); };
-  }, [preview]);
+  }, [asAdvisor]);
   // Stopper klik, slip og formularer på alt, der er kundens handling (data-cust-act)
   const pvStop = (e, fallback) => {
     // Uploadfelterne i punkterne (og knappen, der sender filerne) virker: rådgiveren uploader på kundens vegne
@@ -992,7 +1004,7 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
     e.preventDefault(); e.stopPropagation();
     setPvNote({ what: el ? el.getAttribute('data-cust-act') : fallback, n: Date.now() });
   };
-  const pvHandlers = preview ? {
+  const pvHandlers = asAdvisor ? {
     onClickCapture: (e) => pvStop(e),
     onDropCapture: (e) => pvStop(e, 'upload'),
     onSubmitCapture: (e) => pvStop(e, 'send'),
@@ -1013,7 +1025,7 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   const view = screen;
   const active = activeId ? CW.itemById(activeId) : null;
   // "Nyt" og "1 nyt svar" gælder den visning, hvor kunden så dem første gang
-  const fresh = useCsFreshThreads(preview, view + ':' + (activeId || ''));
+  const fresh = useCsFreshThreads(asAdvisor, view + ':' + (activeId || ''));
 
   // Sidetitel pr. trin, fx "Intern årsrapport · Materiale til EIFO"
   const pageName = !hasReq && lock !== 'declined' ? t('Ingen aktiv anmodning')
@@ -1190,7 +1202,7 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   else content = <PortalHub requested={requested} fresh={fresh} lock={lock} onOpen={openItem} onOpenBundle={(preselect) => setBundle({ preselect: preselect || null })} onOther={() => setOtherOpen(true)} onSubmit={submit} onStatus={() => { setJustSubmitted(false); go('status'); }} onErp={() => go('erp')}/>;
   if (preview && !pvOb && pvNav && view === 'hub') content = <>{content}<div style={{ maxWidth: 760, margin: '0 auto' }}>{pvNav}</div></>;
   // Kundeside: hvor kunden er i opstarten, øverst på oversigten
-  if (preview && !flow && req && !lock && view === 'hub') content = <><PortalPvObStatus onOpenFlow={onOpenFlow}/>{content}</>;
+  if (asAdvisor && !flow && req && !lock && view === 'hub') content = <><PortalPvObStatus onOpenFlow={onOpenFlow}/>{content}</>;
 
   const demoSkipLabel = !loggedIn && (ob.doneAt || legacy) ? t('Log ind (demo)') : t('Spring opstarten over (demo)');
 
@@ -1203,8 +1215,16 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
           <div role="note" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 20px', background: '#1a1d22', color: '#fff', fontSize: 12.5, flexWrap: 'wrap' }}>
             <I.Eye size={13}/>
             <b style={{ fontWeight: 600 }}>{flow ? t('Kundeflow (demo)') : t('Forhåndsvisning af kundens side')}</b>
+            <span className="cwp-pv-role">
+              <label htmlFor="cwp-pv-role">{t('Se som')}</label>
+              <select id="cwp-pv-role" value={flowRole} onChange={e => setFlowRole(e.target.value)}>
+                <option value="rådgiver">{t('Rådgiver')}</option>
+                <option value="kunde">{t('Kunde')}</option>
+              </select>
+            </span>
             <span style={{ color: 'rgba(255,255,255,0.75)' }}>
-              {flow ? t('De skærme, kunden kommer igennem. Du kan klikke rundt, men intet gemmes.')
+              {flowRole === 'kunde' ? t('Du bruger siden som kunden. Svar, filer og beskeder gemmes, som om kunden havde sendt dem.')
+                : flow ? t('De skærme, kunden kommer igennem. Du kan klikke rundt, men intet gemmes.')
                 : req ? t('Du kan se og klikke rundt. Filer, du uploader i punkterne, sendes på kundens vegne. Alt andet gemmes ikke.') : t('Anmodningen er ikke sendt endnu. Sådan ser siden ud, når den er sendt.')}
             </span>
             <div style={{ flex: 1 }}/>
@@ -1792,7 +1812,7 @@ function PortalHubRow({ it, first, status: realStatus, onOpen, readOnly }) {
           : <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 14, alignItems: 'flex-start' }}>{body}</div>}
         {!clickable && (status === 'rejected' || status === 'delegated' || delivered) && (
           <div className={'cwp-row-side' + (delivered ? '' : ' wide')} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {status === 'rejected' && <button type="button" className="btn-ghost-sm" data-cust-act="answer" onClick={() => onOpen(it.id)} aria-label={t('Svar') + ': ' + t(it.label)}>{t('Svar')}</button>}
+            {status === 'rejected' && <button type="button" className="btn-ghost-sm" data-act="answer" onClick={() => onOpen(it.id)} aria-label={t('Svar') + ': ' + t(it.label)}>{t('Svar')}</button>}
             {status === 'delegated' && (
               <>
                 <button type="button" onClick={() => onOpen(it.id)} className="btn-ghost-sm" aria-label={t('Send selv') + ': ' + t(it.label)}>{t('Send selv')}</button>

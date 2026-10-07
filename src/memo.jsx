@@ -80,7 +80,16 @@
        bliver i teksten, så Word-eksporten og "Vis ophav" virker som før;
        afsnittets status står i gennemgangslinjen og i navigationens prik. */
     .memo-body .tpl-draft { margin: 6px 0; }
-    .memo-body .tpl-draft-label { display: none; }
+    /* AI-mærket: ikon og tekst over hver tekst, AI har skrevet. Står der rettelser fra rådgiveren, siger mærket det.
+       Mærket fjernes, når rådgiveren markerer afsnittet som gennemgået, og følger ikke med i eksporten. */
+    .memo-body .tpl-draft-label { display: flex; align-items: center; gap: 5px; width: fit-content; margin: 0 0 4px; padding: 1px 9px 1px 7px;
+      border-radius: 999px; background: rgba(124,140,248,0.14); color: #4b4fb5; font-size: 0; user-select: none; }
+    .memo-body .tpl-draft-label::before { content: ''; width: 11px; height: 11px; background: currentColor;
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 14 9l7 2-7 2-2 9-2-9-7-2 7-2z'/%3E%3C/svg%3E") center / contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2 14 9l7 2-7 2-2 9-2-9-7-2 7-2z'/%3E%3C/svg%3E") center / contain no-repeat; }
+    .memo-body .tpl-draft-label::after { content: "${typeof t === 'function' ? t('AI-genereret') : 'AI-genereret'}"; font-size: 11.5px; font-weight: 600; }
+    .memo-body .tpl-draft[data-ai="edited"] > .tpl-draft-label::after,
+    .memo-body .tpl-draft:has([data-ai="edited"]) > .tpl-draft-label::after { content: "${typeof t === 'function' ? t('AI-genereret + rådgiverens rettelser') : 'AI-genereret + rådgiverens rettelser'}"; }
     .memo-body .tpl-bevtable { width: 100%; border-collapse: collapse; margin: 10px 0; }
     .memo-body .tpl-bevtable th { background: var(--c-ink); color: #fff; padding: 7px 10px; font-size: 12px; font-weight: 600; text-align: left; }
     .memo-body .tpl-bevtable td { padding: 8px 10px; border-bottom: 1px solid var(--c-line-2); font-size: 12px; vertical-align: top; }

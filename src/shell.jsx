@@ -39,7 +39,8 @@ function Sidebar({ route, go, openNewCase }) {
   // Begge tal er grå: tallet siger nok i sig selv.
   CW.useCase();
   const isActive = (r) => route === r || (r === "cases" && route.startsWith("workspace"));
-  const awaitingMe = DATA.CASES.filter(DATA.caseAwaitingMe).length;
+  // Samme tal som fanen "Afventer dig" i Mine opgaver (portfolio.jsx)
+  const awaitingMe = typeof window.cwTasksAwaitingMe === 'function' ? window.cwTasksAwaitingMe() : DATA.CASES.filter(DATA.caseAwaitingMe).length;
   const stuck = DATA.requestRows().filter(r => r.status === 'stuck').length;
   // Kontomappingen er en side for sig; andre skærme kan åbne den med 'cw-open-mapper'
   React.useEffect(() => {
@@ -87,6 +88,13 @@ function Sidebar({ route, go, openNewCase }) {
           title={t('Demo: mapping af kundens konti fra e-conomic til Crediwires kategorier. Hvem der mapper, og hvor det skal ligge, er ikke aftalt.')}>
           <I.GitBranch className="ic"/> {t('Kontomapping')}
           <span className="nav-demo-tag">{t('demo')}</span>
+        </button>
+        {/* Internt: produktteamets værksted til promptene bag "Kør AI igen" (src/prompt_workshop.jsx) */}
+        <button type="button" id="nav-prompts" className={'nav-item nav-demo' + (isActive('prompts') ? ' active' : '')}
+          aria-current={isActive('prompts') ? 'page' : undefined} onClick={() => go('prompts')}
+          title={t('Internt: ret promptene bag "Kør AI igen" og prøv dem på en sag')}>
+          <I.Sparkles className="ic"/> {t('Prompt-værksted')}
+          <span className="nav-demo-tag">{t('internt')}</span>
         </button>
       </nav>
 

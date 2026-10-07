@@ -855,6 +855,7 @@ function AiSectionAssistant({ sKey, num, title, getHtml, onReplace, onAppend, on
         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--c-ink)' }}>
           {selection ? t('Omskriv markeret tekst') : t(title)}
         </span>
+        <AiBadge compact/>
         <span style={{ fontSize: 12, color: 'var(--c-text-3)' }}>
           {status.ready ? t(status.provider.label) + ' · ' + status.model : t('ikke forbundet')}
         </span>
@@ -1100,9 +1101,10 @@ function AiChatPanel({ open, getMemoText, sections, onInsert }) {
             {m.role === 'user'
               ? <div className="ai-msg-user">{m.content}</div>
               : splitSuggestions(m.content).map((part, j) => part.kind === 'text' ? (
-                  <div key={j} className="ai-msg-text">{part.body.trim()}</div>
+                  <div key={j} className="ai-msg-text">{j === 0 && <div style={{ marginBottom: 4 }}><AiBadge/></div>}{part.body.trim()}</div>
                 ) : (
                   <div key={j} className="ai-suggest">
+                    <div style={{ padding: '6px 10px 0' }}><AiBadge/></div>
                     <div className="memo-body ai-suggest-body" dangerouslySetInnerHTML={{ __html: cleanHtml(part.body) }}/>
                     <div className="ai-suggest-foot">
                       <span style={{ fontSize: 11, color: 'var(--c-text-3)' }}>{t('Indsæt i')}</span>

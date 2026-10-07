@@ -301,12 +301,6 @@ function wsStatusKey(caseId) {
   if (CW.isLiveCase(caseId) && (k === 'memo' || k === 'ready')) return wsSubmitReady() ? 'ready' : 'memo';
   return k;
 }
-function WSStatusPill({ caseData }) {
-  const key = wsStatusKey(caseData.id);
-  const d = key ? ((DATA.STATUS && DATA.STATUS[key] && DATA.STATUS[key].label) ? DATA.STATUS[key] : WS_STATUS[key]) : null;
-  if (!d) return statusPill(caseData.status);
-  return <span className={'pill ' + (d.tone || 'outline')}><span className="pill-dot" aria-hidden="true"/>{t(d.label)}</span>;
-}
 
 // ── Ejer ────────────────────────────────────────────────────────────────────
 function wsOwner(caseData) {
@@ -710,10 +704,7 @@ function WorkspaceShell({ tab: routeTab, go, openMemo, caseId }) {
       <div className="ws-header">
         <div className="ws-h-row">
           <div className="ws-h-name" style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <h1 className="ws-co-name" style={{ margin: 0 }}>{name}</h1>
-              {!caseData.unknown && <WSStatusPill caseData={caseData}/>}
-            </div>
+            <h1 className="ws-co-name" style={{ margin: 0 }}>{name}</h1>
             {/* Rød tekst kun når noget er overskredet; tid i fasen kun tæt på eller over SLA */}
             <div style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: 2, display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: 2 }}>
               {/* Faciliteten (flyttet hertil fra kortet Virksomhed og facilitet på Overblik) */}
@@ -826,10 +817,12 @@ function WSCustomerPreview({ caseData, go, onClose, flow: startFlow }) {
   CW.useDialog(ref, true, onClose);
   // Forhåndsvisningen slås til, før portalen tegnes første gang, så intet i
   // portalen (fx "læst af kunden") når at ske, mens spærren endnu ikke er sat
-  React.useState(() => { if (typeof CW.setPreview === 'function') CW.setPreview(true); return true; });
+  // Undtagen med rollen Kunde (vælgeren øverst): der virker portalen som for kunden (portalen styrer selv spærren)
+  const lockOn = () => typeof CW.setPreview === 'function' && !(typeof portalFlowRole === 'function' && portalFlowRole() === 'kunde');
+  React.useState(() => { if (lockOn()) CW.setPreview(true); return true; });
   // Kundehandlinger afvises, og toasts skjules
   React.useEffect(() => {
-    if (typeof CW.setPreview === 'function') CW.setPreview(true);
+    if (lockOn()) CW.setPreview(true);
     return () => { if (typeof CW.setPreview === 'function') CW.setPreview(false); };
   }, []);
   const co = DATA.COMPANY;
@@ -1437,8 +1430,9 @@ function WSActivity() {
 const AUTO_SOURCES = [
   { src: "CVR-registret", what: "Selskab, vedtægter, bestyrelse", reports: true },
   // docs: Crediwires egne eksporter (financials.jsx, CW_EXPORT_DOCS), som kan hentes ligesom årsrapporterne
-  { src: "Branche­opslag", what: "Markedsdata", docs: [{ name: 'Produkt_marked_og_branche.pdf', label: 'Produkt, marked og branche' }] },
-  { src: "Bløde signaler", what: "Trustpilot, hjemmeside, presse, virksomhedsbeskrivelser", docs: [{ name: 'Trustpilot.pdf', label: 'Trustpilot' }] },
+  // ask: katalogets punkt, som "Spørg kunden" stiller spørgsmålet til
+  { src: "Branche­opslag", what: "Markedsdata", ask: 'm-pub-market', docs: [{ name: 'Produkt_marked_og_branche.pdf', label: 'Produkt, marked og branche' }] },
+  { src: "Bløde signaler", what: "Trustpilot, hjemmeside, presse, virksomhedsbeskrivelser", ask: 'm-pub-product', docs: [{ name: 'Trustpilot.pdf', label: 'Trustpilot' }] },
 ];
 
 // Dagen de offentlige data blev hentet (sagens tidslinje i data.js), samme dato som stamdata
@@ -1458,11 +1452,12 @@ function wsPublicTopics() {
   return reports.map(y => 'Årsrapport ' + y).concat(['CVR-registret'], AUTO_SOURCES.filter(x => x.docs).reduce((a, x) => a.concat(x.docs.map(o => o.label)), []));
 }
 window.wsPublicTopics = wsPublicTopics;
-// Åbn samtalen med kunden med emnet valgt (CWConversation lytter efter beskeden)
-function wsAskAbout(about) {
-  const card = document.getElementById('ws-dialog');
-  if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  window.dispatchEvent(new CustomEvent('cw-ask-about', { detail: { about } }));
+// "Spørg kunden" om noget hentet automatisk: anmodningen åbner med spørgsmålet til punktet klar
+// (itemId er katalogets punkt, fx 'm-annual-2024' eller 'm-pub-market'). Spørgsmålet bliver et
+// punkt i anmodningen, som kunden får, når anmodningen sendes.
+function wsAskAbout(itemId) {
+  window.__wsAskItem = itemId;
+  wsRequestMore(() => { setTimeout(() => wsScrollTo('ws-material'), 80); CW.focusSoon('#ws-ask-' + itemId + ' textarea'); });
 }
 
 // De tre offentlige kilder. CVR-registret har årsrapporterne, som kan åbnes under Dokumenter.
@@ -1481,8 +1476,8 @@ function WSPublicSources({ go, caseId }) {
             {(() => {
               // Årsrapporterne fra CVR, eller kildens egne dokumenter (eksporterne)
               const items = x.reports
-                ? reports.map(y => ({ key: y, label: t('Årsrapport') + ' ' + y, about: 'Årsrapport ' + y, doc: reportDoc(y) }))
-                : (x.docs || []).map(o => ({ key: o.name, label: t(o.label), about: o.label, doc: (window.CASE_DOCS || []).concat(window.CW_EXPORT_DOCS || []).find(d => d.name === o.name) }));
+                ? reports.map(y => ({ key: y, label: t('Årsrapport') + ' ' + y, ask: 'm-annual-' + y, doc: reportDoc(y) }))
+                : (x.docs || []).map(o => ({ key: o.name, label: t(o.label), ask: x.ask, doc: (window.CASE_DOCS || []).concat(window.CW_EXPORT_DOCS || []).find(d => d.name === o.name) }));
               if (!items.length) return null;
               return (
                 <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: 0 }}>
@@ -1503,7 +1498,7 @@ function WSPublicSources({ go, caseId }) {
                           : d ? <button type="button" className="btn-link" title={t('Download')} onClick={() => CW.downloadDoc(d.name)}>{it.label}</button>
                           : <span>{it.label}</span>}
                         {/* Spørgsmål til kunden om dokumentet: samtalen nederst åbnes med emnet valgt */}
-                        {CW.request() && <button type="button" className="ws-ask-pub" onClick={() => wsAskAbout(it.about)}
+                        {it.ask && <button type="button" className="ws-ask-pub" onClick={() => wsAskAbout(it.ask)}
                           aria-label={wsFill(t('Stil kunden et spørgsmål om {item}'), { item: it.label })}>{t('Spørg kunden')}</button>}
                       </li>
                     );
@@ -1692,7 +1687,7 @@ function wsSelectorStatus(it, sel, request, st) {
   if (!s) return { label: t('Sendt'), color: 'var(--c-text-2)' };
   if (s.status === 'approved') return { label: t('Godkendt'), color: 'var(--c-success)' };
   if (s.status === 'received' || s.status === 'noted') return { label: t('Modtaget'), color: 'var(--c-primary)' };
-  if (s.status === 'rejected') return { label: t('Spørgsmål stillet'), color: 'var(--c-danger)' };
+  if (s.status === 'rejected') return { label: t('Spørgsmål stillet'), color: 'var(--c-primary)' };
   return { label: t('Sendt'), color: 'var(--c-text-2)' };
 }
 
@@ -1763,6 +1758,12 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
   const target = React.useRef(null);
   const [view, setView] = React.useState(sent ? 'sent' : 'list');
   const [showInCase, setShowInCase] = React.useState(false);
+  // "Spørg kunden" om noget hentet automatisk: hvilket punkt formularen er åben for (åbnet fra Overblik eller her)
+  const [asking, setAsking] = React.useState(() => { const v = window.__wsAskItem || null; window.__wsAskItem = null; return v; });
+  const [showFetched, setShowFetched] = React.useState(() => !!asking);
+  const [askText, setAskText] = React.useState('');
+  const [askCat, setAskCat] = React.useState('');
+  const [askTried, setAskTried] = React.useState(false);
   const [showExtras, setShowExtras] = React.useState(false);
   const [dragId, setDragId] = React.useState(null);
   const [newItem, setNewItem] = React.useState('');
@@ -1785,7 +1786,30 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
   const extras = all.filter(it => isExtra(it) && !hasOnFile(it) && !sel[it.id]);
   const custom = all.filter(it => it.custom);
   const hasYears = all.some(it => it.tier === 'year' && hasOnFile(it));
-  const inCase = all.filter(it => !it.custom && (!!wsUploadedByAdvisor(it.id) || (hasOnFile(it) && !sel[it.id] && !(hasYears && it.id === 'm-annual'))));
+  const inCase0 = all.filter(it => !it.custom && (!!wsUploadedByAdvisor(it.id) || (hasOnFile(it) && !sel[it.id] && !(hasYears && it.id === 'm-annual'))));
+  // Hentet automatisk (offentlige kilder og årsrapporterne fra CVR): står for sig, så rådgiveren kan
+  // se, at det er hentet, og alligevel spørge kunden om det eller bede om en ny version
+  const isFetched = it => { const f = CW.onFile(it); return !!f && (f.isPublic || it.tier === 'year') && !wsUploadedByAdvisor(it.id); };
+  const fetched = inCase0.filter(isFetched);
+  const inCase = inCase0.filter(it => !isFetched(it));
+  const catOptions = WS_MATERIAL_CATS.map(c => c.label);
+  const openAsk = (it) => { const on = asking !== it.id; setAsking(on ? it.id : null); setAskText(''); setAskTried(false); setAskCat(wsMaterialCat(it)); if (on) CW.focusSoon('#ws-ask-q-' + it.id); };
+  // Åbnet fra "Spørg kunden" på Overblik: kategorien er punktets, og markøren står i spørgsmålet
+  // (efter modalens eget fokus på overskriften)
+  React.useEffect(() => {
+    if (!asking) return;
+    const it0 = CW.itemById(asking); if (it0) setAskCat(wsMaterialCat(it0));
+    const id = setTimeout(() => { const el = document.getElementById('ws-ask-q-' + asking); if (el) { el.scrollIntoView({ block: 'center' }); el.focus(); } }, 250);
+    return () => clearTimeout(id);
+  }, []);
+  const addAsk = (it) => {
+    setAskTried(true);
+    if (!askText.trim()) { CW.focusSoon('#ws-ask-' + it.id + ' textarea'); return; }
+    const id = CW.addCustomItem(wsFill(t('Spørgsmål om {item}'), { item: t(it.label) }), askCat || wsMaterialCat(it) || 'Øvrigt', { question: askText.trim(), about: it.id });
+    setAsking(null); setAskText(''); setAskTried(false);
+    CW.toast(t('Spørgsmålet er lagt i anmodningen. Kunden får det, når du sender den.'));
+    CW.focusSoon('#ws-req-' + id);
+  };
 
   // Det, mailen beder om: valgte punkter, som rådgiveren ikke selv har uploadet.
   // En opdatering nævner kun de nye punkter.
@@ -1904,6 +1928,7 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
                 onClick={e => { e.preventDefault(); CW.removeCustomItem(it.id); }}><I.X size={12}/></button>
             )}
           </span>
+          {it.question && <span className="ws-req-q" title={it.question}>"{it.question}"</span>}
           {up && (
             <span style={{ fontSize: 12, color: 'var(--c-text-2)', display: 'flex', flexDirection: 'column', gap: 2, marginTop: 2 }}>
               {up.files.map(f => (
@@ -2015,6 +2040,59 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
                 )}
               </div>
             )}
+            {fetched.length > 0 && (
+              <div style={{ margin: '0 12px', borderTop: '1px solid var(--c-line-2)' }}>
+                <button type="button" className="ws-req-fold" aria-expanded={showFetched} aria-controls="ws-req-fetched" onClick={() => setShowFetched(v => !v)}>
+                  <I.ChevronRight size={12} style={{ transform: showFetched ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }}/>
+                  {wsFill(t('Hentet automatisk ({n})'), { n: fetched.length })}
+                </button>
+                {showFetched && (
+                  <div id="ws-req-fetched" style={{ paddingBottom: 12 }}>
+                    {fetched.map(it => {
+                      const f = CW.onFile(it);
+                      const open = asking === it.id;
+                      return (
+                        <div key={it.id} id={'ws-ask-' + it.id} className="ws-req-row up">
+                          <span style={{ marginTop: 3, display: 'inline-flex' }}><WSCheckDot tone="approved" label={t('Hentet automatisk')}/></span>
+                          <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontWeight: 600, color: 'var(--c-ink)' }}>{t(it.label)}</span>
+                            <span style={{ fontSize: 12, color: 'var(--c-text-2)' }}>
+                              {wsFill(t('Hentet automatisk fra {src}'), { src: f.isPublic ? t(f.name) : t('CVR-registret') })}{f.date ? ' · ' + f.date : ''}
+                            </span>
+                          </div>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <button type="button" className="ws-req-ghost" aria-expanded={open} onClick={() => openAsk(it)}>{t('Spørg kunden')}</button>
+                            <button type="button" className="ws-req-ghost" onClick={() => wsToggleMaterial(it)}>{t('Bed om ny version')}</button>
+                            <span className="ws-req-cat">{t(wsMaterialCat(it))}</span>
+                          </span>
+                            {open && (
+                              <div className="ws-ask-form" style={{ gridColumn: '2 / -1' }}>
+                                <label htmlFor={'ws-ask-q-' + it.id}>{t('Hvad vil du spørge kunden om?')}</label>
+                                <textarea id={'ws-ask-q-' + it.id} className="input" rows={3} value={askText} onChange={e => setAskText(e.target.value)}
+                                  placeholder={t('Fx "Kan I forklare faldet i bruttofortjenesten i 2024?"')}
+                                  aria-invalid={askTried && !askText.trim() ? 'true' : undefined}/>
+                                {askTried && !askText.trim() && <span role="alert" className="ws-ask-err">{t('Skriv dit spørgsmål.')}</span>}
+                                <div className="ws-ask-foot">
+                                  <label htmlFor={'ws-ask-cat-' + it.id}>{t('Kategori')}</label>
+                                  <select id={'ws-ask-cat-' + it.id} className="input" value={askCat} onChange={e => setAskCat(e.target.value)}>
+                                    {catOptions.map(c => <option key={c} value={c}>{t(c)}</option>)}
+                                    <option value="Øvrigt">{t('Andet')}</option>
+                                  </select>
+                                  <span style={{ flex: 1 }}/>
+                                  <button type="button" className="btn btn-sm" onClick={() => setAsking(null)}>{t('Annullér')}</button>
+                                  <button type="button" className="btn btn-sm btn-primary" onClick={() => addAsk(it)}>{t('Tilføj spørgsmålet')}</button>
+                                </div>
+                                <span className="ws-ask-hint">{t('Kunden får det som et punkt i anmodningen og kan svare med tekst eller en fil.')}</span>
+                              </div>
+                            )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            {inCase.length > 0 && (
             <div style={{ margin: '0 12px', borderTop: '1px solid var(--c-line-2)' }}>
               <button type="button" className="ws-req-fold" aria-expanded={showInCase} onClick={() => setShowInCase(v => !v)}>
                 <I.ChevronRight size={12} style={{ transform: showInCase ? 'rotate(90deg)' : 'none', transition: 'transform .2s' }}/>
@@ -2049,6 +2127,7 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
                 </div>
               )}
             </div>
+            )}
           </div>
         )}
 
@@ -2511,7 +2590,7 @@ function WSRejectModal({ it, onClose, onDone }) {
   const to = (request && request.to) || {};
   const label = t(it.label);
   const [reason, setReason] = React.useState('');
-  const [sendMail, setSendMail] = React.useState(true);
+  const [sendMail, setSendMail] = React.useState(false);   // mailen er fra som udgangspunkt; rådgiveren slår den til, hvis kunden skal have en
   const [subjectEdit, setSubjectEdit] = React.useState(null);
   const [bodyEdit, setBodyEdit] = React.useState(null);
   const mail = CW.requestMail({ items: [it], deadline: request && request.deadline, to: { name: to.name, email: to.email }, link: request && request.link });
@@ -2627,6 +2706,97 @@ function WSInotePop({ anchor, initial, note, label, onSave, onDelete, onClose })
       </div>
     </div>,
     document.body
+  );
+}
+
+/* Historik for et punkt, nyeste nederst. Hver række siger, hvem der gjorde hvad, og gemmer
+   det, der var dengang: filerne (også dem, der siden er fjernet), spørgsmålene og kundens svar
+   og kommentarer. Lange tekster er afkortet; hele teksten står, når man holder musen over.
+   Når punktet er godkendt, står det under "Godkendt fra kunden", og historikken kan foldes ud derfra. */
+function wsItemHistory(itemId) {
+  const types = ['received', 'noted', 'rejected', 'approved', 'unreviewed', 'reset'];
+  const adv = wsAdvisor();
+  const eifo = wsFill(t('{name} ({org})'), { name: (adv.name || '').split(' ')[0], org: adv.org || 'EIFO' });
+  const who = (w) => w === 'rådgiver' ? eifo : t('kunde');
+  const list = CW.activity().filter(e => e.itemId === itemId && types.indexOf(e.type) >= 0);
+  // Fortrudte skridt står ikke i historikken: en fortrudt godkendelse eller et fortrudt spørgsmål fjernes sammen med "fortrudt"-rækken,
+  // så kun det, der stod til sidst, er med (fx den endelige Godkendt)
+  let lastReviewId = null;
+  const undone = {};
+  list.forEach(e => {
+    if ((e.type === 'approved' || e.type === 'rejected')) lastReviewId = e.id;
+    else if (e.type === 'unreviewed' && lastReviewId) { undone[lastReviewId] = true; undone[e.id] = true; lastReviewId = null; }
+  });
+  let lastReview = null;
+  return list.filter(e => !undone[e.id]).map(e => {
+    const d = e.data || {};
+    let label = '', names = [], quote = '', tone = '';
+    if (e.type === 'received') {
+      names = d.names || [];
+      if (d.answer) {
+        label = e.who === 'rådgiver' ? wsFill(t('Svar fra {who} på kundens vegne'), { who: eifo }) : wsFill(t('Svar fra {who}'), { who: who(e.who) });
+        quote = d.answer;
+      } else if (names.length) {
+        label = wsFill(names.length === 1 ? t('Fil uploadet af {who}') : t('Filer uploadet af {who}'), { who: who(e.who) });
+      } else label = wsFill(t('Sendt af {who}'), { who: who(e.who) });
+    } else if (e.type === 'noted') {
+      label = wsFill(t('Kommentar fra {who}'), { who: who(e.who) });
+      quote = d.note || (d.kind === 'ikke-relevant' ? t('Ikke relevant for kunden') : d.kind === 'anden-maade' ? t('Sendt på anden måde') : t('Kunden har ingen fil'));
+    } else if (e.type === 'rejected') {
+      label = wsFill(t('Spørgsmål stillet af {who}'), { who: eifo }); quote = d.note || ''; tone = 'q'; lastReview = 'rejected';
+    } else if (e.type === 'approved') {
+      label = wsFill(t('Godkendt af {who}'), { who: eifo }); tone = 'ok'; lastReview = 'approved';
+    } else if (e.type === 'unreviewed') {
+      label = wsFill(lastReview === 'rejected' ? t('Spørgsmål trukket tilbage af {who}') : t('Godkendelse fortrudt af {who}'), { who: eifo }); lastReview = null;
+    } else {
+      // reset: en fil fjernet, eller kunden trak det sendte tilbage (ældre logrækker har ingen data)
+      const removed = d.kind === 'removed' || (!d.kind && /Fil fjernet|File removed/.test(e.text || ''));
+      names = d.names || [];
+      label = wsFill(removed ? t('Fil fjernet af {who}') : t('Trukket tilbage af {who}'), { who: who(e.who) });
+      tone = 'gone';
+    }
+    return { id: e.id, at: e.at, label, names, quote, tone };
+  });
+}
+function WSItemHistory({ itemId }) {
+  CW.useCase();
+  const [open, setOpen] = React.useState(false);
+  const rows = wsItemHistory(itemId);
+  if (rows.length < 2) return null;
+  const files = (CW.itemState(itemId) || {}).files || [];
+  // Filen kan hentes, så længe den ligger på punktet; en fjernet fil står kun med navnet
+  const file = (name, i, gone) => {
+    const f = !gone && files.find(x => x.name === name);
+    const url = f && CW.fileUrl(f.id);
+    return (
+      <React.Fragment key={i}>
+        {i > 0 && ', '}
+        {url ? <a className="ws-hist-file" href={url} download={name} title={name}>{name}</a>
+          : <span className={'ws-hist-file' + (gone ? ' gone' : '')} title={name}>{name}</span>}
+      </React.Fragment>
+    );
+  };
+  return (
+    <div className="ws-hist">
+      <button type="button" className="ws-hist-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <I.ChevronRight size={11} aria-hidden="true" style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}/>
+        {t('Historik')} <span className="n">({rows.length})</span>
+      </button>
+      {open && (
+        <ol className="ws-hist-list" aria-label={t('Historik')}>
+          {rows.map(r => (
+            <li key={r.id} className={r.tone}>
+              <span className="when" title={CW.fmtWhen(r.at)}>{wsDay(r.at)}</span>
+              <span className="what">
+                <span className="lbl">{r.label}{r.names.length || r.quote ? ':' : ''}</span>
+                {r.names.length > 0 && <span className="ws-hist-files">{r.names.map((n, i) => file(n, i, r.tone === 'gone'))}</span>}
+                {r.quote && <span className="ws-hist-quote" title={r.quote}>"{r.quote}"</span>}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
 
@@ -2764,7 +2934,7 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
   const icon = quiet ? <I.Circle size={15} aria-hidden="true" style={{ color: 'var(--c-text-4)' }}/>
     : status === 'approved' ? <WSCheckDot tone="approved" label={t('Godkendt')} title={s && s.reviewedAt ? t('Godkendt') + ' · ' + wsFill(t('{date} af {name}'), { date: wsDay(s.reviewedAt), name: s.reviewedBy || wsAdvisor().name }) : undefined}/>
     : review ? <WSCheckDot tone="received" label={t('Venter på din gennemgang')}/>
-    : status === 'rejected' ? <Icon size={15} aria-hidden="true" style={{ color: 'var(--c-danger)' }}><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></Icon>
+    : status === 'rejected' ? <I.AlertCircle size={15} aria-hidden="true" style={{ color: 'var(--c-primary)' }}/>
     : <I.Clock size={15} aria-hidden="true" style={{ color: 'var(--c-text-3)' }}/>;
 
   const link = (props, text) => <button type="button" className="btn-link" {...props}>{text}</button>;
@@ -2790,6 +2960,9 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
               {(status === 'pending' || status === 'rejected' || status === 'delegated') && link({ onClick: withdraw, title: t('Åbner anmodningen, hvor punktet er fraklikket. Du vælger, om kunden får en mail.'), 'aria-label': wsFill(t('Træk {item} tilbage'), { item: label }) }, t('Træk tilbage'))}
               {(status === 'pending' || status === 'rejected') && !optional && (
                 <button type="button" className="btn btn-sm" onClick={remind} aria-label={wsFill(t('Påmind kunden om {item}'), { item: label })}>{t('Påmind')}</button>
+              )}
+              {status === 'rejected' && (
+                <button type="button" className="btn btn-sm" onClick={() => CW.confirm({ title: t('Er du sikker?'), text: t('Spørgsmålet fjernes fra kundens side, og punktet står igen til din gennemgang.'), confirmLabel: t('Fortryd spørgsmålet') }).then(r => { if (r && r.ok) CW.unreview(it.id); })} aria-label={wsFill(t('Fortryd spørgsmålet om {item}'), { item: label })} title={t('Punktet står igen til gennemgang, og spørgsmålet forsvinder fra kundens side')}>{t('Fortryd')}</button>
               )}
               {status === 'rejected' && files.length > 0 && (
                 <button type="button" className="btn btn-sm btn-primary" data-act="approve" onClick={approve} aria-label={wsFill(t('Godkend {item} alligevel'), { item: label })} title={t('Du tog fejl: godkend materialet alligevel')}>{t('Godkend')}</button>
@@ -2848,6 +3021,7 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
 
       {drag && <div style={{ fontSize: 12, color: 'var(--c-primary)', margin: '4px 0 0 22px' }}>{t('Slip filerne for at uploade på kundens vegne')}</div>}
       <div className="ws-mat-row-more">
+        <WSItemHistory itemId={it.id}/>
         {s && s.answers && Array.isArray(s.answers.countries) && s.answers.countries.length > 0 && (() => {
           const list = s.answers.countries.filter(c => c && (c.name || c.code));
           const sum = list.reduce((n, c) => n + (Number(c.pct) || 0), 0);

@@ -1052,4 +1052,8 @@ Object.assign(window.I18N.en, {
   "{adv} beder om en ny version": "{adv} asks for a new version",
   "Tilføj en fil, hvis der er brug for det": "Add a file if needed",
   "Jeres svar til {adv}:": "Your answer to {adv}:",
+  "Se som": "View as",
+  "Rådgiver": "Adviser",
+  "Kunde": "Customer",
+  "Du bruger siden som kunden. Svar, filer og beskeder gemmes, som om kunden havde sendt dem.": "You are using the page as the customer. Answers, files and messages are saved as if the customer had sent them.",
 });

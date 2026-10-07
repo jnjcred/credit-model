@@ -1070,6 +1070,15 @@ button.user-chip .meta span { display: block; }
 .cs-conv-mail { margin-top: 10px; }
 /* Anmod om materiale uden mail: linket, rådgiveren selv giver kunden */
 .ws-req-nomail { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; background: var(--c-surface-2); border: 1px solid var(--c-line); border-radius: 8px; font-size: 13px; color: var(--c-text-2); line-height: 1.5; overflow-wrap: anywhere; }
+/* Spørg kunden om noget hentet automatisk (i Anmod om materiale) */
+.ws-req-q { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--c-text-2); }
+.ws-ask-form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; padding: 10px 12px; background: var(--c-surface-2); border: 1px solid var(--c-line); border-radius: 8px; }
+.ws-ask-form > label, .ws-ask-foot label { font-size: 12.5px; color: var(--c-text-2); }
+.ws-ask-form textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; font-size: 13px; line-height: 1.5; padding: 8px 10px; background: #fff; }
+.ws-ask-foot { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ws-ask-foot select { height: 30px; font-size: 12.5px; width: auto; }
+.ws-ask-err { font-size: 12px; color: var(--c-danger); }
+.ws-ask-hint { font-size: 12px; color: var(--c-text-3); }
 .ws-out-sum { margin-left: auto; font-size: 12.5px; color: var(--c-text-2); white-space: nowrap; }
 .ws-out-grp-head { display: flex; align-items: center; gap: 8px; min-height: 26px; }
 .ws-out-grp-h { flex: 1; margin: 0; font-size: 13.5px; font-weight: 600; color: var(--c-ink); }
@@ -1516,3 +1525,126 @@ a.ws-mat-fname:hover { text-decoration: underline; text-underline-offset: 2px; }
 .cwp-ask { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--c-primary); background: #fff; color: var(--c-primary); display: grid; place-items: center; flex-shrink: 0; box-sizing: border-box; font-size: 12.5px; font-weight: 700; line-height: 1; font-family: var(--font); }
 .cwp-question { margin: 0 0 18px; padding: 14px 16px; background: var(--c-primary-bg); border: 1px solid #d3e0fb; border-radius: 12px; }
 .cwp-question .field label { font-size: 12.5px; font-weight: 500; color: var(--c-text-2); }
+
+/* Historik på et punkt (foldes ud) */
+.ws-hist { margin-top: 4px; }
+.ws-hist-btn { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 0; border: 0; background: transparent; font: inherit; font-size: 12.5px; color: var(--c-text-2); cursor: pointer; }
+.ws-hist-btn:hover, .ws-hist-btn:focus-visible { color: var(--c-ink); }
+.ws-hist-btn .n { color: var(--c-text-3); }
+.ws-hist-list { list-style: none; margin: 4px 0 2px; padding: 0 0 0 4px; border-left: 2px solid var(--c-line); }
+.ws-hist-list li { display: grid; grid-template-columns: 82px minmax(0, 1fr); gap: 8px; padding: 3px 0 3px 10px; font-size: 12.5px; line-height: 1.45; color: var(--c-text); }
+.ws-hist-list li .when { color: var(--c-text-3); white-space: nowrap; }
+.ws-hist-list li .sub { color: var(--c-text-2); overflow-wrap: anywhere; }
+.ws-hist-list li .what { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; min-width: 0; }
+.ws-hist-list li .lbl { color: var(--c-text); white-space: nowrap; }
+.ws-hist-list li.ok .lbl { color: var(--c-ink); font-weight: 500; }
+.ws-hist-list li.gone .lbl { color: var(--c-text-2); }
+.ws-hist-files { min-width: 0; max-width: 100%; }
+.ws-hist-file { display: inline-block; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+a.ws-hist-file { color: var(--c-primary); text-decoration: none; }
+a.ws-hist-file:hover { text-decoration: underline; }
+.ws-hist-file.gone { color: var(--c-text-3); text-decoration: line-through; }
+.ws-hist-quote { display: inline-block; max-width: min(460px, 100%); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; color: var(--c-text-2); cursor: help; }
+
+/* ── Mine opgaver (designet "Mine opgaver v8", Claude Design 7. oktober) ──
+   Kolonner: Kunde · Afventer · Indhentning · Ventetid · handlinger.
+   Hvem der har bolden, ses af vægten (din tur mørk og fed, kundens grå). Ingen rød. */
+.tk-page { display: flex; flex-direction: column; gap: 16px; }
+.tk-page .page-title { font-size: 24px; line-height: 32px; }
+.tk-search-row { display: flex; gap: 8px; position: relative; }
+.tk-search { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 10px 0 12px; background: #fff; border: 1px solid var(--c-line-strong); border-radius: 8px; color: var(--c-text-3); cursor: text; }
+.tk-search:focus-within { border-color: var(--c-primary); box-shadow: 0 0 0 3px var(--c-primary-bg); }
+.tk-search input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; font: inherit; font-size: 14.5px; background: transparent; color: var(--c-ink); }
+.tk-search input::placeholder { color: var(--c-text-3); }
+.tk-kbd { font: inherit; font-size: 11.5px; line-height: 18px; min-width: 18px; text-align: center; color: var(--c-text-3); border: 1px solid var(--c-line); border-radius: 4px; background: var(--c-surface-2); }
+.tk-search:focus-within .tk-kbd { display: none; }
+.tk-filter-btn { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--c-line-strong); background: #fff; font: inherit; font-size: 13.5px; font-weight: 500; color: var(--c-ink); cursor: pointer; }
+.tk-filter-btn:hover { background: var(--c-surface-2); }
+.tk-filter-btn.on { border-color: var(--c-primary); color: var(--c-primary); }
+.tk-filter-btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 2px; }
+.tk-badge { min-width: 20px; height: 20px; padding: 0 6px; box-sizing: border-box; border-radius: 999px; background: var(--c-primary); color: #fff; font-size: 12px; line-height: 20px; text-align: center; font-weight: 600; }
+.tk-pop { position: absolute; right: 0; top: 46px; z-index: 30; width: 340px; max-width: 100%; background: #fff; border: 1px solid var(--c-line); border-radius: 10px; box-shadow: var(--shadow-lg); }
+.tk-pop-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.tk-pop-foot { padding: 10px 16px; border-top: 1px solid var(--c-line-2); display: flex; justify-content: space-between; align-items: center; }
+.tk-fs { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tk-fs legend, .tk-range-head span:first-child { font-size: 12px; line-height: 20px; color: var(--c-text-3); padding: 0; margin-bottom: 2px; }
+.tk-check { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--c-ink); cursor: pointer; }
+.tk-check input { width: 15px; height: 15px; margin: 0; accent-color: var(--c-primary); flex-shrink: 0; }
+.tk-count { color: var(--c-text-3); font-variant-numeric: tabular-nums; }
+.tk-range { display: flex; flex-direction: column; gap: 4px; }
+.tk-range-head { display: flex; justify-content: space-between; }
+.tk-range-val { font-size: 12px; line-height: 20px; color: var(--c-ink); font-variant-numeric: tabular-nums; }
+.tk-range-track { position: relative; height: 20px; margin: 0 7px; }
+.tk-range-rail, .tk-range-fill { position: absolute; top: 8px; height: 4px; border-radius: 2px; }
+.tk-range-rail { left: 0; right: 0; background: var(--c-line); }
+.tk-range-fill { background: var(--c-primary); }
+.tk-range-track input[type=range] { position: absolute; z-index: 1; left: -7px; top: 0; width: calc(100% + 14px); height: 20px; margin: 0; background: transparent; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.tk-range-track input[type=range]::-webkit-slider-runnable-track { background: transparent; height: 20px; }
+.tk-range-track input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 14px; height: 14px; margin-top: 3px; border-radius: 50%; background: #fff; border: 2px solid var(--c-primary); box-sizing: border-box; cursor: grab; }
+.tk-range-track input[type=range]::-moz-range-track { background: transparent; }
+.tk-range-track input[type=range]::-moz-range-thumb { pointer-events: auto; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid var(--c-primary); box-sizing: border-box; cursor: grab; }
+.tk-range-track input[type=range]:focus-visible { outline: none; }
+.tk-range-track input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--c-primary-border); }
+.tk-range-track input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(--c-primary-border); }
+.tk-range-scale { display: flex; justify-content: space-between; font-size: 12px; line-height: 18px; color: var(--c-text-3); }
+
+.tk-page .cw-tabs { gap: 32px; flex-wrap: wrap; row-gap: 0; }
+.tk-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tk-chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 2px 0 8px; border-radius: 6px; background: var(--c-surface-2); border: 1px solid var(--c-line-strong); font-size: 12px; color: var(--c-ink); white-space: nowrap; }
+.tk-chip button { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--c-text-3); cursor: pointer; }
+.tk-chip button:hover { color: var(--c-ink); background: rgba(0,0,0,0.05); }
+.tk-link { padding: 0; border: 0; background: none; font: inherit; font-size: 12px; line-height: 18px; color: var(--c-primary); cursor: pointer; text-align: left; }
+.tk-link:hover { color: var(--c-primary-hover); text-decoration: underline; }
+.tk-link.muted { color: var(--c-text-3); }
+.tk-pop-foot .tk-link { font-size: 13px; }
+.tk-chips .tk-link { margin-left: 4px; }
+.tk-note { margin: 0; font-size: 12px; line-height: 20px; color: var(--c-text-3); }
+
+.tk-table { padding: 0; overflow: visible; }
+.tk-row { display: grid; grid-template-columns: minmax(150px, 1.15fr) 84px minmax(170px, 1fr) 100px 152px; gap: 12px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--c-line-2); }
+.tk-row:last-child { border-bottom: 0; }
+.tk-row:not(.tk-head):hover { background: var(--c-surface-2); }
+.tk-head { padding-top: 8px; padding-bottom: 8px; font-size: 12px; line-height: 20px; color: var(--c-text-3); border-bottom-color: var(--c-line); }
+.tk-cust { display: flex; flex-direction: column; min-width: 0; }
+.tk-name { font-size: 14.5px; font-weight: 600; color: var(--c-ink); overflow-wrap: anywhere; }
+.tk-nr { font-size: 12px; color: var(--c-text-3); }
+.tk-owner { font-size: 13.5px; color: var(--c-text-3); }
+.tk-owner.me { color: var(--c-ink); font-weight: 600; }
+.tk-status { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.tk-step { font-size: 13.5px; color: var(--c-text-3); }
+.tk-step.me { color: var(--c-ink); font-weight: 600; }
+.tk-line { font-size: 12px; line-height: 18px; color: var(--c-text-3); }
+.tk-status .tk-link { white-space: nowrap; }
+.tk-since { font-size: 13.5px; color: var(--c-ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.tk-row.closed .tk-name, .tk-row.closed .tk-since { color: var(--c-text-3); }
+.tk-acts { position: relative; display: flex; justify-content: flex-end; align-items: center; gap: 4px; }
+.tk-acts .btn { height: 32px; }
+.tk-more { width: 32px; height: 32px; }
+.tk-cap { display: none; }
+.tk-menu { position: absolute; right: 0; top: 38px; z-index: 30; min-width: 220px; background: #fff; border: 1px solid var(--c-line); border-radius: 8px; box-shadow: var(--shadow-lg); padding: 4px; }
+.tk-menu .menu-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 10px; min-height: 32px; border: 0; background: transparent; border-radius: 5px; font: inherit; font-size: 13px; color: var(--c-text); text-align: left; cursor: pointer; }
+.tk-menu-sep { height: 1px; background: var(--c-line-2); margin: 4px 0; }
+.tk-menu-head { padding: 6px 10px 4px; font-size: 12px; font-weight: 600; color: var(--c-text-2); }
+.tk-empty { padding: 48px 20px; text-align: center; color: var(--c-text-3); font-size: 13.5px; }
+.tk-tipw { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+.tk-tip-btn { display: inline-flex; padding: 2px; border: 0; background: none; color: inherit; cursor: help; border-radius: 4px; }
+.tk-tip-btn:focus-visible { outline: 2px solid var(--c-primary); }
+.tk-tip { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); z-index: 30; width: 220px; padding: 6px 8px; border-radius: 6px; background: rgba(13,17,23,0.88); color: #fff; font-size: 12px; line-height: 18px; font-weight: 400; pointer-events: none; }
+.tk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 1200; display: flex; align-items: center; gap: 16px; padding: 10px 16px; border-radius: 10px; background: #0d0f12; color: #fff; font-size: 13.5px; box-shadow: var(--shadow-lg); }
+.tk-toast button { padding: 4px 2px; border: 0; background: none; font: inherit; font-weight: 600; color: #8ab4ff; cursor: pointer; }
+.tk-page .cw-tabs button { max-width: 280px; overflow: hidden; text-overflow: ellipsis; }
+/* Smal skærm (sidebjælken tager 232 px): hver sag som et lille kort; kolonnenavnene står foran værdierne */
+@media (max-width: 1080px) {
+  .tk-head { display: none; }
+  .tk-row { grid-template-columns: 1fr auto; grid-template-areas: "cust acts" "status status" "owner since"; row-gap: 6px; padding: 14px 16px; }
+  .tk-cust { grid-area: cust; }
+  .tk-acts { grid-area: acts; }
+  .tk-status { grid-area: status; }
+  .tk-owner { grid-area: owner; font-size: 12.5px; }
+  .tk-since { grid-area: since; font-size: 12.5px; text-align: right; }
+  .tk-cap { display: inline; color: var(--c-text-3); font-weight: 400; }
+}
+
+/* AI-mærke: ikon og tekst på alt, AI har skrevet (AiBadge i ui_kit.jsx). Violet, så det ikke forveksles med status. */
+.ai-badge { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px 1px 7px; border-radius: 999px; background: rgba(124, 140, 248, 0.14); color: #4b4fb5; font-size: 11.5px; font-weight: 600; line-height: 18px; white-space: nowrap; vertical-align: middle; cursor: help; }
+.ai-badge svg { flex-shrink: 0; fill: currentColor; stroke: currentColor; stroke-width: 1.5; }

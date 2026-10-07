@@ -294,7 +294,6 @@ function WSDocuments() {
   const [sortMode, setSortMode] = React.useState("newest");
   const [dragOver, setDragOver] = React.useState(false);
   const dragDepth = React.useRef(0);
-  const [pendingFiles, setPendingFiles] = React.useState(null);
   const [fetching, setFetching] = React.useState(false);
   const fileInputRef = React.useRef(null);
 
@@ -349,27 +348,12 @@ function WSDocuments() {
 
   const handleFiles = (fileList) => {
     const files = Array.from(fileList || []);
-    if (files.length) setPendingFiles(files);
-  };
-  function commitUpload(itemId) {
-    const files = pendingFiles || [];
-    setPendingFiles(null);
     if (!files.length) return;
-    let metas;
-    if (itemId) {
-      const wasApproved = CW.isApproved(itemId);
-      metas = CW.putFiles(files, { by: 'rådgiver', itemId });
-      CW.markReceived(itemId, { by: 'rådgiver', files: metas });
-      const it = CW.itemById(itemId);
-      if (wasApproved) CW.toast(docFill(files.length === 1 ? t('1 fil uploadet. {punkt} er stadig godkendt.') : t('{n} filer uploadet. {punkt} er stadig godkendt.'), { n: files.length, punkt: it ? t(it.label) : '' }));
-      else CW.toast(docFill(files.length === 1 ? t('1 fil uploadet. {punkt} står nu som modtaget.') : t('{n} filer uploadet. {punkt} står nu som modtaget.'), { n: files.length, punkt: it ? t(it.label) : '' }));
-    } else {
-      metas = CW.putFiles(files, { by: 'rådgiver' });
-      CW.addLooseUploads(metas);
-      CW.toast(docFill(files.length === 1 ? t('1 fil uploadet under Dokumenter') : t('{n} filer uploadet under Dokumenter'), { n: files.length }));
-    }
+    const metas = CW.putFiles(files, { by: 'rådgiver' });
+    CW.addLooseUploads(metas);
+    CW.toast(docFill(files.length === 1 ? t('1 fil uploadet under Dokumenter') : t('{n} filer uploadet under Dokumenter'), { n: files.length }));
     if (metas[0]) { setSelKey('u:' + metas[0].id); setFocus(null); }
-  }
+  };
 
   // Hent alle dokumenter, der har indhold, én ad gangen (browseren spørger
   // evt. én gang, om siden må hente flere filer). Knappen er låst imens.
@@ -614,9 +598,6 @@ function WSDocuments() {
       </div>
     </div>
 
-    {pendingFiles && (
-      <AssignUploadDialog files={pendingFiles} onCancel={() => setPendingFiles(null)} onConfirm={commitUpload}/>
-    )}
     </React.Fragment>
   );
 }

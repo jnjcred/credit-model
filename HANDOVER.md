@@ -232,6 +232,53 @@ ordlisten. Der er bevidst ingen fast læserækkefølge eller afsnitsskabelon, s�
 videre AI ikke bindes unødigt. Registret læser ikke dens indhold (`lazy: true`), og
 CW.downloadDoc gemmer .md som tekst. Test: `scratchpad\guide_test.js` i session 746e68ca.
 
+**AI-teksterne kan rettes, gendannes og køres igen (7. oktober).** I "Produkt, marked
+og branche" (financials.jsx) er produktbeskrivelsen, markedet og hvert PEST-punkt en
+FinAiBlock med synlige ikoner (FinIconBtn, altid til stede): blyant (Ret tekst), pil
+i ring (Kør AI igen) og fortryd-pil (Gendan AI-teksten, kun når teksten er rettet).
+Stamdata (CompanySection) har det samme: blyant pr. felt, fortryd-pil "Gendan … fra
+CVR" på rettede felter (med "Rettet af … · CVR: oprindelig værdi") og "Hent stamdata
+igen fra CVR" i sektionens hoved (demo: integrationen kaldes ikke; rettelser
+bevares). CVR-nummeret kan ikke rettes. Tilstand: `kabul:fin-cvr:nordhavn`;
+eksporten Virksomhedsprofil_CVR.pdf bruger cvrVal. Test: `scratchpad\icons_test.js`. Under teksten står "Rettet af … · dato" eller "Nyt AI-udkast ·
+dato". Kør AI igen på en rettet tekst beder om bekræftelse. Er der forbundet en AI
+(window.AI.isReady(), ai.js), skriver den et nyt udkast ud fra faktaarket,
+ledelsesberetningen 2025 og markedsrapporten (finAiContext). Ellers skifter demoen
+mellem to forberedte AI-udkast (FIN_AI_DEFS[id].alt) og siger det i en toast.
+Tilstanden ligger i `kabul:fin-ai-texts:nordhavn` (Nulstil demo rydder den).
+Eksporten Produkt_marked_og_branche.pdf bruger finAiText og skriver "(Rettet af …)"
+under rettede tekster, og README'en nævner det. Test: `scratchpad\aitext_test.js`
+i session 746e68ca.
+
+**Prompt-værksted (7. oktober, ruten `prompts`, src/prompt_workshop.jsx).** Internt
+menupunkt under Kontomapping. Liste over de tre prompts og en editor: websøgning
+til/fra, System og Opgave, pladsholdere man klikker ind ved markøren, Gem, Fortryd
+ændringer og Hent som fil. Lokalt gemmer devserver.js direkte i `prompts/*.md`
+(`POST /local-prompts/save`) og lægger den forrige version i `prompts/.historik/`
+(`GET /local-prompts/history`), som kan indlæses igen. På et hosted domæne gemmes i
+browseren (localStorage `cw_prompt_override:<fil>`; Nulstil demo sletter ikke), og
+finAiPrompt bruger browserens kopi via `window.CW_PROMPTS.load`. "Prøv på Nordhavn"
+kører kladden med finAiGenerate uden at gemme, viser ord, linjer og tid, prompten
+der blev sendt, og kan bruge teksten som AI-udkast. AI-forbindelsen skiftes med
+memoets AiSettingsDialog. Uden websøgning får AI'en altid besked om, at den ikke kan
+søge (ellers forsøgte Claude Code at søge og løb tør for ture). Test:
+`scratchpad\pw_test.js` (`--real` kører én rigtig kørsel) i session 746e68ca.
+
+**Prompts i `prompts/` og web-søgning (7. oktober).** "Kør AI igen" på AI-teksterne
+bruger prompt-filerne i `prompts/` (produktbeskrivelse.md, markedet.md, pest.md; se
+prompts/README.md). Filen hentes ved hvert klik (finAiPrompt i financials.jsx), så
+Jesper kan rette den uden at røre koden: `## Indstillinger` (websøgning: ja/nej),
+`## System` og `## Opgave` med pladsholdere som {virksomhed}, {materiale} og
+{nuvaerende_tekst}. {materiale} er ledelsesberetningen i den nyeste årsrapport og
+markedsrapporten, men bevidst ikke regnskabstal. Web-søgning: `AI.stream({ webSearch })`
+og `AI.canSearch()` i ai.js. Anthropic-API'et bruger server-værktøjet
+`web_search_20260209` (og falder tilbage til `web_search_20250305`) og smider teksten før
+sidste søgning væk. Den lokale bro (devserver.js) giver Claude Code `--allowed-tools
+"WebSearch WebFetch"` og op til 12 ture og sender kun det endelige svar. ChatGPT,
+Copilot og Codex søger ikke; så får AI'en besked i systemprompten. Testet med Claude
+Code på Markedet: 57 ord, 3 linjer, kilder i parentes, 3½ minut. Husk at genstarte
+devserver.js efter opdatering. Test: `scratchpad\realai_test.js` (bruger abonnementet).
+
 **Kundeside og Kundeflow (5. oktober).** Rådgiverens forhåndsvisning har to spor
 (sagshovedets knapper, WSCustomerPreview i workspace.jsx → CustomerPortal med
 `flow`):
@@ -1072,7 +1119,8 @@ sted ad gangen. Sagens fase "Afventer kunden" er uændret. Test: `anmodet.js da|
 - Rådgiveren kan sætte kryds i "Send også en mail til kunden": mailen bygges af beskeden
   (emne "Vi har et spørgsmål til …" eller "Besked fra EIFO", link til kundens side) og
   kan rettes, før den sendes, som ved "Stil spørgsmål til materialet". Mailen logges som
-  `dialog-mail`. Kunden har ikke valget.
+  `dialog-mail`. Kunden har ikke valget. Valget findes også, når rådgiveren skriver i
+  forhåndsvisningen af kundens side (Kundeside). Test: `pvmail.js`.
 - Test: `askpub.js da|en` (scratchpad for session 2e448e6b, mappen `ob`).
 
 ## Anmod om materiale uden mail (7. oktober)
@@ -1105,3 +1153,84 @@ Når rådgiveren stiller et spørgsmål til et punkt (`CW.reject`, status `rejec
   - Landefordelingen kræver noget nyt efter et spørgsmål, og en fil fjernet i skemaet fjernes rigtigt, når kunden sender.
 - **Rådgiveren.** Under punktet står "Dit spørgsmål: …" og "Kundens svar: …". Svarer rådgiveren i forhåndsvisningen, står det i historikken som "Rådgiveren svarede for kunden".
 - **Test.** `ans_test.js` i scratchpad: 40/40 på dansk og engelsk, og ingen vandret scroll ved 375 px.
+
+## Kundeside og Kundeflow: vælg rolle, Rådgiver eller Kunde (7. oktober)
+
+Øverst i Kundeside og Kundeflow (demo) står vælgeren "Se som" med valgene Rådgiver og Kunde (`#cwp-pv-role`). Valget huskes i browseren (`localStorage` `kabul:flow-role`, læses med `portalFlowRole()`).
+
+- **Rådgiver (standard).** Som før er det en forhåndsvisning. Kundens handlinger (`data-cust-act`) stoppes. Filer og svar gemmes på kundens vegne som rådgiverens.
+- **Kunde.** Forhåndsvisningens spærre er slået fra, og portalen virker som for kunden. Svar, filer, "Har vi ikke", beskeder og "læst" gemmes som kundens, og historikken siger "Kunden …". Bjælken siger det.
+  - Skærmrækken (Landingsside, Bruger, Crediwire) og demoknapperne på trinnet Bruger viser kun skærmene i begge roller.
+- **Det, der kun er for rådgiveren, forsvinder med rollen Kunde.** Det gælder mail-afkrydsningen og "Skriv som rådgiver" i dialogen, noten om upload på kundens vegne og statusboksen "Kunden er ikke startet endnu" på Kundeside.
+  - Alt det spørger `CW.isPreview()`. `setFlowRole` skifter spærren med det samme, før siden tegnes igen.
+  - "Nyt" i dialogen følger også rollen (`useCsFreshThreads(asAdvisor)`).
+- **Teknik.** `asAdvisor` i CustomerPortal styrer `CW.setPreview` og `pvHandlers`. WSCustomerPreview (workspace.jsx) slår ikke spærren til, når forhåndsvisningen åbner med rollen Kunde. Dens effekt kører efter portalens og ville ellers overskrive rollen.
+- **Rettet samtidig.** Knappen "Svar" på et spørgsmål havde `data-cust-act`, så forhåndsvisningen stoppede den, og rådgiveren kunne ikke åbne punktet. Den har nu `data-act="answer"`.
+- **Test.** `role_test.js` i scratchpad: 20/20 på dansk og engelsk. `ans_test.js` er stadig 40/40.
+
+## Punktets historik: hvem gjorde hvad, med filer og tekster (7. oktober)
+
+"Historik (n)" ved et punkt (`wsItemHistory`/`WSItemHistory` i workspace.jsx) viser nu
+hver hændelse som "hvem gjorde hvad" og gemmer det, der var dengang:
+"Filer uploadet af kunde: a.pdf, b.xlsx", "Spørgsmål stillet af Mette (EIFO): "…"",
+"Svar fra kunde: "…"", "Kommentar fra kunde: "…"", "Godkendt af Mette (EIFO)",
+"Godkendelse fortrudt af …" / "Spørgsmål trukket tilbage af …", "Fil fjernet af kunde:
+x.pdf" (gennemstreget) og "Trukket tilbage af kunde". Filer, der stadig ligger på punktet,
+kan hentes; lange filnavne og tekster er afkortet, og hele teksten står ved hover.
+Rådgiveren hedder "{fornavn} ({org})". Loggen i case_state.js gemmer nu det, historikken
+skal bruge: `answerItem` gemmer svaret, `removeFile` filnavnet, `resetItem` typen, og
+rådgiverens upload til et godkendt punkt filnavnene. Ældre logrækker uden data vises
+med det, der findes. Test: `hist.js da|en` (scratchpad for session 2e448e6b, mappen `ob`).
+
+## Mine opgaver efter designet "Mine opgaver v8" (7. oktober)
+
+Siden er bygget efter Claude Design-projektet "Mine opgaver" (fil `Mine opgaver v8.dc.html` og handoff-README). Den bruger prototypens eget designsystem, ikke Ant Design-tokens. Koden er i `src/portfolio.jsx`, og reglerne står som kommentar øverst i filen.
+
+**Liste og visninger**
+- **Rækkefølge.** Afventer din gennemgang, Ikke anmodet, Afventer kunden, Alt materiale godkendt, Afsluttet. Inden for hver gruppe står længste ventetid først.
+- **Kolonner.** Kunde, Afventer (Dig/Kunden), Indhentning (status og linjer under den), Ventetid (med forklaring) og "Gå til sagen" plus en ···-menu.
+- **Faner.** "Alle", "Afventer dig" og "Afventer kunden" er gemte filtre. "Gem som visning" laver en ny fane, og "Slet visning" fjerner en gemt fane (en lille tilføjelse til designet).
+- **Filter.** Indhentning, Ventetid og Seneste påmindelse (skydere med to håndtag, 0–60+ dage), "Kun påmindede" og "Nyt siden sidst".
+- **Søgning.** Den dækker navn, CVR og sagsnummer, ignorerer filtre og viser også afsluttede sager. `/` fokuserer søgefeltet.
+
+**Handlinger**
+- **Påmindelse.** Den vises ved Afventer kunden, ventetid på mindst 14 dage og ingen påmindelse de seneste 7 dage.
+  - Påmindelsen står som sendt med det samme, men gemmes først efter 6 sekunder, så "Fortryd" virker for alvor. Timeren holder pause, mens musen eller fokus er på beskeden.
+  - Forlader man siden eller genindlæser inden da, sendes den.
+  - Den gemmes som på Dataanmodninger og i sagen (`DATA.remindCase` / `DATA.remindersFor`), så de tre steder er enige.
+- **Afslut sag.** Det kræver en årsag og kan fortrydes i toasten. En afsluttet sag står som lukket på Dataanmodninger (`requestLock` i data.js læser `kabul:tasks`). ···-menuen har også "Flyt sagen til" som før.
+
+**Data**
+- **Nordhavn (sag 1)** udledes levende af CW: anmodning, `progress()` (godkendt, til gennemgang, spørgsmål), samtalen, uploads og påmindelser i historikken.
+- **De øvrige sager** har faste tal i `DATA.CASES[].collect` (data.js). Designets ekstra sager er tilføjet som Mettes (id 12–22).
+- **Sager uden `collect`** (fra Ny sag-guiden, eller en kollegas sag, der er flyttet til dig) følger anmodningen på Dataanmodninger og sagens fase.
+- **Det, rådgiveren gør i listen,** gemmes i `localStorage` `kabul:tasks`: set, påmindet, afsluttet og gemte visninger. "Nulstil demo" rydder det.
+- **Nyt siden sidst** ryddes, når sagen åbnes. Det sker via `cw-route-changed`, så det gælder uanset hvorfra sagen åbnes.
+- **Menuens tal** ved "Mine opgaver" (shell.jsx) er det samme som fanen "Afventer dig" (`window.cwTasksAwaitingMe`).
+
+**Andet**
+- **Engelsk.** Tre ord har en anden oversættelse andre steder i appen. Siden bruger sine egne (`TASK_EN` i portfolio.jsx): "Waiting on", "Customer" og "Go to case".
+- **Smal skærm.** Under 1080 px står hver sag som et kort, fordi sidebjælken tager 232 px.
+- **Ikke med fra designet.** Demo-punkterne i menuen ("Demo: kunden uploader en fil" og "Demo: du godkender en fil") var kun til designets prototype.
+- **Test.** `tasks_test.js` i scratchpad: 45/45 på dansk og engelsk og ved 1024 og 390 px. Den sidste runde var en blind gennemgang, og fundene er rettet.
+
+## "Spørg kunden" om det hentede bliver et punkt i anmodningen (7. oktober)
+
+Afløser "Spørg kunden" → dialogen fra tidligere i dag.
+- I "Anmod om materiale" står det, der er hentet automatisk (årsrapporterne fra CVR og de
+  offentlige kilder: stamdata, branche og marked, produktbeskrivelse), i folden "Hentet
+  automatisk (n)" med "Hentet automatisk fra {kilde} · dato" og knapperne "Spørg kunden"
+  og "Bed om ny version". "Ligger allerede på sagen" har nu kun resten.
+- "Spørg kunden" åbner en formular: spørgsmål og kategori (de fire kategorier eller
+  "Andet" = Øvrigt; forvalgt er punktets egen). "Tilføj spørgsmålet" laver et eget punkt
+  "Spørgsmål om {punkt}" (`CW.addCustomItem(label, cat, { question, about })`), som er
+  valgt i anmodningen og viser spørgsmålet under titlen.
+- Når anmodningen eller opdateringen sendes (med eller uden mail), får kunden punktet som
+  et spørgsmål fra rådgiveren (`sendRequest` sætter status 'rejected' med spørgsmålet som
+  `reviewNote` og logger det). Kunden ser "Mette spørger: …" og "Svar" og kan svare med
+  tekst eller fil; svaret går til gennemgang som andre punkter.
+- "Spørg kunden" ved dokumenterne under Materiale på sagen åbner anmodningen med
+  formularen klar for det dokument (vises nu også før anmodningen er sendt).
+- Dialogens "Handler om → Offentlige data" findes stadig til almindelige beskeder.
+- Test: `askitem.js da|en` (scratchpad for session 2e448e6b, mappen `ob`). `askpub.js`
+  er forældet (testede den gamle vej via dialogen).

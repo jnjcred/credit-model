@@ -92,6 +92,243 @@ const MARKET_PEST = [
 ];
 
 /* ─────────────────────────────────────────────────────────────────────────
+   AI-teksterne i Produkt, marked og branche (7. oktober): rådgiveren kan rette
+   hver tekst, gendanne AI-teksten og køre AI igen. Er der forbundet en AI
+   (window.AI, ai.js), skriver den et nyt udkast efter prompten i prompts/<fil>.md
+   (rettes af produktfolkene selv, se prompts/README.md) og søger på nettet, hvis
+   prompten og motoren tillader det; ellers
+   skifter demoen mellem to forberedte AI-udkast (alt) og siger det.
+   Tilstanden ligger i localStorage (kabul:, så Nulstil demo rydder den):
+   { [id]: { edited, editedAt, editedBy, ai, aiAt, alt } }. Eksporten læser
+   finAiText, så PDF og README følger det, der står på skærmen.
+   ──────────────────────────────────────────────────────────────────────── */
+const FIN_AI_KEY = 'kabul:fin-ai-texts:nordhavn';
+const FIN_AI_DEFS = {
+  product: { label: 'Produktbeskrivelse', text: PRODUCT_TEXT, file: 'produktbeskrivelse.md',
+    alt: 'Nordhavn Composite A/S er underleverandør til vindmølleproducenter og fremstiller kompositkomponenter til vinger: kulfiberlameller og bjælkepakker (spar caps), rodmoduler, næsekanter og servicepaneler. Produktionen foregår på selskabets egne anlæg i Frederikshavn og Sæby.',
+    ask: ['Skriv en produktbeskrivelse på 2-3 sætninger: hvad virksomheden laver, til hvem og hvor.', 'Write a product description of 2-3 sentences: what the company makes, for whom and where.'] },
+  market: { label: 'Markedet', text: MARKET_TEXT, file: 'markedet.md',
+    alt: 'Markedet for vindkomponenter i Danmark voksede med ca. 6,8 % i 2025, og efterspørgslen var stabil i andet kvartal 2026. Der er 5-7 aktører i det danske segment, og konkurrencen vurderes som moderat.',
+    ask: ['Skriv 2-3 sætninger om markedet: vækst, efterspørgsel og konkurrence.', 'Write 2-3 sentences about the market: growth, demand and competition.'] },
+};
+const FIN_PEST_ALT = {
+  'Politisk': "Den danske vindkraftpolitik og EU's Green Deal understøtter efterspørgslen. Handelsbarrierer på importerede kompositmaterialer kan påvirke indkøbet.",
+  'Økonomisk': 'Branchen vokser stabilt, og finansieringsomkostningerne er lave. Den høje eksportandel gør marginerne følsomme over for kursen mellem DKK og EUR.',
+  'Socialt': 'Efterspørgslen efter vedvarende energi stiger og understøtter ordretilgangen. Mangel på faglærte inden for kompositter kan presse lønningerne.',
+  'Teknologisk': 'Genanvendelige kompositter og automatisering giver nye muligheder, men kræver investeringer for at følge med udviklingen.',
+};
+MARKET_PEST.forEach(p => {
+  FIN_AI_DEFS['pest:' + p.k] = { label: p.k, text: p.desc, alt: FIN_PEST_ALT[p.k] || p.desc, file: 'pest.md', faktor: p.k,
+    ask: ['Skriv 1-2 sætninger om den ' + p.k.toLowerCase() + 'e dimension i en PEST-analyse af virksomhedens marked.', 'Write 1-2 sentences about the ' + p.k + ' dimension of a PEST analysis of the company\'s market.'] };
+});
+
+function finAiLoad() { try { return JSON.parse(localStorage.getItem(FIN_AI_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function finAiPatch(id, patch) {
+  const all = finAiLoad();
+  all[id] = Object.assign({}, all[id] || {}, patch);
+  try { localStorage.setItem(FIN_AI_KEY, JSON.stringify(all)); } catch (e) {}
+  window.dispatchEvent(new CustomEvent('fin-ai-texts'));
+}
+function finAiState(id) { return finAiLoad()[id] || {}; }
+// AI-teksten (seneste udkast) og teksten, der vises (rådgiverens rettelse går forud)
+function finAiAiText(id) {
+  const s = finAiState(id), def = FIN_AI_DEFS[id];
+  return s.ai != null ? s.ai : t(s.alt ? def.alt : def.text);
+}
+function finAiText(id) { const s = finAiState(id); return s.edited != null ? s.edited : finAiAiText(id); }
+function finAiAnyEdited() { const all = finAiLoad(); return Object.keys(all).some(k => all[k] && all[k].edited != null); }
+
+// Sagens materiale til AI'en (pladsholderen {materiale}): ledelsesberetningen i den
+// nyeste årsrapport og markedsrapporten. Regnskabstal sendes bevidst ikke med: de
+// står andre steder i værktøjet og trak teksterne væk fra produkt og marked.
+function finAiContext() {
+  const docs = window.CASE_DOCS || [];
+  const parts = [];
+  const reports = docs.filter(d => d && d.type === 'Årsrapport' && Array.isArray(d.pages)).sort((a, b) => String(b.year).localeCompare(String(a.year)));
+  if (reports[0]) reports[0].pages.filter(p => /ledelsesberetning/i.test(p.title)).forEach(p => parts.push('--- ' + reports[0].name + ', ' + p.ref + ' ---\n' + p.body));
+  docs.filter(d => d && d.type === 'Marked' && Array.isArray(d.pages)).forEach(d => d.pages.slice(0, 3).forEach(p => parts.push('--- ' + d.name + ', ' + p.ref + ' ---\n' + p.body)));
+  return parts.join('\n\n').slice(0, 12000);
+}
+
+/* Prompten læses fra prompts/<fil>.md (rettes i Prompt-værkstedet eller direkte i
+   filen, se prompts/README.md): ## Indstillinger (websøgning: ja/nej), ## System og
+   ## Opgave. Prompt-værkstedet (src/prompt_workshop.jsx, window.CW_PROMPTS) står for
+   at hente filen (eller en kopi gemt i browseren) og læse afsnittene. Uden
+   værkstedet hentes filen direkte. Kan den ikke hentes, bruges en kort indbygget prompt. */
+async function finAiPrompt(id) {
+  const def = FIN_AI_DEFS[id];
+  let raw = null;
+  try {
+    if (window.CW_PROMPTS && typeof CW_PROMPTS.load === 'function') raw = await CW_PROMPTS.load(def.file);
+    else {
+      const r = await fetch('prompts/' + def.file + '?t=' + Date.now(), { cache: 'no-store' });
+      if (r.ok) raw = await r.text();
+    }
+  } catch (e) { raw = null; }
+  if (!raw || !/^##\s+Opgave/mi.test(raw)) {
+    return {
+      system: 'Du er kreditanalytiker og skriver korte, faktuelle baggrundstekster til en kreditrådgiver hos EIFO. Svar kun med selve teksten, uden overskrift eller indledning. Dagens dato er {dato}.',
+      task: '<materiale>\n{materiale}\n</materiale>\n\n' + def.ask[0] + ' Højst 60 ord. Sprog: {sprog}.',
+      web: true, fromFile: false,
+    };
+  }
+  return Object.assign(finAiParse(raw), { fromFile: true });
+}
+// Afsnittene i en promptfil: { system, task, web }
+function finAiParse(raw) {
+  const sec = {};
+  String(raw || '').replace(/\r\n/g, '\n').split(/^##\s+/m).slice(1).forEach(chunk => {
+    const nl = chunk.indexOf('\n');
+    sec[chunk.slice(0, nl < 0 ? undefined : nl).trim().toLowerCase()] = nl < 0 ? '' : chunk.slice(nl + 1).trim();
+  });
+  return { system: sec['system'] || '', task: sec['opgave'] || '', web: /websøgning:\s*ja/i.test(sec['indstillinger'] || '') };
+}
+function finAiFill(text, vars) { return String(text || '').replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? String(vars[k]) : m)); }
+// Ryd op i svaret: ingen markdown-fed, links som ren tekst, ingen omgivende anførselstegn
+function finAiClean(text) {
+  return String(text || '')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '$1')
+    .replace(/^["“„']+|["”']+$/g, '')
+    .trim();
+}
+// Pladsholdernes værdier for en AI-tekst (samme i Kør AI igen og Prompt-værkstedet)
+function finAiVars(id, opts) {
+  const def = FIN_AI_DEFS[id] || {};
+  const co = DATA.COMPANY || {};
+  const en = window.CW_LANG === 'en';
+  return {
+    virksomhed: co.name, cvr: co.cvr, branche: cvrVal('industry'), aktivitet: co.activity, hjemsted: co.hq,
+    ansatte: cvrVal('employees'), hjemmeside: co.website, dato: DATA.fmt.longDate(DATA.fmt.isoDay(new Date())),
+    sprog: en ? 'engelsk' : 'dansk', materiale: finAiContext(), nuvaerende_tekst: finAiAiText(id),
+    faktor: (opts && opts.faktor) || (def.faktor ? t(def.faktor) : ''),
+  };
+}
+/* Kør AI'en med en prompt ({ system, task, web }) og returnér teksten uden at gemme
+   noget. Bruges af Kør AI igen (finAiRun) og af Prompt-værkstedets "Prøv". */
+async function finAiGenerate(id, pr, opts) {
+  opts = opts || {};
+  const vars = finAiVars(id, opts);
+  const canSearch = typeof AI.canSearch === 'function' && AI.canSearch();
+  const web = !!(pr.web && canSearch);
+  let system = finAiFill(pr.system, vars);
+  // Uden websøgning (slået fra i promptet, eller motoren kan ikke) skal AI'en vide det,
+  // ellers forsøger den at søge, fordi promptteksten beder om det, og kørslen fejler
+  if (!web) system += '\n\nI denne kørsel har du ikke adgang til internettet og kan ikke bruge værktøjer. Brug materialet og din generelle viden, og skriv kort, hvis du mangler aktuelle tal.';
+  const task = finAiFill(pr.task, vars);
+  const res = await AI.stream({
+    system, maxTokens: 8000, webSearch: web, signal: opts.signal, onDelta: opts.onDelta,
+    messages: [{ role: 'user', content: task }],
+  });
+  const text = finAiClean(res && res.text);
+  if (!text) throw new Error(t('AI svarede ikke med en tekst.'));
+  return { text, web, system, task };
+}
+
+async function finAiRun(id) {
+  if (window.AI && typeof AI.isReady === 'function' && AI.isReady()) {
+    const r = await finAiGenerate(id, await finAiPrompt(id));
+    finAiPatch(id, { ai: r.text, aiAt: new Date().toISOString(), aiWeb: r.web, edited: null, editedAt: null, editedBy: null });
+    return { real: true, web: r.web };
+  }
+  // Demo uden AI-forbindelse: skift til det andet forberedte AI-udkast
+  await new Promise(r => setTimeout(r, 1100));
+  const s = finAiState(id);
+  finAiPatch(id, { ai: null, alt: !s.alt, aiAt: new Date().toISOString(), aiWeb: false, edited: null, editedAt: null, editedBy: null });
+  return { real: false };
+}
+
+/* Lille, altid synlig ikonknap (ret, kør igen, gendan) med tooltip og aria-label */
+function FinIconBtn({ icon, label, onClick, disabled, busy }) {
+  return (
+    <button type="button" className="btn-ghost-sm" onClick={onClick} disabled={disabled} aria-label={label} title={label} aria-busy={busy || undefined}
+      style={{ padding: '0 6px', color: 'var(--c-text-2)' }}>
+      {icon}
+    </button>
+  );
+}
+
+/* Én AI-tekst med titel, synlige ikoner (Ret tekst, Kør AI igen, Gendan AI-teksten) og
+   en kort grå linje, når teksten er rettet eller skrevet om. headExtra står før menuen. */
+function FinAiBlock({ id, title, headExtra, after, small }) {
+  const [, bump] = React.useReducer(x => x + 1, 0);
+  React.useEffect(() => {
+    const on = () => bump();
+    window.addEventListener('fin-ai-texts', on);
+    window.addEventListener('cw-ai-config-changed', on);
+    return () => { window.removeEventListener('fin-ai-texts', on); window.removeEventListener('cw-ai-config-changed', on); };
+  }, []);
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+  const taRef = React.useRef(null);
+  const s = finAiState(id);
+  const text = finAiText(id);
+  const edited = s.edited != null;
+  const aiReady = !!(window.AI && typeof AI.isReady === 'function' && AI.isReady());
+
+  const startEdit = () => { setDraft(text); setEditing(true); setTimeout(() => { if (taRef.current) { taRef.current.focus(); taRef.current.setSelectionRange(taRef.current.value.length, taRef.current.value.length); } }, 30); };
+  const save = () => {
+    const v = draft.trim();
+    if (!v) return;
+    // Samme tekst som AI'ens: ingen rettelse
+    if (v === finAiAiText(id).trim()) finAiPatch(id, { edited: null, editedAt: null, editedBy: null });
+    else finAiPatch(id, { edited: v, editedAt: new Date().toISOString(), editedBy: (DATA.ADVISOR && DATA.ADVISOR.name) || 'Mette Larsen' });
+    setEditing(false);
+  };
+  const restore = () => { finAiPatch(id, { edited: null, editedAt: null, editedBy: null }); CW.toast(t('AI-teksten er gendannet')); };
+  const run = () => {
+    const go = () => {
+      setBusy(true);
+      finAiRun(id).then(r => { CW.toast(r.real ? t('AI har skrevet et nyt udkast') : t('Demo: der er ikke forbundet en AI, så du ser et andet forberedt AI-udkast')); })
+        .catch(err => { CW.toast(t('AI kunne ikke køre') + ': ' + (err && err.message || ''), { tone: 'danger' }); })
+        .finally(() => setBusy(false));
+    };
+    if (!edited) return go();
+    CW.confirm({ title: t('Kør AI igen?'), text: t('AI skriver et nyt udkast, og din rettelse erstattes.'), confirmLabel: t('Kør AI igen') }).then(r => { if (r.ok) go(); });
+  };
+  const meta = busy ? (aiReady && typeof AI.canSearch === 'function' && AI.canSearch() ? t('AI søger på nettet og skriver … (kan tage et par minutter)') : t('AI skriver …'))
+    : edited ? finFill(t('Rettet af {who} · {date}'), { who: s.editedBy || '', date: CW.fmtDate(s.editedAt) })
+    : s.aiAt ? finFill(t('Nyt AI-udkast · {date}'), { date: CW.fmtDate(s.aiAt) }) : '';
+  const textStyle = small ? { fontSize: 13, color: 'var(--c-text-2)' } : { fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.65, maxWidth: 760 };
+
+  return (
+    <div className="fin-ai" aria-busy={busy || undefined}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: small ? 0 : 6 }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
+          {small ? <span className="cw-row-title">{title}</span> : <h3 style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{title}</h3>}
+          <AiBadge edited={edited} compact={small}/>
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 'auto' }}>
+          {headExtra}
+          {!editing && <>
+            <FinIconBtn icon={<I.Edit size={13} aria-hidden="true"/>} label={finFill(t('Ret {navn}'), { navn: title })} onClick={startEdit} disabled={busy}/>
+            <FinIconBtn icon={<I.Refresh size={13} aria-hidden="true"/>} busy={busy} disabled={busy} onClick={run}
+              label={finFill(aiReady ? t('Kør AI igen for {navn}') : t('Kør AI igen for {navn} (demo: viser et andet AI-udkast)'), { navn: title })}/>
+            {edited && <FinIconBtn icon={<I.Undo size={13} aria-hidden="true"/>} disabled={busy} onClick={restore} label={finFill(t('Gendan AI-teksten for {navn}'), { navn: title })}/>}
+          </>}
+        </div>
+      </div>
+      {editing ? (
+        <div>
+          <label htmlFor={'fin-ai-' + id} style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{finFill(t('Ret {navn}'), { navn: title })}</label>
+          <textarea id={'fin-ai-' + id} ref={taRef} className="input" value={draft} onChange={e => setDraft(e.target.value)} rows={small ? 3 : 4}
+            onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setEditing(false); } if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save(); } }}
+            style={{ width: '100%', height: 'auto', padding: '8px 10px', resize: 'vertical', lineHeight: 1.55, fontFamily: 'inherit', fontSize: 13, boxSizing: 'border-box' }}/>
+          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+            <button type="button" className="btn btn-sm btn-primary" onClick={save} disabled={!draft.trim()}>{t('Gem')}</button>
+            <button type="button" className="btn btn-sm" onClick={() => setEditing(false)}>{t('Annullér')}</button>
+          </div>
+        </div>
+      ) : (
+        <div style={Object.assign({ opacity: busy ? 0.5 : 1, transition: 'opacity .2s' }, textStyle)}>{text}{after}</div>
+      )}
+      {!editing && <div aria-live="polite" style={{ fontSize: 12, color: 'var(--c-text-3)', marginTop: meta ? 4 : 0 }}>{meta}</div>}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    Produkt, marked og branche. Underteksten siger, at det er AI-sammenfattet
    og ikke kontrolleret mod kilder.
    ──────────────────────────────────────────────────────────────────────── */
@@ -109,9 +346,7 @@ function MarketSection() {
       >
         {/* Produktbeskrivelse */}
         <div className="card" style={{ padding: '14px 18px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-            <h3 style={{ margin: 0, fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Produktbeskrivelse')}</h3>
-            {uploaded ? (
+          <FinAiBlock id="product" title={t('Produktbeskrivelse')} headExtra={uploaded ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 12.5 }}>
                 <button type="button" className="cw-filelink" aria-haspopup="dialog" onClick={() => setDocModalOpen(true)}>produktblad_nordhavn.pdf</button>
                 <span style={{ color: 'var(--c-text-3)', fontSize: 12 }}>{t('uploadet')} {DATA.fmt.longDate('2026-06-04')}</span>
@@ -122,29 +357,21 @@ function MarketSection() {
                 <I.Upload size={13} aria-hidden="true"/> {t('Upload produktblad')}
               </button>
             )}
-          </div>
-          <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.65, maxWidth: 760 }}>
-            {t(PRODUCT_TEXT)}
-            {uploaded && (
+            after={uploaded && (
               <>
                 {' '}<span style={{ color: 'var(--c-ink)', fontWeight: 500 }}>{t('De tre største kunder (Vestas, GE Vernova og Siemens Gamesa) stod for 56 % af omsætningen i 2025.')}</span>{' '}
                 {t('Selskabet investerer ca. DKK 1,6 mio. i 2026 i automatiseret limpåføring og kapacitet til efterbehandling.')}
               </>
-            )}
-          </div>
+            )}/>
         </div>
 
         {/* Markedstal og PEST i en fold */}
         <div className="card" style={{ padding: '14px 18px 2px', marginTop: 12 }}>
-          <h3 style={{ margin: '0 0 6px', fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)' }}>{t('Markedet')}</h3>
-          <div style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.65, maxWidth: 760, paddingBottom: 12 }}>{t(MARKET_TEXT)}</div>
+          <div style={{ paddingBottom: 8 }}><FinAiBlock id="market" title={t('Markedet')}/></div>
           <CWFold id="fin-pest" label={t('PEST-analyse')} count={MARKET_PEST.length}>
             {MARKET_PEST.map(p => (
               <div key={p.k} className="cw-row" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
-                <div className="cw-row-main">
-                  <span className="cw-row-title">{t(p.k)}</span>
-                  <span style={{ fontSize: 13, color: 'var(--c-text-2)' }}>{t(p.desc)}</span>
-                </div>
+                <div className="cw-row-main"><FinAiBlock id={'pest:' + p.k} title={t(p.k)} small/></div>
               </div>
             ))}
           </CWFold>
@@ -200,13 +427,44 @@ Største kunder 2025: Vestas, GE Vernova, Siemens Gamesa.
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Virksomheden: stamdata fra CVR (flyttet hertil fra Overblik 2. oktober;
-   facilitet og beløb står i sagshovedet). Samme indhold som eksporten
-   Virksomhedsprofil_CVR.pdf.
+   Stamdata: hentet via integrationen til CVR. Rådgiveren kan rette et felt
+   (blyant), gendanne CVR-værdien (fortryd-pil) og hente stamdata igen fra CVR
+   (pil i ring i sektionens hoved). Rettelser bevares ved hentning. CVR-nummeret
+   er nøglen til registret og kan ikke rettes. Tilstanden ligger i
+   localStorage (kabul:, så Nulstil demo rydder den):
+   { fields: { [key]: { value, at, by } }, fetchedAt }. Eksporten
+   Virksomhedsprofil_CVR.pdf bruger cvrVal, så den følger skærmen.
    ──────────────────────────────────────────────────────────────────────── */
+const FIN_CVR_KEY = 'kabul:fin-cvr:nordhavn';
+function cvrLoad() { try { return JSON.parse(localStorage.getItem(FIN_CVR_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function cvrSave(st) { try { localStorage.setItem(FIN_CVR_KEY, JSON.stringify(st)); } catch (e) {} window.dispatchEvent(new CustomEvent('fin-cvr')); }
+// CVR's egne værdier (det integrationen leverer) pr. felt
+function cvrOrig(key) {
+  const co = DATA.COMPANY || {};
+  const present = (v) => v != null && v !== '' && v !== '-';
+  if (key === 'address') return [co.address, co.postal].filter(present).join(', ');
+  if (key === 'employees') return present(co.employees) ? String(co.employees) : '';
+  return co[key] != null ? String(co[key]) : '';
+}
+function cvrEdit(key) { const f = (cvrLoad().fields || {})[key]; return f && f.value != null ? f : null; }
+function cvrVal(key) { const e = cvrEdit(key); return e ? e.value : cvrOrig(key); }
+function cvrUpdated() { const at = cvrLoad().fetchedAt; return at ? CW.fmtDate(at) : ((DATA.COMPANY && DATA.COMPANY.masterDataUpdated) || finPublicDataDate()); }
+const CVR_FIELDS = [
+  { key: 'legalForm', label: 'Juridisk form' },
+  { key: 'industry', label: 'Branche' },
+  { key: 'founded', label: 'Stiftelsesdato' },
+  { key: 'employees', label: 'Antal ansatte' },
+  { key: 'address', label: 'Adresse', copy: true },
+];
+
 function CompanySection() {
   const co = DATA.COMPANY;
+  const [, bump] = React.useReducer(x => x + 1, 0);
+  React.useEffect(() => { const on = () => bump(); window.addEventListener('fin-cvr', on); return () => window.removeEventListener('fin-cvr', on); }, []);
   const [copied, setCopied] = React.useState(null);
+  const [editKey, setEditKey] = React.useState(null);
+  const [draft, setDraft] = React.useState('');
+  const [fetching, setFetching] = React.useState(false);
   const present = (v) => v != null && v !== '' && v !== '-';
   const copy = (key, text) => {
     try { navigator.clipboard && navigator.clipboard.writeText(String(text)).catch(() => {}); } catch (e) {}
@@ -219,32 +477,82 @@ function CompanySection() {
       {copied === k ? <I.Check size={11}/> : <I.Copy size={11}/>}
     </button>
   );
-  const address = [co.address, co.postal].filter(present).join(', ');
-  const rows = [
-    { label: t('CVR-nr.'), value: present(co.cvr) ? <><span className="mono">{co.cvr}</span><Copy k="cvr" text={String(co.cvr).replace(/\s+/g, '')} label={t('Kopiér CVR-nummer')}/></> : null },
-    { label: t('Juridisk form'), value: co.legalForm },
-    { label: t('Branche'), value: co.industry },
-    { label: t('Stiftelsesdato'), value: co.founded },
-    { label: t('Antal ansatte'), value: present(co.employees) ? String(co.employees) : null },
-    { label: t('Adresse'), value: address ? <>{address}<Copy k="addr" text={[co.address, co.postal, co.country].filter(present).join(', ')} label={t('Kopiér adresse')}/></> : null },
-  ];
+  const startEdit = (key) => { setDraft(cvrVal(key)); setEditKey(key); CW.focusSoon('#fin-cvr-' + key); };
+  const save = (key) => {
+    const v = draft.trim();
+    const st = cvrLoad(); st.fields = st.fields || {};
+    if (!v || v === cvrOrig(key)) delete st.fields[key];
+    else st.fields[key] = { value: v, at: new Date().toISOString(), by: (DATA.ADVISOR && DATA.ADVISOR.name) || 'Mette Larsen' };
+    cvrSave(st); setEditKey(null);
+  };
+  const restore = (key, label) => {
+    const st = cvrLoad(); if (st.fields) delete st.fields[key]; cvrSave(st);
+    CW.toast(finFill(t('{navn} er gendannet fra CVR'), { navn: label }));
+  };
+  // Demo: integrationen til CVR kaldes igen (ingen rigtig forbindelse i prototypen)
+  const refetch = () => {
+    setFetching(true);
+    setTimeout(() => {
+      const st = cvrLoad(); st.fetchedAt = new Date().toISOString(); cvrSave(st);
+      setFetching(false);
+      const kept = Object.keys(st.fields || {}).length;
+      CW.toast(kept ? t('Stamdata er hentet igen fra CVR. Dine rettelser er bevaret.') : t('Stamdata er hentet igen fra CVR'));
+    }, 900);
+  };
+  const cvrNo = String(co.cvr || '');
   return (
     <FinSection
       title={t('Stamdata')}
-      sub={finFill(t('Fra CVR-registret, opdateret {date}.'), { date: co.masterDataUpdated || finPublicDataDate() })}
-      badge={co.cvrUrl && (
-        <a href={co.cvrUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost-sm" style={{ textDecoration: 'none', marginRight: -8 }}>
-          {t('Åbn i CVR')} <I.Link size={10} aria-hidden="true"/>
-        </a>
-      )}
+      sub={fetching ? t('Henter fra CVR …') : finFill(t('Fra CVR-registret, opdateret {date}.'), { date: cvrUpdated() })}
+      badge={
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, marginRight: -8 }}>
+          <FinIconBtn icon={<I.Refresh size={13} aria-hidden="true"/>} label={t('Hent stamdata igen fra CVR')} onClick={refetch} disabled={fetching} busy={fetching}/>
+          {co.cvrUrl && (
+            <a href={co.cvrUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost-sm" style={{ textDecoration: 'none' }}>
+              {t('Åbn i CVR')} <I.Link size={10} aria-hidden="true"/>
+            </a>
+          )}
+        </span>
+      }
     >
-      <div className="card" style={{ padding: '4px 18px' }}>
-        {rows.map(r => (
-          <div key={r.label} className="cw-row" style={{ alignItems: 'center' }}>
-            <span style={{ color: 'var(--c-text-2)' }}>{r.label}</span>
-            <span style={{ color: present(r.value) ? 'var(--c-ink)' : 'var(--c-text-3)', textAlign: 'right' }}>{present(r.value) ? r.value : t('Ikke oplyst')}</span>
-          </div>
-        ))}
+      <div className="card" style={{ padding: '4px 18px', opacity: fetching ? 0.6 : 1, transition: 'opacity .2s' }}>
+        <div className="cw-row" style={{ alignItems: 'center' }}>
+          <span style={{ color: 'var(--c-text-2)' }}>{t('CVR-nr.')}</span>
+          <span style={{ color: 'var(--c-ink)', textAlign: 'right' }}>
+            {present(cvrNo) ? <><span className="mono">{cvrNo}</span><Copy k="cvr" text={cvrNo.replace(/\s+/g, '')} label={t('Kopiér CVR-nummer')}/></> : t('Ikke oplyst')}
+          </span>
+        </div>
+        {CVR_FIELDS.map(f => {
+          const label = t(f.label);
+          const e = cvrEdit(f.key);
+          const v = cvrVal(f.key);
+          const editing = editKey === f.key;
+          return (
+            <div key={f.key} className="cw-row" style={{ alignItems: editing ? 'start' : 'center' }}>
+              <span style={{ color: 'var(--c-text-2)', paddingTop: editing ? 6 : 0 }}>{label}</span>
+              {editing ? (
+                <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                  <label htmlFor={'fin-cvr-' + f.key} style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{finFill(t('Ret {navn}'), { navn: label })}</label>
+                  <input id={'fin-cvr-' + f.key} className="input" value={draft} onChange={ev => setDraft(ev.target.value)}
+                    onKeyDown={ev => { if (ev.key === 'Enter') { ev.preventDefault(); save(f.key); } if (ev.key === 'Escape') { ev.stopPropagation(); setEditKey(null); } }}
+                    style={{ height: 30, fontSize: 13, minWidth: 260, maxWidth: '100%' }}/>
+                  <button type="button" className="btn btn-sm btn-primary" onClick={() => save(f.key)}>{t('Gem')}</button>
+                  <button type="button" className="btn btn-sm" onClick={() => setEditKey(null)}>{t('Annullér')}</button>
+                </span>
+              ) : (
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2, textAlign: 'right', minWidth: 0 }}>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ color: present(v) ? 'var(--c-ink)' : 'var(--c-text-3)' }}>{present(v) ? v : t('Ikke oplyst')}</span>
+                    {f.copy && present(v) && <Copy k={f.key} text={[v, co.country].filter(present).join(', ')} label={t('Kopiér adresse')}/>}
+                    {e && <span style={{ display: 'block', fontSize: 12, color: 'var(--c-text-3)' }}>{finFill(t('Rettet af {who} · {date}'), { who: e.by || '', date: CW.fmtDate(e.at) })} · CVR: {cvrOrig(f.key) || t('Ikke oplyst')}</span>}
+                  </span>
+                  <FinIconBtn icon={<I.Edit size={13} aria-hidden="true"/>} label={finFill(t('Ret {navn}'), { navn: label })} onClick={() => startEdit(f.key)}/>
+                  {e && <FinIconBtn icon={<I.Undo size={13} aria-hidden="true"/>} label={finFill(t('Gendan {navn} fra CVR'), { navn: label })} onClick={() => restore(f.key, label)}/>}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </FinSection>
   );
@@ -2058,6 +2366,11 @@ function exFinancialsPages() {
   ];
 }
 
+// Rettet af rådgiveren? Så står det under teksten i eksporten (ellers null)
+function exAiNote(id) {
+  const s = finAiState(id);
+  return s.edited != null ? '(' + finFill(t('Rettet af {who} · {date}'), { who: s.editedBy || '', date: CW.fmtDate(s.editedAt) }) + ')' : null;
+}
 function exMarketPages() {
   const co = DATA.COMPANY;
   const head = [exHead(t('Produkt, marked og branche')), exCompanyLine(), '',
@@ -2071,14 +2384,14 @@ function exMarketPages() {
     t('Hjemsted') + ': ' + co.hq,
     '',
     exHead(t('Produktbeskrivelse')),
-    exWrap(t(PRODUCT_TEXT)),
+    exWrap(finAiText('product')), exAiNote('product'),
     '',
     exHead(t('Markedet')),
-    exWrap(t(MARKET_TEXT)),
+    exWrap(finAiText('market')), exAiNote('market'),
     '',
     exHead(t('PEST-analyse')),
-  ]);
-  MARKET_PEST.forEach(p => { body.push(exWrap(t(p.k) + ': ' + t(p.desc))); body.push(''); });
+  ].filter(x => x !== null));
+  MARKET_PEST.forEach(p => { body.push(exWrap(t(p.k) + ': ' + finAiText('pest:' + p.k))); const n = exAiNote('pest:' + p.k); if (n) body.push(n); body.push(''); });
   return [{ ref: 's. 1', title: t('Produkt, marked og branche'), body: body.join('\n').replace(/\n+$/, '') }];
 }
 
@@ -2122,14 +2435,15 @@ function exOwnershipPages() {
 function exCompanyPages() {
   const co = DATA.COMPANY;
   const rows = [
-    [t('Virksomhedsnavn'), co.name], [t('CVR-nr.'), co.cvr], [t('Juridisk form'), co.legalForm], [t('Branche'), co.industry],
-    [t('Stiftelsesdato'), co.founded], [t('Antal ansatte'), co.employees], [t('Adresse'), co.address],
-    [t('Postnummer/by'), co.postal], [t('Land'), co.country], [t('Kommune'), co.municipality],
+    // Stamdata som på skærmen (rådgiverens rettelser går forud for CVR)
+    [t('Virksomhedsnavn'), co.name], [t('CVR-nr.'), co.cvr], [t('Juridisk form'), cvrVal('legalForm')], [t('Branche'), cvrVal('industry')],
+    [t('Stiftelsesdato'), cvrVal('founded')], [t('Antal ansatte'), cvrVal('employees')], [t('Adresse'), cvrVal('address')],
+    [t('Land'), co.country], [t('Kommune'), co.municipality],
     [t('Revisor'), co.auditor], [t('Bankforbindelse'), co.bank], [t('Direktør'), co.ceo],
   ];
   const body = [
     exHead(t('Virksomhed og facilitet')), '',
-    t('Stamdata fra') + ' ' + co.masterDataSource + ', ' + t('opdateret') + ' ' + co.masterDataUpdated + '.',
+    t('Stamdata fra') + ' ' + co.masterDataSource + ', ' + t('opdateret') + ' ' + cvrUpdated() + '.' + (CVR_FIELDS.some(f => cvrEdit(f.key)) ? ' ' + t('Felter rettet af rådgiveren:') + ' ' + CVR_FIELDS.filter(f => cvrEdit(f.key)).map(f => t(f.label)).join(', ') + '.' : ''),
     co.cvrUrl, '',
   ].concat(rows.map(r => exPad(r[0], 22) + exClean(r[1])));
   body.push('', exHead(t('Sagen')),

@@ -123,7 +123,7 @@
     var res = await fetch('/local-ai/generate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ engine: opts.model || 'claude', system: opts.system || '', prompt: prompt }),
+      body: JSON.stringify({ engine: opts.model || 'claude', system: opts.system || '', prompt: prompt, webSearch: !!opts.webSearch }),
       signal: signal,
     });
     if (!res.ok) {
@@ -314,6 +314,11 @@
     };
   }
 
+  // Web-søgning (server-værktøj): den nyeste variant kræver Opus 4.6+ / Sonnet 4.6+.
+  // Afviser modellen den, prøves den basale variant (se anthropicStream).
+  var WEB_SEARCH_TOOL = 'web_search_20260209';
+  var WEB_SEARCH_BASIC = 'web_search_20250305';
+
   function anthropicBody(opts, lean) {
     var body = {
       model: opts.model,
@@ -322,6 +327,7 @@
       messages: opts.messages,
       stream: true,
     };
+    if (opts.webSearch) body.tools = [{ type: opts.webSearchType || WEB_SEARCH_TOOL, name: 'web_search', max_uses: 5 }];
     if (!lean) {
       // Adaptiv tænkning er standard på de nyeste Claude-modeller. Effort styrer
       // hvor dybt der tænkes; max_tokens dækker tænkning OG svar under ét.
@@ -339,6 +345,9 @@
     });
     if (!res.ok) {
       var text = await res.text();
+      if (res.status === 400 && opts.webSearch && !opts.webSearchType && /web_search/.test(text)) {
+        return anthropicStream(Object.assign({}, opts, { webSearchType: WEB_SEARCH_BASIC }), onDelta, signal, lean);
+      }
       if (res.status === 400 && !lean && mentionsOptionalParam(text)) {
         return anthropicStream(opts, onDelta, signal, true);
       }
@@ -349,7 +358,10 @@
     var out = '';
     var stopReason = null;
     await readSSE(res, function (ev) {
-      if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') {
+      if (ev.type === 'content_block_start' && ev.content_block && /tool_use|tool_result/.test(ev.content_block.type || '')) {
+        // Med web-søgning er tekst før en søgning blot "jeg søger …": kun teksten efter sidste søgning er svaret
+        out = '';
+      } else if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') {
         out += ev.delta.text;
         onDelta(ev.delta.text, out);
       } else if (ev.type === 'message_delta' && ev.delta && ev.delta.stop_reason) {
@@ -471,6 +483,7 @@
           model: cfg.models.local,
           system: opts.system || '',
           messages: opts.messages || [],
+          webSearch: !!opts.webSearch && canSearch(cfg),
         }, opts.onDelta || function () {}, opts.signal);
       } catch (err) {
         if (err && err.name === 'AbortError') { var la = new Error(t('Afbrudt.')); la.code = 'abort'; throw la; }
@@ -493,6 +506,7 @@
       messages: opts.messages || [],
       maxTokens: opts.maxTokens,
       effort: opts.effort,
+      webSearch: !!opts.webSearch && canSearch(cfg),
     };
     var onDelta = opts.onDelta || function () {};
     try {
@@ -506,6 +520,15 @@
       }
       throw err;
     }
+  }
+
+  /** Kan den valgte motor søge på nettet? Claude via API-nøgle og Claude Code via den
+   *  lokale bro kan; ChatGPT, Copilot og Codex kaldes uden web-søgning. */
+  function canSearch(cfg) {
+    cfg = cfg || getConfig();
+    if (cfg.provider === 'anthropic') return true;
+    if (cfg.provider === 'local') return (cfg.models.local || 'claude') === 'claude';
+    return false;
   }
 
   async function listModels(providerId, key, baseUrl) {
@@ -563,6 +586,7 @@
     activeModel: activeModel,
     provider: provider,
     stream: stream,
+    canSearch: canSearch,
     listModels: listModels,
     testConnection: testConnection,
     probeLocal: probeLocal,

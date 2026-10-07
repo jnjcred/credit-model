@@ -219,7 +219,7 @@ const HO_TYPE_INFO = {
 // Crediwires egne eksporter (financials.jsx) efter filnavn: [hvad, pålidelighed]
 function hoExportInfo(name) {
   if (/^Regnskabstabel/i.test(name)) return ['Financial table compiled by Crediwire. Sheet Regnskab: 2023-2025, 2026E, 2027B in DKK thousands. Sheet Kvartaler: quarters behind 2026E/2027B. Sheet Noter: method, sources and the adviser\'s corrections', 'Derived from the annual reports, interim figures and budget'];
-  if (/^Produkt_marked/i.test(name)) return ['Product, market and industry summary', 'AI-generated in Crediwire and not checked against sources; background only'];
+  if (/^Produkt_marked/i.test(name)) return ['Product, market and industry summary', 'AI-generated in Crediwire and not checked against sources; background only' + (typeof finAiAnyEdited === 'function' && finAiAnyEdited() ? '. Parts are edited by the adviser (marked in the file)' : '')];
   if (/^Trustpilot/i.test(name)) return ['Trustpilot score, distribution and latest reviews as retrieved', 'Unverified reviews; soft signal'];
   if (/^Ejerskab/i.test(name)) return ['Owners from the register of beneficial owners, warrants, board with PEP check, management, group relations', 'Derived from CVR and the register of shareholders'];
   if (/^Virksomhedsprofil/i.test(name)) return ['Company master data and the case\'s product and amount', 'Derived from CVR and the case'];

@@ -52,4 +52,16 @@ function cwConfirmRemove(name, text, opts) {
   }).then(r => !!(r && r.ok));
 }
 
-Object.assign(window, { CWFold, CWSeg, CWStatus, cwConfirmRemove });
+/* Mærke på alt, AI har skrevet: ikon og tekst. Er rådgiveren gået ind i teksten, står der også det
+   (edited). compact = kun ikonet (med forklaringen som tooltip), til små rækker. */
+function AiBadge({ edited, compact, title }) {
+  const label = edited ? t('AI-genereret + rådgiverens rettelser') : t('AI-genereret');
+  return (
+    <span className={'ai-badge' + (edited ? ' edited' : '')} role="note" aria-label={label} title={title || label}>
+      <I.Spark size={11} aria-hidden="true"/>
+      {!compact && <span>{label}</span>}
+    </span>
+  );
+}
+
+Object.assign(window, { CWFold, CWSeg, CWStatus, cwConfirmRemove, AiBadge });

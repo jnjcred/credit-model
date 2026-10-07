@@ -587,8 +587,9 @@ function CWConversation({ side, idPrefix, compact, readOnly, variant, bare, note
   const taRef = React.useRef(null);
   const advisorSide = side === 'rådgiver';
   const request = CW.request();
-  // Mail til kunden (rådgiverens side, når anmodningen er sendt): som ved "Stil spørgsmål til materialet"
-  const canMail = advisorSide && !!request && !readOnly;
+  // Mail til kunden, når det er rådgiveren, der skriver: på sagen og i forhåndsvisningen af
+  // kundens side (Kundeside). Kun når anmodningen er sendt. Som ved "Stil spørgsmål til materialet"
+  const canMail = (advisorSide || (side === 'kunde' && preview)) && !!request && !readOnly;
   const [sendMail, setSendMail] = React.useState(false);
   const [subjectEdit, setSubjectEdit] = React.useState(null);
   const [bodyEdit, setBodyEdit] = React.useState(null);
