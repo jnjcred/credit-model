@@ -353,6 +353,7 @@ Object.assign(window.I18N.en, {
   'Spørgsmålet er sendt til {navn}': 'The question has been sent to {navn}',
   'Ingen spørgsmål endnu. Skriv, hvis der er noget, du er i tvivl om.': 'No questions yet. Write if there is anything you are unsure about.',
   'Nyt': 'New',
+  'Vælg en fil, eller skriv en bemærkning': 'Choose a file, or write a remark',
   'Står ved {step}': 'At {step}',
   'Log ind eller opret bruger': 'Log in or create an account',
   'Fortsæt med Crediwire': 'Continue with Crediwire',
@@ -396,4 +397,5 @@ Object.assign(window.I18N.en, {
   // Blind runde
   'Kladde gemt kl. {tid}': 'Draft saved at {tid}',
   'Dit svar er sendt': 'Your reply has been sent',
+  "Filen fjernes, når I sender punktet.": "The file is removed when you send this item.",
 });

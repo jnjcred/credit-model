@@ -1053,12 +1053,21 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
     const prev = CW.itemState(id);
     // På Kundeside (forhåndsvisning) uploader rådgiveren på kundens vegne: filen står som rådgiverens
     const by = CW.isPreview() ? 'rådgiver' : 'kunde';
+    // Svar på rådgiverens spørgsmål uden ny fil: det, der allerede er sendt, gælder stadig
+    if (prev && prev.status === 'rejected' && !(files || []).length && note) {
+      if (!CW.answerItem(id, note, { by })) return;
+      csClearDraft(id);
+      CW.toast(by === 'rådgiver' ? t('Svaret er gemt på kundens vegne') : ncFill(t('Svaret er sendt til {name}'), { name: PORTAL_CONTACT.first }));
+      toHub(id);
+      return;
+    }
     const metas = (files || []).map(f => (f instanceof File ? CW.putFiles([f], { by, itemId: id })[0] : f));
     csClearDraft(id);
-    const changed = metas.length || (prev && prev.status === 'received' && (note || '') !== (prev.note || ''));
+    const noteOnly = by === 'rådgiver' && !metas.length && !!(note || '').trim() && !(prev && prev.status === 'received');
+    const changed = metas.length || noteOnly || (prev && prev.status === 'received' && (note || '') !== (prev.note || ''));
     if (changed) {
       const stale = prev && (prev.status === 'noted' || prev.status === 'rejected' || prev.status === 'delegated');
-      CW.markReceived(id, { by, files: metas, note: note != null ? note : (stale ? '' : undefined) });
+      CW.markReceived(id, { by, files: metas, note: note != null ? note : (stale ? '' : undefined), noteKind: noteOnly ? 'ikke-relevant' : undefined });
       CW.toast(by === 'rådgiver'
         ? ncFill(t('{item} er uploadet på kundens vegne'), { item: t(CW.itemById(id).label) })
         : ncFill(t('{item} er sendt til {name}'), { item: t(CW.itemById(id).label), name: PORTAL_CONTACT.first }));
@@ -1172,7 +1181,7 @@ function CustomerPortal({ back, preview = false, flow = false, flowStart = null,
   else if (obStep) content = <PortalOnboarding key={obStep + demoKey} step={obStep} arrive={obArrive} setStep={(k) => { setObArrive(false); setObView(k); }} onFinished={onboardingDone} onLogout={logout}
     footer={obStep === 'account' ? obDemoBar : undefined}/>;
   else if (view === 'upload' && active && !lock) content = <PortalUpload item={active} onBack={() => toHub(active.id)} onFinish={(files, note) => finish(active.id, files, note)} onNoted={() => toHub(active.id)}/>;
-  else if (view === 'connect' && active && !lock) content = <PortalConnect item={active} onBack={() => toHub(active.id)} onFinish={(files) => finish(active.id, files)} onNoted={() => toHub(active.id)}/>;
+  else if (view === 'connect' && active && !lock) content = <PortalConnect item={active} onBack={() => toHub(active.id)} onFinish={(files, note) => finish(active.id, files, note)} onNoted={() => toHub(active.id)}/>;
   // Ingen kontrol af samtykket her: det skrives midt i forbindelsen, og dialogen skal blive stående til "Fortsæt"
   // (PortalErpSetup går selv tilbage, hvis der allerede er forbundet, når den åbnes)
   else if (view === 'erp' && !lock) content = <PortalErpSetup onBack={() => toHub()} onDone={() => toHub()}/>;
@@ -1734,21 +1743,22 @@ function PortalHubRow({ it, first, status: realStatus, onOpen, readOnly }) {
     return () => { clearTimeout(id); document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
   }, [menu]);
 
-  // Statusikonet bærer informationen; kun et afvist punkt er rødt
+  // Statusikonet bærer informationen. Et spørgsmål fra rådgiveren er et blåt "!", ikke en fejl
   const circle = (bg, color, border, icon) => <div aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', background: bg, color, border, display: 'grid', placeItems: 'center', flexShrink: 0, boxSizing: 'border-box' }}>{icon}</div>;
   const icon = delivered ? circle('var(--c-primary)', '#fff', 'none', <I.Check size={12}/>)
-    : status === 'rejected' ? circle('#fff', 'var(--c-danger)', '1.5px solid var(--c-danger)', <I.AlertCircle size={12}/>)
+    : status === 'rejected' ? <PortalAskMark/>
     : status === 'delegated' ? circle('#fff', 'var(--c-text-3)', '1.5px solid var(--c-text-4)', <I.Clock size={11}/>)
     : <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: '50%', border: '2px solid var(--c-text-4)', flexShrink: 0, boxSizing: 'border-box' }}/>;
-  const statusWord = { pending: t('Mangler'), received: t('Afventer godkendelse af EIFO'), noted: t('Bemærkning sendt'), delegated: s && s.delegate && s.delegate.role === 'bank' ? t('Hos jeres bank') : t('Hos jeres revisor'), approved: t('Godkendt'), rejected: t('Skal sendes igen'), closed: t('Ikke sendt') }[status];
+  const answered = !!s && !!s.answer;
+  const statusWord = { pending: t('Mangler'), received: t('Afventer godkendelse af EIFO'), noted: answered ? t('Svar sendt') : t('Bemærkning sendt'), delegated: s && s.delegate && s.delegate.role === 'bank' ? t('Hos jeres bank') : t('Hos jeres revisor'), approved: t('Godkendt'), rejected: ncFill(t('Spørgsmål fra {adv}'), { adv }), closed: t('Ikke sendt') }[status];
 
   // Den ene grå linje: kun det, kunden kan bruge. Hvem, hvornår og hvor mange filer står i
   // detaljerne (pilen til højre); status står som en mærkat (Afventer godkendelse / Godkendt)
   const meta = status === 'pending' ? (draft ? <span className="cwp-row-draft">{t('Påbegyndt, ikke sendt endnu')}</span> : t(it.desc))
     : status === 'closed' ? t('Ikke sendt')
     : status === 'received' || status === 'approved' ? (sourceText || null)
-    : status === 'noted' ? t('Bemærkning sendt')
-    : status === 'rejected' ? adv + ': ' + (s.reviewNote || t('Send venligst en ny version.'))
+    : status === 'noted' ? (answered ? t('Svar sendt') : t('Bemærkning sendt'))
+    : status === 'rejected' ? (s.reviewNote ? ncFill(t('{adv} spørger:'), { adv }) + ' ' + s.reviewNote : ncFill(t('{adv} beder om en ny version'), { adv }))
     : status === 'delegated' && s.delegate ? ncFill(s.delegate.role === 'bank' ? t('Hos jeres bank: {name}') : t('Hos jeres revisor: {name}'), { name: s.delegate.name })
     : null;
   // Mærkaten: sendt, men ikke gennemgået endnu, eller godkendt (skærmlæsere får samme ord fra statusWord)
@@ -1782,7 +1792,7 @@ function PortalHubRow({ it, first, status: realStatus, onOpen, readOnly }) {
           : <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 14, alignItems: 'flex-start' }}>{body}</div>}
         {!clickable && (status === 'rejected' || status === 'delegated' || delivered) && (
           <div className={'cwp-row-side' + (delivered ? '' : ' wide')} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {status === 'rejected' && <button type="button" className="btn-ghost-sm" onClick={() => onOpen(it.id)} aria-label={(kind === 'trade' ? t('Udfyld igen') : t('Send igen')) + ': ' + t(it.label)}>{kind === 'trade' ? t('Udfyld igen') : t('Send igen')}</button>}
+            {status === 'rejected' && <button type="button" className="btn-ghost-sm" data-cust-act="answer" onClick={() => onOpen(it.id)} aria-label={t('Svar') + ': ' + t(it.label)}>{t('Svar')}</button>}
             {status === 'delegated' && (
               <>
                 <button type="button" onClick={() => onOpen(it.id)} className="btn-ghost-sm" aria-label={t('Send selv') + ': ' + t(it.label)}>{t('Send selv')}</button>
@@ -1815,6 +1825,8 @@ function PortalHubRow({ it, first, status: realStatus, onOpen, readOnly }) {
           {answers && <div style={{ marginTop: files.length ? 8 : 0 }}><span className="muted">{t('Jeres svar:')}</span> {answers}</div>}
           {!files.length && !answers && status !== 'noted' && <div className="muted">{t('Ingen filer')}</div>}
           {s.note && !sourceText && <div style={{ marginTop: 6 }}><span className="muted">{t('Jeres bemærkning:')}</span> {s.note}</div>}
+          {answered && s.question && <div style={{ marginTop: 6 }}><span className="muted">{ncFill(t('{adv} spurgte:'), { adv })}</span> {s.question}</div>}
+          {answered && <div style={{ marginTop: s.question ? 2 : 6 }}><span className="muted">{ncFill(t('Jeres svar til {adv}:'), { adv })}</span> {s.answer}</div>}
           {sourceText && consent && <div className="muted" style={{ marginTop: 6 }}>{sourceText} · {portalConsentUntil(consent)}</div>}
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 8, marginLeft: -8 }}>
             {status !== 'approved' && !readOnly && (
@@ -1902,17 +1914,75 @@ function PortalFilePicker({ staged, setStaged, accept = CS_ACCEPT, title, hint, 
   );
 }
 
-// Punktets side: titel, beskrivelse og "Hvorfor" (K2 flyttede den hertil). K5: en
-// afvisning står som én grå linje "Mette skriver: …". Ingen versal-overskrift (K6).
-function PortalItemHead({ item }) {
+// Det blå "!" for et spørgsmål fra rådgiveren (rækken på oversigten og punktets side)
+function PortalAskMark() {
+  return <span aria-hidden="true" className="cwp-ask">!</span>;
+}
+
+/**
+ * Rådgiverens spørgsmål til punktet. Kunden kan svare med tekst alene; en ny fil
+ * er kun nødvendig, når spørgsmålet beder om den. Med value/onChange styrer
+ * punktets side feltet og sender svaret med sin egen knap (én primærknap, K6).
+ * Uden (landefordelingen, der har sin egen knap) har boksen sin egen "Send svar".
+ */
+function PortalQuestion({ item, value, onChange, onAnswered, ownButton }) {
   const s = CW.itemState(item.id);
   const adv = PORTAL_CONTACT.first;
-  const note = s && (s.status === 'rejected' ? (s.reviewNote || t('Send venligst en ny version.')) : s.status === 'delegated' && s.reviewNote ? s.reviewNote : '');
+  const own = !onChange || !!ownButton;
+  const [text, setText] = React.useState('');
+  const v = onChange ? (value || '') : text;
+  const set = onChange || setText;
+  const send = () => {
+    const by = CW.isPreview() ? 'rådgiver' : 'kunde';
+    if (!v.trim() || !CW.answerItem(item.id, v, { by })) return;
+    csClearDraft(item.id);
+    CW.toast(by === 'rådgiver' ? t('Svaret er gemt på kundens vegne') : ncFill(t('Svaret er sendt til {name}'), { name: adv }));
+    if (onAnswered) onAnswered();
+  };
+  return (
+    <section className="cwp-question" aria-labelledby="cwp-q-h">
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <PortalAskMark/>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2 id="cwp-q-h" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--c-ink)', margin: '1px 0 0' }}>{ncFill(s && s.reviewNote ? t('{adv} spørger') : t('{adv} beder om en ny version'), { adv })}</h2>
+          {s && s.reviewNote && <p style={{ margin: '2px 0 0', fontSize: 14, color: 'var(--c-text)', lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>{s.reviewNote}</p>}
+        </div>
+      </div>
+      <div className="field" style={{ margin: '12px 0 0' }}>
+        <label htmlFor="cwp-answer">{ncFill(t('Jeres svar til {adv}'), { adv })}</label>
+        <textarea id="cwp-answer" className="input" rows={3} value={v} onChange={e => set(e.target.value)}
+          onKeyDown={own ? (e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); } }) : undefined}
+          placeholder={t('Skriv jeres svar her')} aria-describedby="cwp-answer-hint"
+          style={{ height: 'auto', padding: 10, resize: 'vertical', background: '#fff', lineHeight: 1.5 }}/>
+        <div id="cwp-answer-hint" className="muted" style={{ fontSize: 12.5, marginTop: 4, lineHeight: 1.5 }}>
+          {own ? t('I kan svare her eller rette skemaet nedenfor.') : ncFill(t('Svaret kan stå alene. Beder {adv} om en ny fil, kan I uploade den nedenfor.'), { adv })}
+        </div>
+      </div>
+      {own && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+          <button type="button" className={'btn' + (v.trim() ? ' btn-primary' : '')} data-cust-act="send" data-pv-allow="1" disabled={!v.trim()} onClick={send}
+            style={v.trim() ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
+            <I.Send size={12}/> {t('Send svar')}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// Punktets side: titel, beskrivelse og "Hvorfor" (K2 flyttede den hertil). Et
+// spørgsmål fra rådgiveren står i en boks med svarfeltet. Ingen versal-overskrift (K6).
+function PortalItemHead({ item, answer, setAnswer, onAnswered, ownButton }) {
+  const s = CW.itemState(item.id);
+  const adv = PORTAL_CONTACT.first;
+  const asked = !!s && s.status === 'rejected';
+  const note = s && s.status === 'delegated' && s.reviewNote ? s.reviewNote : '';
   return (
     <>
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: '-0.015em', color: 'var(--c-ink)', margin: '0 0 6px' }}>{t(item.label)}</h1>
       <p style={{ fontSize: 14, color: 'var(--c-text-2)', lineHeight: 1.55, margin: '0 0 4px' }}>{t(item.desc)}</p>
-      <p style={{ fontSize: 13, color: 'var(--c-text-3)', lineHeight: 1.55, margin: note || (s && s.status === 'noted') ? '0 0 8px' : '0 0 18px' }}>{t('Hvorfor')}: {t(item.why)}</p>
+      <p style={{ fontSize: 13, color: 'var(--c-text-3)', lineHeight: 1.55, margin: asked ? '0 0 14px' : note || (s && s.status === 'noted') ? '0 0 8px' : '0 0 18px' }}>{t('Hvorfor')}: {t(item.why)}</p>
+      {asked && <PortalQuestion item={item} value={answer} onChange={setAnswer} onAnswered={onAnswered} ownButton={ownButton}/>}
       {note && (
         <p role="status" style={{ fontSize: 13.5, color: 'var(--c-text)', lineHeight: 1.55, margin: '0 0 18px' }}>
           {ncFill(t('{adv} skriver:'), { adv })} <span style={{ color: 'var(--c-text-2)' }}>{note}</span>
@@ -1921,7 +1991,8 @@ function PortalItemHead({ item }) {
       {s && s.status === 'noted' && (
         <div style={{ margin: '0 0 18px', fontSize: 13.5, color: 'var(--c-text)', display: 'flex', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
           <span style={{ flex: 1, minWidth: 220, lineHeight: 1.55 }}>
-            {ncFill(t('I har skrevet til {adv}'), { adv })}: <span style={{ color: 'var(--c-text-2)' }}>"{s.note}"</span>{' '}
+            {s.note && <span style={{ display: 'block' }}>{ncFill(t('I har skrevet til {adv}'), { adv })}: <span style={{ color: 'var(--c-text-2)' }}>"{s.note}"</span></span>}
+            {s.answer && <span style={{ display: 'block' }}>{ncFill(t('I har svaret {adv}'), { adv })}: <span style={{ color: 'var(--c-text-2)' }}>"{s.answer}"</span></span>}
             <span className="muted">{t('Har I alligevel en fil, kan I sende den nedenfor.')}</span>
           </span>
           {csCanUndo(s) && <button type="button" className="btn-ghost-sm" data-cust-act="undo" onClick={() => csConfirmUndo(item.id)}>{t('Fortryd bemærkning')}</button>}
@@ -1970,7 +2041,7 @@ function PortalUpload({ item, onBack, onFinish, onNoted }) {
   CW.useCase();
   const s = CW.itemState(item.id);
   // Afvist, eller afvist og derefter sendt til en hjælper: de gamle filer gælder ikke længere
-  const rejected = !!s && (s.status === 'rejected' || (s.status === 'delegated' && !!s.reviewedAt));
+  const rejected = !!s && s.status === 'delegated' && !!s.reviewedAt;
   const existing = s && !rejected ? (s.files || []) : [];
   const draft0 = React.useMemo(() => csDraft(item.id), [item.id]);
   const [staged, setStaged] = React.useState(draft0 && draft0.files ? draft0.files : []);
@@ -1981,24 +2052,32 @@ function PortalUpload({ item, onBack, onFinish, onNoted }) {
   const total = existing.length + staged.length;
   const adv = PORTAL_CONTACT.first;
   const canNote = existing.length === 0 && (!s || s.status !== 'noted');
+  // Rådgiveren (Kundeside) kan færdiggøre punktet med blot en bemærkning, fx når en fil ikke er relevant for virksomheden
+  const noteOnly = CW.isPreview() && total === 0 && !!note.trim();
+  // Spørgsmål fra rådgiveren: svarfeltet står øverst, og et svar alene kan sendes
+  const asked = !!s && s.status === 'rejected';
+  // Med et spørgsmål kræver knappen noget nyt: et svar eller en fil (de sendte filer står allerede)
+  const canFinish = asked ? staged.length > 0 || !!note.trim() : total > 0 || noteOnly;
+  const answerOnly = asked && staged.length === 0;
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <PortalBackNav onBack={onBack}/>
-      <PortalItemHead item={item}/>
+      <PortalItemHead item={item} answer={note} setAnswer={setNote}/>
 
       {notedOpen ? (
         <PortalNotedToggle item={item} open setOpen={setNotedOpen} onDone={onNoted}/>
       ) : (
         <>
+          {asked && <h2 style={{ fontSize: 14, fontWeight: 600, color: 'var(--c-ink)', margin: '22px 0 8px' }}>{existing.length ? t('Tilføj en fil, hvis der er brug for det') : t('Send en ny fil, hvis der er brug for det')}</h2>}
           <PortalSentFiles item={item} files={existing}/>
           <PortalPvUploadNote/>
           <PortalFilePicker staged={staged} setStaged={setStaged} itemId={item.id}/>
 
-          {noteOpen ? (
+          {asked ? null : noteOpen ? (
             <div className="field" style={{ marginTop: 16 }}>
               <label htmlFor="cwp-note">{ncFill(t('Bemærkning til {adv} (valgfri)'), { adv })}</label>
-              <textarea id="cwp-note" className="input" rows={2} value={note} readOnly={CW.isPreview()} onChange={e => setNote(e.target.value)} placeholder={t('Fx hvilken version det er, eller hvad der mangler')} style={{ height: 'auto', padding: 10, resize: 'vertical' }}/>
+              <textarea id="cwp-note" className="input" rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder={t('Fx hvilken version det er, eller hvad der mangler')} style={{ height: 'auto', padding: 10, resize: 'vertical' }}/>
             </div>
           ) : (
             <button type="button" className="btn-ghost-sm" style={{ marginTop: 12, marginLeft: -8 }} onClick={() => { setNoteOpen(true); CW.focusSoon('#cwp-note'); }}>
@@ -2010,10 +2089,10 @@ function PortalUpload({ item, onBack, onFinish, onNoted }) {
             {canNote ? <PortalNotedToggle item={item} open={false} setOpen={setNotedOpen} onDone={onNoted}/> : <span/>}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', marginLeft: 'auto' }}>
               {draftAt && <span className="muted cwp-draft-at" style={{ fontSize: 12.5 }}>{ncFill(t('Kladde gemt kl. {tid}'), { tid: csHHMM(draftAt) })}</span>}
-              {total === 0 && <span id="cwp-up-hint" className="muted" style={{ fontSize: 12.5 }}>{t('Vælg mindst én fil')}</span>}
-              <button type="button" className="btn btn-primary" data-cust-act="send" data-pv-allow="1" disabled={total === 0} onClick={() => onFinish(staged, note.trim())} aria-describedby={total === 0 ? 'cwp-up-hint' : undefined}
-                style={total > 0 ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
-                {t('Færdig med dette punkt')}
+              {!canFinish && <span id="cwp-up-hint" className="muted" style={{ fontSize: 12.5 }}>{asked ? t('Skriv et svar, eller vælg en fil') : CW.isPreview() ? t('Vælg en fil, eller skriv en bemærkning') : t('Vælg mindst én fil')}</span>}
+              <button type="button" className="btn btn-primary" data-cust-act="send" data-pv-allow="1" disabled={!canFinish} onClick={() => onFinish(staged, note.trim())} aria-describedby={!canFinish ? 'cwp-up-hint' : undefined}
+                style={canFinish ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
+                {answerOnly && note.trim() ? t('Send svar') : t('Færdig med dette punkt')}
               </button>
             </div>
           </div>
@@ -2043,10 +2122,15 @@ function PortalConnect({ item, onBack, onFinish, onNoted }) {
   const ob = CW.onboarding();
   const s = CW.itemState(item.id);
   // Afvist, eller afvist og derefter sendt til en hjælper: de gamle filer gælder ikke længere
-  const rejected = !!s && (s.status === 'rejected' || (s.status === 'delegated' && !!s.reviewedAt));
+  const rejected = !!s && s.status === 'delegated' && !!s.reviewedAt;
   const existing = s && !rejected ? (s.files || []) : [];
   const fromSystem = !!(s && s.noteKind === 'system' && !rejected);
   const revoke = () => portalRevoke(consent);
+  // Spørgsmål fra rådgiveren: et svar alene kan sendes (se PortalUpload)
+  const asked = !!s && s.status === 'rejected';
+  const [answer, setAnswer] = React.useState('');
+  const canSend = staged.length > 0 || (asked && !!answer.trim());
+  const answerOnly = asked && staged.length === 0;
 
   if (setup) return <PortalErpSetup backLabel={ncFill(t('Tilbage til {item}'), { item: t(item.label) })} onBack={() => { setSetup(false); CW.focusSoon('.cwp-main h1'); }} onDone={() => { setSetup(false); onBack(); }}/>;
 
@@ -2058,7 +2142,7 @@ function PortalConnect({ item, onBack, onFinish, onNoted }) {
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <PortalBackNav onBack={onBack}/>
-      <PortalItemHead item={item}/>
+      <PortalItemHead item={item} answer={answer} setAnswer={setAnswer}/>
 
       {notedOpen ? (
         <PortalNotedToggle item={item} open setOpen={setNotedOpen} onDone={onNoted}/>
@@ -2107,10 +2191,10 @@ function PortalConnect({ item, onBack, onFinish, onNoted }) {
         {canNote ? <PortalNotedToggle item={item} open={false} setOpen={setNotedOpen} onDone={onNoted}/> : <span/>}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', marginLeft: 'auto' }}>
           {connDraftAt && <span className="muted cwp-draft-at" style={{ fontSize: 12.5 }}>{ncFill(t('Kladde gemt kl. {tid}'), { tid: csHHMM(connDraftAt) })}</span>}
-          {staged.length === 0 && <span id="cwp-conn-hint" className="muted" style={{ fontSize: 12.5 }}>{total === 0 ? t('Vælg mindst én fil') : t('Vælg en fil for at sende mere')}</span>}
-          <button type="button" className="btn btn-primary" data-cust-act="send" data-pv-allow="1" disabled={staged.length === 0} onClick={() => onFinish(staged)} aria-describedby={staged.length === 0 ? 'cwp-conn-hint' : undefined}
-            style={staged.length > 0 ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
-            {t('Færdig med dette punkt')}
+          {!canSend && <span id="cwp-conn-hint" className="muted" style={{ fontSize: 12.5 }}>{asked ? t('Skriv et svar, eller vælg en fil') : total === 0 ? t('Vælg mindst én fil') : t('Vælg en fil for at sende mere')}</span>}
+          <button type="button" className="btn btn-primary" data-cust-act="send" data-pv-allow="1" disabled={!canSend} onClick={() => onFinish(staged, asked ? answer.trim() : undefined)} aria-describedby={!canSend ? 'cwp-conn-hint' : undefined}
+            style={canSend ? { background: 'var(--c-primary)', borderColor: 'var(--c-primary)' } : { opacity: 0.5, cursor: 'not-allowed' }}>
+            {answerOnly ? t('Send svar') : t('Færdig med dette punkt')}
           </button>
         </div>
       </div>
@@ -2125,13 +2209,14 @@ function PortalTradeScreen({ item, onBack, onDone }) {
   CW.useCase();
   const s = CW.itemState(item.id);
   const [notedOpen, setNotedOpen] = React.useState(false);
+  const [answer, setAnswer] = React.useState('');
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <PortalBackNav onBack={onBack}/>
-      <PortalItemHead item={item}/>
+      <PortalItemHead item={item} answer={answer} setAnswer={setAnswer} onAnswered={onDone} ownButton/>
       {notedOpen
         ? <PortalNotedToggle item={item} open setOpen={setNotedOpen} onDone={onDone}/>
-        : <CWTradeForm itemId={item.id} idPrefix="cwp" onDone={onDone}/>}
+        : <CWTradeForm itemId={item.id} idPrefix="cwp" onDone={onDone} answer={answer.trim()}/>}
       {!notedOpen && (!s || s.status === 'rejected') && (
         <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--c-line-2)' }}>
           <PortalNotedToggle item={item} open={false} setOpen={setNotedOpen} onDone={onDone}/>

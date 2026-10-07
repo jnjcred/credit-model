@@ -450,6 +450,7 @@
   //         | 'delegated'  kunden har bedt sin revisor/bank om at sende det (delegate: { name, email, at })
   //         | 'approved' | 'rejected'
   //   at, by: 'kunde'|'rådgiver', files: FileMeta[], note, noteKind?: 'har-vi-ikke'|'anden-maade'|'system',
+  //   answer?, question?: kundens svar på rådgiverens spørgsmål (reviewNote) og spørgsmålet,
   //   answers?: { countries: [{ code, name, pct }] }  (spørgeskema)
   //   reviewedAt, reviewNote
   // }
@@ -482,10 +483,11 @@
       opts.files = opts.files.filter(function (f) { return !recent.some(function (r) { return r.name === f.name && r.size === f.size; }); });
       if (!opts.files.length && !opts.answers && prev.status === 'received') return false;
     }
-    // En afvist fil følger ikke med, heller ikke hvis punktet siden er sendt videre til revisor eller bank
+    // Et spørgsmål til punktet (status 'rejected'): de sendte filer gælder stadig, og en ny fil
+    // lægges til. Er punktet siden sendt videre til revisor eller bank, følger de gamle filer ikke med.
     var wasRejected = prev && (prev.status === 'rejected' || (prev.status === 'delegated' && prev.reviewedAt));
-    var keepFiles = prev && !wasRejected ? (prev.files || []) : [];
-    var files = keepFiles.concat(opts.files || []);
+    var keepFiles = prev && !(prev.status === 'delegated' && prev.reviewedAt) ? (prev.files || []) : [];
+    var files = keepFiles.concat((opts.files || []).filter(function (f) { return !keepFiles.some(function (k) { return k.id === f.id || (k.name === f.name && k.size === f.size); }); }));
     // Lægger rådgiveren selv en fil til et punkt, der allerede er godkendt, forbliver det godkendt
     if ((opts.by || 'kunde') === 'rådgiver' && prev && prev.status === 'approved' && opts.files && opts.files.length) {
       patchItem(id, { files: files });
@@ -494,10 +496,18 @@
     }
     // Uden filer og svar er det en bemærkning, ikke en levering
     if (!files.length && !opts.answers && opts.note) return markNoted(id, { by: opts.by, note: opts.note, kind: opts.noteKind || 'anden-maade' });
+    // Tekst sendt efter rådgiverens spørgsmål er kundens svar på det (ikke en bemærkning).
+    // Et tidligere svar følger punktet, indtil der kommer et nyt spørgsmål.
+    var answer = wasRejected && opts.note && opts.noteKind == null;
+    // Svar på et spørgsmål til filer, der stadig gælder: deres bemærkning eller kilde
+    // ("Hentet fra e-conomic") står urørt. Var punktet kun en bemærkning, gælder den ikke længere.
+    var keepNote = !!prev && prev.status === 'rejected' && (prev.files || []).length > 0 && (answer || !opts.note);
     patchItem(id, {
       status: 'received', at: now(), by: opts.by || 'kunde', files: files, viaPreview: previewMode || null,
-      note: opts.note != null ? opts.note : (prev && prev.note) || '',
-      noteKind: ('noteKind' in opts) ? opts.noteKind : ((prev && prev.noteKind) || null),
+      note: keepNote ? (prev.note || '') : answer ? '' : opts.note != null ? opts.note : (prev && prev.note) || '',
+      noteKind: keepNote ? (prev.noteKind || null) : answer ? null : opts.noteKind !== undefined ? opts.noteKind : ((prev && prev.noteKind) || null),
+      answer: answer ? opts.note : wasRejected ? null : (prev && prev.answer) || null,
+      question: answer ? (prev.reviewNote || '') : wasRejected ? null : (prev && prev.question) || null,
       answers: opts.answers || (prev && prev.answers) || null,
       delegate: null, reviewedAt: null, reviewNote: '',
     });
@@ -507,8 +517,28 @@
   function markNoted(id, opts) {
     opts = opts || {};
     if ((opts.by || 'kunde') === 'kunde' && (customerLock() || previewBlocked('send'))) return false;
-    patchItem(id, { status: 'noted', at: now(), by: opts.by || 'kunde', viaPreview: previewMode || null, files: [], note: opts.note || '', noteKind: opts.kind || 'har-vi-ikke', delegate: null, reviewedAt: null, reviewNote: '' });
+    patchItem(id, { status: 'noted', at: now(), by: opts.by || 'kunde', viaPreview: previewMode || null, files: [], note: opts.note || '', noteKind: opts.kind || 'har-vi-ikke', answer: null, question: null, delegate: null, reviewedAt: null, reviewNote: '' });
     log('noted', (opts.kind === 'anden-maade' ? t('Sendt på anden måde') : t('Har vi ikke')) + ': ' + label(id), { who: opts.by || 'kunde', itemId: id });
+  }
+  /**
+   * Kunden svarer på rådgiverens spørgsmål til et punkt med tekst alene. Det, der
+   * allerede er sendt, gælder stadig, og punktet står igen til gennemgang.
+   */
+  function answerItem(id, text, opts) {
+    opts = opts || {};
+    var by = opts.by || 'kunde';
+    if (by === 'kunde' && (customerLock() || previewBlocked('send'))) return false;
+    var prev = itemState(id);
+    text = String(text || '').trim();
+    if (!prev || prev.status !== 'rejected' || !text) return false;
+    // Uden filer og skema var punktet en bemærkning ("Har vi ikke"); den står stadig
+    var has = (prev.files && prev.files.length) || prev.answers;
+    patchItem(id, {
+      status: has ? 'received' : 'noted', at: now(), by: by, viaPreview: previewMode || null,
+      answer: text, question: prev.reviewNote || '', delegate: null, reviewedAt: null, reviewNote: '',
+    });
+    log('received', (by === 'rådgiver' ? t('Rådgiveren svarede for kunden') : t('Kunden svarede på spørgsmålet')) + ': ' + label(id), { who: by, itemId: id });
+    return true;
   }
   /** Kunden har bedt sin revisor eller bank om at sende punktet. */
   function markDelegated(ids, to) {
@@ -531,11 +561,13 @@
   }
   function reject(id, note) {
     patchItem(id, { status: 'rejected', reviewedAt: now(), reviewedBy: reviewerName(), reviewNote: note || '' });
-    log('rejected', t('Afvist') + ': ' + label(id) + (note ? ' (' + note + ')' : ''), { who: 'rådgiver', itemId: id });
+    log('rejected', t('Spørgsmål stillet') + ': ' + label(id) + (note ? ' (' + note + ')' : ''), { who: 'rådgiver', itemId: id });
   }
   function resetItem(id, by) {
     if ((by || 'kunde') === 'kunde' && previewBlocked('undo')) return false;
-    patchItem(id, null);
+    var cur = itemState(id);
+    if (cur && cur.status === 'delegated' && cur.reviewedAt) patchItem(id, { status: 'rejected', delegate: null });
+    else patchItem(id, null);
     log('reset', t('Trukket tilbage') + ': ' + label(id), { who: by || 'kunde', itemId: id });
   }
   /** Fortryder rådgiverens godkendelse eller afvisning: punktet står igen som leveret. */
@@ -556,6 +588,11 @@
     if (who === 'kunde' && previewBlocked('remove')) return false;
     if (who && !canRemoveFile(id, fileId, who)) return false;
     var files = (s.files || []).filter(function (f) { return f.id !== fileId; });
+    if (!files.length && !s.answers && (s.status === 'rejected' || s.answer)) {
+      patchItem(id, { files: [], status: s.status === 'rejected' ? 'rejected' : 'noted' });
+      log('reset', t('Fil fjernet') + ': ' + label(id), { who: who || s.by, itemId: id });
+      return true;
+    }
     if (!files.length && !s.answers) { patchItem(id, null); log('reset', t('Fil fjernet') + ': ' + label(id), { who: who || s.by, itemId: id }); return true; }
     patchItem(id, { files: files });
     log('reset', t('Fil fjernet') + ': ' + label(id), { who: who || s.by, itemId: id });
@@ -700,7 +737,9 @@
       })(),
       version: prev ? (prev.version || 1) + 1 : 1, link: requestLink(),
       firstSentAt: prev ? (prev.firstSentAt || prev.sentAt) : now(),
-      history: (prev && prev.history || []).concat([{ at: now(), added: added, removed: removed }]),
+      // noMail: rådgiveren sendte ingen mail (giver selv kunden linket, eller kundens side viser ændringen)
+      noMail: !!opts.noMail,
+      history: (prev && prev.history || []).concat([{ at: now(), added: added, removed: removed, noMail: !!opts.noMail }]),
     };
     write('request', r);
     var parts = [];
@@ -708,7 +747,8 @@
     if (removed.length) parts.push(t('fjernet') + ' ' + removed.map(label).join(', '));
     log(prev ? 'request-updated' : 'request-sent', prev
       ? t('Opdateret anmodning sendt') + (parts.length ? ': ' + parts.join('; ') : '')
-      : t('Anmodning sendt til') + ' ' + ((r.to && r.to.name) || t('kunden')), { who: 'rådgiver', data: { added: added, removed: removed } });
+      : opts.noMail ? t('Anmodning oprettet uden mail til') + ' ' + ((r.to && r.to.name) || t('kunden'))
+      : t('Anmodning sendt til') + ' ' + ((r.to && r.to.name) || t('kunden')), { who: 'rådgiver', data: { added: added, removed: removed, noMail: !!opts.noMail } });
     return r;
   }
   /** Fortryder en sendt anmodning (fx "Fortryd" i kvitteringen). */
@@ -840,9 +880,10 @@
   // Question = { id, from: 'kunde'|'rådgiver', text, at, itemId?, preview?, replies: [{from,text,at,preview?}], readBy: { kunde?:ISO, rådgiver?:ISO } }
   // preview: skrevet af rådgiveren i forhåndsvisningen af kundesiden (from er stadig 'kunde', kundens plads)
   function questions() { return read('questions', []); }
-  function ask(from, text, itemId) {
+  // about: emnet, når beskeden ikke handler om et punkt, fx "Årsrapport 2024" fra de offentlige data
+  function ask(from, text, itemId, about) {
     if (from === 'kunde' && previewBlocked('message')) return null;
-    var q = { id: uid('q'), from: from, text: text, at: now(), itemId: itemId || null, replies: [], readBy: {} };
+    var q = { id: uid('q'), from: from, text: text, at: now(), itemId: itemId || null, about: about || null, replies: [], readBy: {} };
     q.readBy[from] = q.at;
     // Stillet i forhåndsvisningen af kundesiden: det er rådgiveren, der skriver (vises og logges sådan)
     if (previewMode && from === 'kunde') { q.preview = true; q.readBy['rådgiver'] = q.at; }
@@ -887,7 +928,7 @@
   function conversation() {
     var out = [];
     questions().forEach(function (q) {
-      out.push({ key: q.id, qid: q.id, from: q.from, text: q.text, at: q.at, itemId: q.itemId || null, preview: !!q.preview });
+      out.push({ key: q.id, qid: q.id, from: q.from, text: q.text, at: q.at, itemId: q.itemId || null, about: q.about || null, preview: !!q.preview });
       (q.replies || []).forEach(function (r, i) {
         out.push({ key: q.id + ':' + i, qid: q.id, from: r.from, text: r.text, at: r.at, itemId: null, preview: !!r.preview });
       });
@@ -917,9 +958,9 @@
    * Skriv i samtalen. Et svar på den seneste besked, medmindre beskeden handler om
    * et bestemt punkt, eller der ikke er nogen samtale endnu (så starter en ny tråd).
    */
-  function sendMessage(from, text, itemId) {
+  function sendMessage(from, text, itemId, about) {
     var qs = questions();
-    if (itemId || !qs.length) return ask(from, text, itemId);
+    if (itemId || about || !qs.length) return ask(from, text, itemId, about);
     var latest = conversation().slice(-1)[0];
     reply(latest.qid, from, text);
     return latest.qid;
@@ -1646,7 +1687,7 @@
     selection: selection, setSelection: setSelection, draftItems: draftItems, requestedItems: requestedItems,
     draftDiff: draftDiff, discardDraft: discardDraft,
     items: items, itemState: itemState, isReceived: isReceived, isApproved: isApproved,
-    markReceived: markReceived, markNoted: markNoted, markDelegated: markDelegated,
+    markReceived: markReceived, markNoted: markNoted, markDelegated: markDelegated, answerItem: answerItem,
     approve: approve, reject: reject, resetItem: resetItem, removeFile: removeFile, canRemoveFile: canRemoveFile, unreview: unreview,
     progress: progress,
     putFiles: putFiles, fileUrl: fileUrl, fmtSize: fmtSize,

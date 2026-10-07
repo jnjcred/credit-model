@@ -1049,3 +1049,59 @@ Status står som en mærkat i designsystemets `.pill`: "Afventer godkendelse af 
 står som ét punkt pr. år med en grøn mærkat "Hentet automatisk", fordi rådgiveren ikke
 godkender dem. På mobil står mærkaten under titlen. Test: `hub.js da|en 1400|420`
 (scratchpad for session 2e448e6b, mappen `ob`).
+
+## Overblik: "Anmodet materiale" i stedet for "Afventer kunden" (7. oktober)
+
+Kortet hed "Afventer kunden", men indeholdt også det, der venter på rådgiverens
+gennemgang. Det hedder nu "Anmodet materiale" (`WSOutstandingCard` i workspace.jsx)
+og viser kun det, der stadig er åbent, i to grupper: "Til din gennemgang" (først) og
+"Hos kunden" (ikke sendt, afvist eller sendt videre til revisor/bank). Toppen af kortet
+viser "1 til gennemgang · 4 hos kunden". Godkendt materiale står kun under "Materiale
+på sagen", hvor kolonnen nu hedder "Godkendt fra kunden". Et punkt står dermed kun ét
+sted ad gangen. Sagens fase "Afventer kunden" er uændret. Test: `anmodet.js da|en`
+(scratchpad for session 2e448e6b, mappen `ob`).
+
+## Spørg kunden om offentlige data, og mail fra dialogen (7. oktober)
+
+- Under "Materiale på sagen → Offentlige data" har hvert dokument (årsrapporterne,
+  "Produkt, marked og branche", Trustpilot) et diskret "Spørg kunden", når anmodningen
+  er sendt. Det ruller ned til "Dialog med kunden" og vælger emnet i "Handler om".
+- "Handler om" har nu to grupper: "Anmodet materiale" (punkterne) og "Offentlige data"
+  (dokumenterne og CVR-registret). Emnet gemmes som `about` på spørgsmålet
+  (`CW.ask`/`CW.sendMessage` i case_state.js) og vises ved beskeden hos begge parter.
+- Rådgiveren kan sætte kryds i "Send også en mail til kunden": mailen bygges af beskeden
+  (emne "Vi har et spørgsmål til …" eller "Besked fra EIFO", link til kundens side) og
+  kan rettes, før den sendes, som ved "Stil spørgsmål til materialet". Mailen logges som
+  `dialog-mail`. Kunden har ikke valget.
+- Test: `askpub.js da|en` (scratchpad for session 2e448e6b, mappen `ob`).
+
+## Anmod om materiale uden mail (7. oktober)
+
+I "Anmod om materiale" (og ved opdateringer) står "Send en mail til {navn} ({mail})"
+med kryds som standard. Uden kryds skjules mailen. Ved første anmodning vises linket
+med "Kopiér link", fordi kunden først ser anmodningen, når rådgiveren selv giver dem
+linket. Knappen hedder "Opret uden mail" (første gang) eller "Gem ændringen"
+(opdatering). Valget gemmes i kladden (`draft.sendMail`) og nulstilles efter
+afsendelse. Anmodningen og dens historik får `noMail`, loggen siger "Anmodning
+oprettet uden mail til …", og en opdatering uden mail står som "Anmodningen er ændret
+uden mail til kunden: tilføjet …". Test: `nomail.js da|en` (scratchpad for session
+2e448e6b, mappen `ob`).
+
+## Kunden svarer på spørgsmål til materialet (7. oktober)
+
+Når rådgiveren stiller et spørgsmål til et punkt (`CW.reject`, status `rejected`), står det ikke længere som en rød fejl i kundens portal.
+
+- **Oversigten.** Rækken har et blåt "!" (`PortalAskMark`, `.cwp-ask`), teksten "Mette spørger: …" og knappen "Svar". Skærmlæsere hører "Spørgsmål fra Mette".
+- **Punktets side.** Spørgsmålet står i en rolig blå boks med svarfeltet (`PortalQuestion`, `.cwp-question`). Et svar alene er nok, og knappen hedder så "Send svar". Kunden kan også tilføje en fil. Filerne, der allerede er sendt, står stadig og gælder stadig: en ny fil lægges til og afløser ikke de gamle. Landefordelingen har sin egen "Send svar" i boksen, og et svar skrevet der følger med, hvis kunden i stedet gemmer skemaet.
+- **Data.** `CW.answerItem(id, text, { by })` gemmer `answer` og `question` på punktet og sætter det til gennemgang igen: `received`, eller `noted` hvis punktet kun havde en bemærkning. Det rører ikke `note`/`noteKind`, så en hentet kilde ("Hentet fra e-conomic") står urørt.
+  - `markReceived` gemmer også teksten som `answer`, når der sendes tekst efter et spørgsmål. Svaret følger punktet ved senere uploads, indtil der kommer et nyt spørgsmål.
+  - `markNoted` nulstiller svaret.
+  - Et svar kan ikke fortrydes som helhed (`csCanUndo`), for det ville også trække de tidligere filer tilbage.
+  - Fjerner kunden den sidste fil, mens der står et spørgsmål eller et svar, bliver spørgsmålet eller svaret stående.
+  - Et svar kun med fil bevarer de sendte filers bemærkning eller kilde.
+  - `markReceived` overskriver ikke længere `noteKind` med `undefined`, når et kald sender nøglen uden værdi (det gjorde `finish` i portalen, så hentede periodetal mistede kilden ved en ekstra fil).
+  - En fil med samme navn og størrelse som en, punktet allerede har, lægges ikke ind igen.
+  - "Tag tilbage" fra revisor eller bank efter et spørgsmål sætter spørgsmålet og filerne tilbage i stedet for at nulstille punktet.
+  - Landefordelingen kræver noget nyt efter et spørgsmål, og en fil fjernet i skemaet fjernes rigtigt, når kunden sender.
+- **Rådgiveren.** Under punktet står "Dit spørgsmål: …" og "Kundens svar: …". Svarer rådgiveren i forhåndsvisningen, står det i historikken som "Rådgiveren svarede for kunden".
+- **Test.** `ans_test.js` i scratchpad: 40/40 på dansk og engelsk, og ingen vandret scroll ved 375 px.

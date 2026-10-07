@@ -162,6 +162,8 @@ function csRemoveOwnFile(itemId, file) {
 function csCanUndo(s) {
   if (!s || s.status === 'approved' || s.status === 'rejected') return false;
   if ((s.by || 'kunde') !== 'kunde') return false;
+  // Et svar på rådgiverens spørgsmål: fortryd ville også trække de tidligere filer tilbage
+  if (s.answer) return false;
   return (s.files || []).every(f => (f.by || s.by) === 'kunde');
 }
 function csConfirmUndo(itemId) {
@@ -351,7 +353,7 @@ const CS_TRADE_ACCEPT = '.pdf,.xlsx,.xls,.csv';
  * med, så kunden kun retter det, Mette bad om. "Færdig" kræver, at summen er
  * 100 %, eller at kunden har vedhæftet en rapport i stedet for at udfylde.
  */
-function CWTradeForm({ itemId, onDone, onCancel, idPrefix, doneLabel }) {
+function CWTradeForm({ itemId, onDone, onCancel, idPrefix, doneLabel, answer }) {
   CW.useCase();
   const s = CW.itemState(itemId);
   const pid = (idPrefix || 'cs') + '-trade';
@@ -410,7 +412,9 @@ function CWTradeForm({ itemId, onDone, onCancel, idPrefix, doneLabel }) {
   const sumWarn = sum > 0 && !sumOk;
   const fileCount = kept.length + staged.length + current.length;
   // Med en rapport er skemaet valgfrit: et halvt udfyldt skema blokerer ikke, men sendes kun med, når summen er 100 %
-  const canSave = fileCount > 0 || (rows.length > 0 && sumOk);
+  // Efter et spørgsmål kræver "Færdig" noget nyt: en fil, et ændret skema, en fjernet fil eller et svar
+  const fresh = staged.length > 0 || !!answer || JSON.stringify(rows) !== JSON.stringify(prevRows) || kept.length !== ((s && s.files) || []).length;
+  const canSave = (fileCount > 0 || (rows.length > 0 && sumOk)) && (!rejected || fresh);
   const sendRows = rows.length > 0 && sumOk;
 
   const onKey = (e) => {
@@ -423,9 +427,12 @@ function CWTradeForm({ itemId, onDone, onCancel, idPrefix, doneLabel }) {
   const save = () => {
     if (!canSave) return;
     const metas = staged; // lagt i fillageret, da de blev valgt
+    // Efter et spørgsmål står de sendte filer stadig; dem, kunden har fjernet her, fjernes nu
+    if (rejected) ((s && s.files) || []).filter(f => !kept.some(k => k.id === f.id)).forEach(f => CW.removeFile(itemId, f.id, 'kunde'));
     csClearDraft(itemId);
     const answers = sendRows ? { countries: rows.map(x => ({ code: x.c, name: x.n, pct: Math.round(num(x.v) * 10) / 10 })) } : null;
-    CW.markReceived(itemId, { by: 'kunde', files: rejected ? kept.concat(metas) : metas, answers, note: '' });
+    // answer: kundens svar på rådgiverens spørgsmål, skrevet i portalens boks over skemaet
+    CW.markReceived(itemId, { by: 'kunde', files: metas, answers, note: answer || '' });
     const it = CW.itemById(itemId);
     CW.toast(csFill(t('{punkt} er sendt til {navn}'), { punkt: it ? t(it.label) : '', navn: csFirst(csAdvisor().name) }));
     onDone && onDone();
@@ -518,7 +525,7 @@ function CWTradeForm({ itemId, onDone, onCancel, idPrefix, doneLabel }) {
               <li key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 0' }}>
                 <I.File size={13} style={{ color: 'var(--c-text-3)' }}/><span style={{ flex: 1, minWidth: 0, wordBreak: 'break-all' }}>{f.name}</span>
                 <span className="muted" style={{ fontSize: 12 }}>{t('Sendes med igen')}</span>
-                {(f.by || 'kunde') === 'kunde' && <button type="button" className="btn btn-sm btn-ghost" onClick={() => cwConfirmRemove(f.name, t('Filen er ikke sendt endnu.')).then(ok => { if (ok) setKept(p => p.filter(x => x.id !== f.id)); })} aria-label={csFill(t('Fjern {navn}'), { navn: f.name })}><I.X size={11}/></button>}
+                {(f.by || 'kunde') === 'kunde' && <button type="button" className="btn btn-sm btn-ghost" onClick={() => cwConfirmRemove(f.name, t('Filen fjernes, når I sender punktet.')).then(ok => { if (ok) setKept(p => p.filter(x => x.id !== f.id)); })} aria-label={csFill(t('Fjern {navn}'), { navn: f.name })}><I.X size={11}/></button>}
               </li>
             ))}
             {staged.map((f, i) => (
@@ -547,6 +554,14 @@ function CWTradeForm({ itemId, onDone, onCancel, idPrefix, doneLabel }) {
 
 /* ── Samtalen mellem kunde og rådgiver ───────────────────────────────────── */
 
+// Emnet på en besked uden for punkterne gemmes på dansk (fx "Årsrapport 2024") og oversættes, når det vises
+function csAboutLabel(about) {
+  if (!about) return '';
+  const m = /^Årsrapport (\d{4})$/.exec(about);
+  return m ? t('Årsrapport') + ' ' + m[1] : t(about);
+}
+
+
 /**
  * Én samtale pr. sag, i tidsorden med den nyeste nederst, ens for kunde og rådgiver.
  * side: 'kunde' (portalen og statussiden) eller 'rådgiver' (sagens Overblik).
@@ -566,7 +581,30 @@ function CWConversation({ side, idPrefix, compact, readOnly, variant, bare, note
   const preview = !!(CW.isPreview && CW.isPreview());
   const [text, setText] = React.useState('');
   const [itemId, setItemId] = React.useState('');
+  // Emne uden for punkterne (rådgiverens side), fx "Årsrapport 2024" fra de offentlige data
+  const [about, setAbout] = React.useState('');
   const listRef = React.useRef(null);
+  const taRef = React.useRef(null);
+  const advisorSide = side === 'rådgiver';
+  const request = CW.request();
+  // Mail til kunden (rådgiverens side, når anmodningen er sendt): som ved "Stil spørgsmål til materialet"
+  const canMail = advisorSide && !!request && !readOnly;
+  const [sendMail, setSendMail] = React.useState(false);
+  const [subjectEdit, setSubjectEdit] = React.useState(null);
+  const [bodyEdit, setBodyEdit] = React.useState(null);
+  const publicTopics = advisorSide && typeof wsPublicTopics === 'function' ? wsPublicTopics() : [];
+
+  // "Spørg kunden" ved de offentlige data (workspace.jsx) åbner samtalen med emnet valgt
+  React.useEffect(() => {
+    if (!advisorSide) return;
+    const onAsk = (e) => {
+      setAbout((e.detail && e.detail.about) || ''); setItemId('');
+      const el = taRef.current;
+      if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); setTimeout(() => { try { el.focus({ preventScroll: true }); } catch (x) {} }, 250); }
+    };
+    window.addEventListener('cw-ask-about', onAsk);
+    return () => window.removeEventListener('cw-ask-about', onAsk);
+  }, [advisorSide]);
 
   // Beskeder, der var ulæste, da samtalen blev vist. Huskes, så skillelinjen ikke
   // forsvinder i samme øjeblik, beskederne markeres som set.
@@ -585,16 +623,34 @@ function CWConversation({ side, idPrefix, compact, readOnly, variant, bare, note
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs.length]);
 
+  // Mailen: emne og tekst bygges af beskeden og kan rettes, før den sendes
+  const topic = itemId ? (CW.itemById(itemId) ? t(CW.itemById(itemId).label) : '') : about ? csAboutLabel(about) : '';
+  const mailBase = canMail ? CW.requestMail({ items: [], deadline: request.deadline, to: { name: request.to && request.to.name, email: request.to && request.to.email }, link: request.link }) : null;
+  const defSubject = mailBase ? (topic ? csFill(t('Vi har et spørgsmål til {item}'), { item: topic }) : t('Besked fra EIFO')) + ' · ' + mailBase.caseLine : '';
+  const defBody = mailBase ? [
+    mailBase.greeting, '',
+    text.trim() || t('[Din besked]'), '',
+    t('I kan svare direkte på jeres side hos EIFO:'),
+    mailBase.link, '',
+    adv.name,
+  ].join('\n') : '';
+  const mailSubject = subjectEdit != null ? subjectEdit : defSubject;
+  const mailBody = bodyEdit != null ? bodyEdit : defBody;
+
   function send() {
     const txt = text.trim();
     if (!txt) return;
     // I forhåndsvisningen af kundesiden er det rådgiveren, der skriver (fx svarer derinde ved en fejl)
     const asAdvisor = side === 'kunde' && preview;
-    CW.sendMessage(asAdvisor ? 'rådgiver' : side, txt, itemId || null);
+    if (canMail && sendMail && !mailBody.trim()) return;
+    CW.sendMessage(asAdvisor ? 'rådgiver' : side, txt, itemId || null, (!itemId && about) || null);
+    const mailed = canMail && sendMail;
+    if (mailed) CW.log('dialog-mail', csFill(t('Mail sendt til {to}: {subject}'), { to: (request.to && (request.to.name || request.to.email)) || t('kunden'), subject: mailSubject }), { who: 'rådgiver', itemId: itemId || null });
     CW.markConversationRead(side);
     fresh.current = new Set();
-    setText(''); setItemId('');
-    CW.toast(side === 'kunde' && !asAdvisor ? csFill(t('Beskeden er sendt til {navn}'), { navn: advFirst }) : t('Beskeden er sendt til kunden'));
+    setText(''); setItemId(''); setAbout(''); setSendMail(false); setSubjectEdit(null); setBodyEdit(null);
+    CW.toast(side === 'kunde' && !asAdvisor ? csFill(t('Beskeden er sendt til {navn}'), { navn: advFirst })
+      : mailed ? t('Beskeden er sendt, og kunden har fået en mail.') : t('Beskeden er sendt til kunden'));
   }
 
   // Hvem skrev? Beskeder skrevet i forhåndsvisningen er rådgiverens (D11).
@@ -640,7 +696,7 @@ function CWConversation({ side, idPrefix, compact, readOnly, variant, bare, note
                   {fresh.current.has(m.key) && <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--c-primary)', background: 'var(--c-primary-soft, rgba(52,80,220,0.1))', borderRadius: 999, padding: '0 7px', lineHeight: '17px' }}>{t('Nyt')}</span>}
                   {a.tag && <span>{a.tag}</span>}
                   <span title={CW.fmtWhen(m.at)}>{csShortDate(m.at)}</span>
-                  {it && <span>· {t(it.label)}</span>}
+                  {(it || m.about) && <span>· {it ? t(it.label) : csAboutLabel(m.about)}</span>}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--c-text)', lineHeight: 1.55, marginTop: 2, whiteSpace: 'pre-wrap' }}>{m.text}</div>
               </div>
@@ -654,7 +710,7 @@ function CWConversation({ side, idPrefix, compact, readOnly, variant, bare, note
   const composer = !readOnly && (
     <div style={{ padding: bare ? '10px 0 4px' : '12px 18px 14px', borderTop: bare && !msgs.length ? 0 : '1px solid var(--c-line-2)' }}>
       <label htmlFor={pid + '-msg'} style={csVisuallyHidden}>{side === 'kunde' ? csFill(t('Besked til {navn}'), { navn: advFirst }) : t('Besked til kunden')}</label>
-      <textarea id={pid + '-msg'} className="input" rows={2} value={text} onChange={e => setText(e.target.value)} aria-keyshortcuts="Control+Enter"
+      <textarea ref={taRef} id={pid + '-msg'} className="input" rows={2} value={text} onChange={e => setText(e.target.value)} aria-keyshortcuts="Control+Enter"
         onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); } }}
         placeholder={side === 'kunde' ? (preview ? t('Skriv som rådgiver') : csFill(t('Skriv til {navn}'), { navn: advFirst })) : t('Skriv til kunden')}
         style={{ width: '100%', height: 'auto', padding: '8px 10px', resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit', fontSize: 13, boxSizing: 'border-box', background: '#fff' }}
@@ -662,16 +718,52 @@ function CWConversation({ side, idPrefix, compact, readOnly, variant, bare, note
       {note && <div id={pid + '-msg-note'} style={{ fontSize: 12.5, color: 'var(--c-text-3)', marginTop: 4, lineHeight: 1.5 }}>{note}</div>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
         <label htmlFor={pid + '-msg-item'} style={{ fontSize: 12.5, color: 'var(--c-text-2)' }}>{t('Handler om')}</label>
-        <select id={pid + '-msg-item'} className="input" value={itemId} onChange={e => setItemId(e.target.value)} style={{ height: 30, fontSize: 12.5, width: 'auto', maxWidth: '100%' }}>
+        <select id={pid + '-msg-item'} className="input" value={itemId || (about ? 'about:' + about : '')}
+          onChange={e => { const v = e.target.value; if (v.indexOf('about:') === 0) { setAbout(v.slice(6)); setItemId(''); } else { setItemId(v); setAbout(''); } }}
+          style={{ height: 30, fontSize: 12.5, width: 'auto', maxWidth: '100%' }}>
           <option value="">{t('Sagen generelt')}</option>
-          {requested.map(it => <option key={it.id} value={it.id}>{t(it.label)}</option>)}
+          {publicTopics.length > 0 && requested.length > 0
+            ? <optgroup label={t('Anmodet materiale')}>{requested.map(it => <option key={it.id} value={it.id}>{t(it.label)}</option>)}</optgroup>
+            : requested.map(it => <option key={it.id} value={it.id}>{t(it.label)}</option>)}
+          {publicTopics.length > 0 && (
+            <optgroup label={t('Offentlige data')}>
+              {publicTopics.map(a => <option key={a} value={'about:' + a}>{csAboutLabel(a)}</option>)}
+            </optgroup>
+          )}
+          {/* Et emne, der ikke står på listerne (fx et dokument, der er slettet siden) */}
+          {about && publicTopics.indexOf(about) < 0 && <option value={'about:' + about}>{csAboutLabel(about)}</option>}
         </select>
         <div style={{ flex: 1 }}/>
         {/* Først primær, når der er skrevet noget; ellers er sidens egen næste-knap den eneste blå */}
         <button type="button" className={'btn btn-sm' + (text.trim() ? ' btn-primary' : '')} disabled={!text.trim()} onClick={send} title={t('Ctrl+Enter sender')} style={!text.trim() ? { opacity: 0.5, cursor: 'not-allowed' } : null}>
-          <I.Send size={12}/> {t('Send')}
+          <I.Send size={12}/> {canMail && sendMail ? t('Send besked og mail') : t('Send')}
         </button>
       </div>
+      {canMail && (
+        <div className="cs-conv-mail">
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, lineHeight: 1.5, cursor: 'pointer' }}>
+            <input type="checkbox" checked={sendMail} onChange={e => setSendMail(e.target.checked)} style={{ accentColor: 'var(--c-primary)', margin: '3px 0 0' }}/>
+            <span>{csFill(t('Send også en mail til kunden ({email})'), { email: (request.to && request.to.email) || t('kunden') })}</span>
+          </label>
+          {sendMail && (
+            <>
+              <div style={{ border: '1px solid var(--c-line-strong)', borderRadius: 8, overflow: 'hidden', background: '#fff', marginTop: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '56px 1fr', alignItems: 'center', gap: '0 12px', padding: '0 12px', borderBottom: '1px solid var(--c-line)' }}>
+                  <label htmlFor={pid + '-mail-subject'} style={{ color: 'var(--c-text-2)', fontSize: 13 }}>{t('Emne')}</label>
+                  <input id={pid + '-mail-subject'} value={mailSubject} onChange={e => setSubjectEdit(e.target.value)}
+                    style={{ height: 36, border: 0, padding: 0, font: 'inherit', fontSize: 13, minWidth: 0, background: 'transparent', outline: 'none', color: 'var(--c-ink)' }}/>
+                </div>
+                <textarea aria-label={t('Mailens tekst')} value={mailBody} rows={8} onChange={e => setBodyEdit(e.target.value)}
+                  style={{ display: 'block', width: '100%', boxSizing: 'border-box', border: 0, padding: 12, font: 'inherit', fontSize: 13, lineHeight: 1.6, resize: 'vertical', minHeight: 160, outline: 'none', color: 'var(--c-ink)' }}/>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginTop: 6, fontSize: 12, color: 'var(--c-text-3)' }}>
+                <span>{bodyEdit == null ? t('Mailen følger din besked. Ret den her, hvis den skal lyde anderledes.') : ''}</span>
+                {(subjectEdit != null || bodyEdit != null) && <button type="button" className="ws-req-ghost" onClick={() => { setSubjectEdit(null); setBodyEdit(null); }}>{t('Gendan standardtekst')}</button>}
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 
