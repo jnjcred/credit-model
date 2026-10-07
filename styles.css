@@ -596,7 +596,7 @@ button { font-family: inherit; }
   text-align: center; padding: 10px 10px 4px;
   color: var(--c-text-3);
 }
-.fin-tbl thead .fin-hd { font-size: 12px; font-weight: 500; text-align: right; padding-bottom: 8px; }
+.fin-tbl thead .fin-hd { font-size: 13px; font-weight: 500; text-align: right; padding-bottom: 8px; }
 .fin-tbl thead tr:last-child th { border-bottom: 1px solid var(--c-line); }
 
 /* Klæbende etiketkolonne, så rækkenavne bliver stående ved vandret scroll */
@@ -1063,6 +1063,14 @@ button.user-chip .meta span { display: block; }
 /* Udestående: en gruppe pr. tilstand med antal, streg mellem grupperne */
 .ws-out-body { padding: 12px 22px 8px; }
 .ws-out-grp + .ws-out-grp { border-top: 1px solid var(--c-line-2); margin-top: 4px; padding-top: 12px; }
+/* Anmodet materiale: "1 til gennemgang · 4 hos kunden" til højre i kortets top */
+/* "Spørg kunden" ved de offentlige dokumenter: diskret, til højre i rækken */
+.ws-ask-pub { margin-left: auto; padding: 0 2px; border: 0; background: none; font: inherit; font-size: 12.5px; color: var(--c-text-3); cursor: pointer; white-space: nowrap; }
+.ws-ask-pub:hover, .ws-ask-pub:focus-visible { color: var(--c-primary); text-decoration: underline; }
+.cs-conv-mail { margin-top: 10px; }
+/* Anmod om materiale uden mail: linket, rådgiveren selv giver kunden */
+.ws-req-nomail { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 12px; background: var(--c-surface-2); border: 1px solid var(--c-line); border-radius: 8px; font-size: 13px; color: var(--c-text-2); line-height: 1.5; overflow-wrap: anywhere; }
+.ws-out-sum { margin-left: auto; font-size: 12.5px; color: var(--c-text-2); white-space: nowrap; }
 .ws-out-grp-head { display: flex; align-items: center; gap: 8px; min-height: 26px; }
 .ws-out-grp-h { flex: 1; margin: 0; font-size: 13.5px; font-weight: 600; color: var(--c-ink); }
 .ws-out-grp-h .n { font-weight: 400; color: var(--c-text-3); }
@@ -1502,3 +1510,9 @@ a.ws-mat-fname:hover { text-decoration: underline; text-underline-offset: 2px; }
 .ws-inote-foot button { padding: 1px 6px; border: 0; border-radius: 4px; background: transparent; font: inherit; font-size: 11.5px; color: var(--c-text-2); cursor: pointer; }
 .ws-inote-foot button:hover, .ws-inote-foot button:focus-visible { background: var(--c-surface-2); color: var(--c-ink); }
 .ws-inote-foot button.on { font-weight: 600; color: var(--c-ink); }
+
+/* Portalen, 7. oktober: rådgiverens spørgsmål til et punkt er et blåt "!" og
+   en rolig boks med svarfeltet, ikke en rød fejl. */
+.cwp-ask { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--c-primary); background: #fff; color: var(--c-primary); display: grid; place-items: center; flex-shrink: 0; box-sizing: border-box; font-size: 12.5px; font-weight: 700; line-height: 1; font-family: var(--font); }
+.cwp-question { margin: 0 0 18px; padding: 14px 16px; background: var(--c-primary-bg); border: 1px solid #d3e0fb; border-radius: 12px; }
+.cwp-question .field label { font-size: 12.5px; font-weight: 500; color: var(--c-text-2); }

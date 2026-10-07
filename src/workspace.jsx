@@ -1391,9 +1391,11 @@ function wsWhoName(who) {
 
 // En opdatering uden nye punkter sendes ikke som mail; loggen siger det
 function wsActivityText(e) {
-  if (e.type === 'request-updated' && e.data && !(e.data.added || []).length) {
-    const rem = (e.data.removed || []).map(id => { const it = CW.itemById(id); return it ? t(it.label) : id; });
-    return t('Anmodningen er ændret uden mail til kunden') + (rem.length ? ': ' + t('fjernet') + ' ' + rem.join(', ') : '');
+  if (e.type === 'request-updated' && e.data && (e.data.noMail || !(e.data.added || []).length)) {
+    const lbl = id => { const it = CW.itemById(id); return it ? t(it.label) : id; };
+    const add = (e.data.added || []).map(lbl), rem = (e.data.removed || []).map(lbl);
+    const parts = [add.length ? t('tilføjet') + ' ' + add.join(', ') : '', rem.length ? t('fjernet') + ' ' + rem.join(', ') : ''].filter(Boolean);
+    return t('Anmodningen er ændret uden mail til kunden') + (parts.length ? ': ' + parts.join('; ') : '');
   }
   return e.text;
 }
@@ -1450,6 +1452,19 @@ function wsPublicDataDay() {
   return wsPublicDataDate();
 }
 
+// Emner fra de offentlige data, som rådgiveren kan spørge kunden om (gemmes på dansk)
+function wsPublicTopics() {
+  const reports = ((DATA.FINANCIALS && DATA.FINANCIALS.years) || []).filter(y => /^\d{4}$/.test(y));
+  return reports.map(y => 'Årsrapport ' + y).concat(['CVR-registret'], AUTO_SOURCES.filter(x => x.docs).reduce((a, x) => a.concat(x.docs.map(o => o.label)), []));
+}
+window.wsPublicTopics = wsPublicTopics;
+// Åbn samtalen med kunden med emnet valgt (CWConversation lytter efter beskeden)
+function wsAskAbout(about) {
+  const card = document.getElementById('ws-dialog');
+  if (card) card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  window.dispatchEvent(new CustomEvent('cw-ask-about', { detail: { about } }));
+}
+
 // De tre offentlige kilder. CVR-registret har årsrapporterne, som kan åbnes under Dokumenter.
 function WSPublicSources({ go, caseId }) {
   const reportDoc = (y) => (window.CASE_DOCS || []).find(d => d.type === 'Årsrapport' && String(d.year) === String(y));
@@ -1466,8 +1481,8 @@ function WSPublicSources({ go, caseId }) {
             {(() => {
               // Årsrapporterne fra CVR, eller kildens egne dokumenter (eksporterne)
               const items = x.reports
-                ? reports.map(y => ({ key: y, label: t('Årsrapport') + ' ' + y, doc: reportDoc(y) }))
-                : (x.docs || []).map(o => ({ key: o.name, label: t(o.label), doc: (window.CASE_DOCS || []).concat(window.CW_EXPORT_DOCS || []).find(d => d.name === o.name) }));
+                ? reports.map(y => ({ key: y, label: t('Årsrapport') + ' ' + y, about: 'Årsrapport ' + y, doc: reportDoc(y) }))
+                : (x.docs || []).map(o => ({ key: o.name, label: t(o.label), about: o.label, doc: (window.CASE_DOCS || []).concat(window.CW_EXPORT_DOCS || []).find(d => d.name === o.name) }));
               if (!items.length) return null;
               return (
                 <ul style={{ listStyle: 'none', margin: '4px 0 0', padding: 0 }}>
@@ -1487,6 +1502,9 @@ function WSPublicSources({ go, caseId }) {
                         {url ? <a className="btn-link" href={url} download={d.name} title={t('Download')}>{it.label}</a>
                           : d ? <button type="button" className="btn-link" title={t('Download')} onClick={() => CW.downloadDoc(d.name)}>{it.label}</button>
                           : <span>{it.label}</span>}
+                        {/* Spørgsmål til kunden om dokumentet: samtalen nederst åbnes med emnet valgt */}
+                        {CW.request() && <button type="button" className="ws-ask-pub" onClick={() => wsAskAbout(it.about)}
+                          aria-label={wsFill(t('Stil kunden et spørgsmål om {item}'), { item: it.label })}>{t('Spørg kunden')}</button>}
                       </li>
                     );
                   })}
@@ -1557,11 +1575,11 @@ function wsDraft(caseData) {
   let deadline = CW.workdaysFromNow(7);
   const cd = wsCaseDeadline(caseData);
   if (cd && cd < deadline && !CW.isPast(cd)) deadline = cd;
-  const base = { v: WS_DRAFT_V, name: r.name || '', role: (r.role || '').split(',')[0].trim(), email: r.email || '', deadline, message: null, notifyRemoved: true };
+  const base = { v: WS_DRAFT_V, name: r.name || '', role: (r.role || '').split(',')[0].trim(), email: r.email || '', deadline, message: null, notifyRemoved: true, sendMail: true };
   const d = CW.draft();
   if (!d) return base;
   const out = { ...base, name: d.name != null ? d.name : base.name, role: d.role != null ? d.role : base.role, email: d.email != null ? d.email : base.email };
-  if (d.v === WS_DRAFT_V) { out.deadline = d.deadline != null ? d.deadline : base.deadline; out.message = d.message != null ? d.message : null; out.subject = d.subject != null ? d.subject : null; out.body = d.body != null ? d.body : null; out.notifyRemoved = d.notifyRemoved !== false; }
+  if (d.v === WS_DRAFT_V) { out.deadline = d.deadline != null ? d.deadline : base.deadline; out.message = d.message != null ? d.message : null; out.subject = d.subject != null ? d.subject : null; out.body = d.body != null ? d.body : null; out.notifyRemoved = d.notifyRemoved !== false; out.sendMail = d.sendMail !== false; }
   return out;
 }
 function wsSetDraft(patch, caseData) { CW.setDraft({ ...wsDraft(caseData), ...patch, v: WS_DRAFT_V }); }
@@ -1610,7 +1628,7 @@ function wsDoSend(c, caseData) {
   const added = c.diff ? c.diff.added.length : 0;
   const removedN = c.diff ? c.diff.removed.filter(it => !CW.isReceived(it.id)).length : 0;
   const notifyRemoved = c.draft.notifyRemoved !== false;
-  const noMail = !first && added === 0 && !(removedN > 0 && notifyRemoved);
+  const noMail = c.draft.sendMail === false || (!first && added === 0 && !(removedN > 0 && notifyRemoved));
   const prevRequest = c.request ? JSON.parse(JSON.stringify(c.request)) : null;
   CW.sendRequest({ deadline: c.draft.deadline, to, noMail, notifyRemoved });
   wsSetDraft({ deadline: c.draft.deadline, message: null }, caseData);
@@ -1629,7 +1647,7 @@ function wsDoSend(c, caseData) {
           CW.focusSoon('#ws-material-title');
         });
       };
-      CW.toast(wsFill(t('Anmodning sendt til {email}'), { email: to.email }), { action: { label: t('Fortryd'), onClick: undo } });
+      CW.toast(noMail ? t('Anmodningen er oprettet uden mail. Giv selv kunden linket.') : wsFill(t('Anmodning sendt til {email}'), { email: to.email }), { action: { label: t('Fortryd'), onClick: undo } });
     } else {
       // Fortryd en opdatering: den tidligere anmodning gælder igen, og
       // ændringerne ligger tilbage i kladden
@@ -1640,9 +1658,8 @@ function wsDoSend(c, caseData) {
         CW.toast(t('Opdateringen er fortrudt. Ændringerne ligger igen i kladden.'), { tone: 'info' });
         CW.focusSoon('#ws-hero-title');
       };
-      CW.toast(added
-        ? wsFill(wsPlural(added, t('Opdatering sendt til {email} med 1 nyt punkt'), t('Opdatering sendt til {email} med {n} nye punkter')), { email: to.email })
-        : noMail ? t('Anmodningen er opdateret uden mail. Kundens side viser ændringen.')
+      CW.toast(noMail ? t('Anmodningen er opdateret uden mail. Kundens side viser ændringen.')
+        : added ? wsFill(wsPlural(added, t('Opdatering sendt til {email} med 1 nyt punkt'), t('Opdatering sendt til {email} med {n} nye punkter')), { email: to.email })
         : wsFill(t('Opdatering sendt til {email}: punkter er fjernet'), { email: to.email }),
         { action: { label: t('Fortryd'), onClick: undoUpdate } });
     }
@@ -1675,7 +1692,7 @@ function wsSelectorStatus(it, sel, request, st) {
   if (!s) return { label: t('Sendt'), color: 'var(--c-text-2)' };
   if (s.status === 'approved') return { label: t('Godkendt'), color: 'var(--c-success)' };
   if (s.status === 'received' || s.status === 'noted') return { label: t('Modtaget'), color: 'var(--c-primary)' };
-  if (s.status === 'rejected') return { label: t('Afvist'), color: 'var(--c-danger)' };
+  if (s.status === 'rejected') return { label: t('Spørgsmål stillet'), color: 'var(--c-danger)' };
   return { label: t('Sendt'), color: 'var(--c-text-2)' };
 }
 
@@ -1718,7 +1735,7 @@ function wsToggleMaterial(it) {
   if (s.status === 'received' || s.status === 'noted') {
     CW.confirm({
       title: wsFill(t('Gennemgå "{item}" først'), { item: t(it.label) }),
-      text: t('Kunden har sendt punktet, men du har ikke gennemgået det. Godkend eller afvis det under Udestående, før du fravælger det.'),
+      text: t('Kunden har sendt punktet, men du har ikke gennemgået det. Godkend det eller stil et spørgsmål til materialet under Udestående, før du fravælger det.'),
       confirmLabel: t('Gå til punktet'),
     }).then(r => {
       if (!r.ok) return;
@@ -1787,7 +1804,15 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
   const whyOf = it => hasOnFile(it) ? t('Opdateret version.') : t(it.why || '');
   const removedList = removedItems.map((it, n) => (n + 1) + '. ' + t(it.label)).join('\n');
   const noNew = request && mailItems.length === 0;
-  const showMail = !(request && mailItems.length === 0 && !notifyRemoved);   // intet at skrive til kunden: ingen mail
+  const hasMail = !(request && mailItems.length === 0 && !notifyRemoved);   // intet at skrive til kunden: ingen mail
+  // Rådgiveren kan altid lade være med at sende mailen (fx fordi de selv ringer eller skriver til kunden)
+  const wantMail = draft.sendMail !== false;
+  const showMail = hasMail && wantMail;
+  const reqLink = 'https://' + ((request && request.link) || (DATA.REQUEST_LINK || 'crediwire.app/c/nh-9j2k-7Aq3'));
+  const copyLink = () => {
+    const done = () => CW.toast(t('Linket er kopieret.'));
+    try { navigator.clipboard.writeText(reqLink).then(done, done); } catch (e) { done(); }
+  };
   const defBody = (noNew ? [
     mail.greeting, '',
     t('Vi skal alligevel ikke bruge følgende materiale, så I behøver ikke at sende det:'), '',
@@ -1836,10 +1861,10 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
     setTried(true);
     const c = wsDraftCheck(caseData);
     if (c.error) { if (/navn|mail|frist/i.test(c.error)) setEditRec(true); return; }
-    const info = { name: c.draft.name.trim(), count: mailItems.length, deadline: c.draft.deadline, update: !!request };
+    const info = { name: c.draft.name.trim(), count: mailItems.length, deadline: c.draft.deadline, update: !!request, noMail: !showMail };
     if (c.noRequired) { wsSendRequest(caseData); onClose(); return; }
     wsDoSend(c, caseData);
-    wsSetDraft({ subject: null, body: null }, caseData);
+    wsSetDraft({ subject: null, body: null, sendMail: true }, caseData);
     onSent && onSent(info);
     setView('sent');
   };
@@ -1922,7 +1947,7 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
   };
 
   const title = (sent ? sent.update : request) ? t('Ret i anmodningen') : t('Anmod om materiale');
-  const subtitle = view === 'sent' ? t('Kunden har fået mailen og kan uploade materialet via linket.')
+  const subtitle = view === 'sent' ? (sent && sent.noMail ? t('Der er ikke sendt en mail. Kunden ser anmodningen via linket.') : t('Kunden har fået mailen og kan uploade materialet via linket.'))
     : view === 'preview' ? t('Tjek modtager og mail, før du sender.')
     : t('Vælg det materiale, du vil have fra kunden.');
 
@@ -1941,10 +1966,18 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
         {view === 'sent' && sent && (
           <div style={{ padding: '44px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, textAlign: 'center' }}>
             <I.CheckCircle size={34} aria-hidden="true" style={{ color: 'var(--c-success)' }}/>
-            <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)' }}>{wsFill(sent.update ? t('Opdatering sendt til {name}') : t('Anmodning sendt til {name}'), { name: sent.name })}</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--c-ink)' }}>{sent.noMail
+              ? (sent.update ? t('Anmodningen er opdateret uden mail') : wsFill(t('Anmodningen til {name} er oprettet uden mail'), { name: sent.name }))
+              : wsFill(sent.update ? t('Opdatering sendt til {name}') : t('Anmodning sendt til {name}'), { name: sent.name })}</div>
             <div style={{ fontSize: 13.5, color: 'var(--c-text-2)' }}>
               {wsFill(t('{items} · svarfrist {date}. Du kan følge svarene i sagen.'), { items: wsPlural(sent.count, t('1 punkt'), t('{n} punkter')), date: CW.fmtDate(sent.deadline) })}
             </div>
+            {sent.noMail && !sent.update && (
+              <div className="ws-req-nomail" style={{ marginTop: 6 }}>
+                <span>{t('Giv selv kunden linket:')} <b style={{ fontWeight: 500, color: 'var(--c-ink)' }}>{reqLink}</b></span>
+                <button type="button" className="ws-req-ghost" onClick={copyLink}>{t('Kopiér link')}</button>
+              </div>
+            )}
             <button type="button" className="btn btn-sm" style={{ marginTop: 8 }} onClick={onClose}>{t('Tilbage til sagen')}</button>
           </div>
         )}
@@ -2060,6 +2093,21 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
                 </span>
               </label>
             )}
+            {hasMail && (
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13.5, lineHeight: 1.5, cursor: 'pointer' }}>
+                <input type="checkbox" id="ws-req-sendmail" checked={wantMail} onChange={e => wsSetDraft({ sendMail: e.target.checked }, caseData)} style={{ accentColor: 'var(--c-primary)', margin: '3px 0 0' }}/>
+                <span>{wsFill(t('Send en mail til {name} ({email})'), { name: draft.name || t('kunden'), email: draft.email || '' })}</span>
+              </label>
+            )}
+            {hasMail && !wantMail && (
+              <div className="ws-req-nomail">
+                <span>{request
+                  ? t('Der sendes ingen mail. Kundens side viser ændringen, næste gang kunden logger ind.')
+                  : t('Der sendes ingen mail. Kunden ser først anmodningen, når du selv giver dem linket:')}
+                  {!request && <> <b style={{ fontWeight: 500, color: 'var(--c-ink)' }}>{reqLink}</b></>}</span>
+                {!request && <button type="button" className="ws-req-ghost" onClick={copyLink}>{t('Kopiér link')}</button>}
+              </div>
+            )}
             {showMail && (
               <>
             <div style={{ border: '1px solid var(--c-line-strong)', borderRadius: 8, overflow: 'hidden', background: '#fff' }}>
@@ -2098,7 +2146,7 @@ function WSMaterialModal({ caseData, request, editing, onClose, onSent, sent }) 
               <>
                 <button type="button" className="btn btn-sm" onClick={() => { setTried(false); setView('list'); }}>{t('Tilbage')}</button>
                 <button type="button" id="ws-send-request" className="btn btn-sm btn-primary" aria-disabled={!!check.error} style={wsOff(!!check.error)} onClick={send}>
-                  {request ? (showMail ? t('Send opdatering') : t('Gem ændringen')) : wsFill(t('Send til {name}'), { name: first })}
+                  {request ? (showMail ? t('Send opdatering') : t('Gem ændringen')) : showMail ? wsFill(t('Send til {name}'), { name: first }) : t('Opret uden mail')}
                 </button>
               </>
             )}
@@ -2184,7 +2232,7 @@ function WSCustomerEvents() {
   if (CW.request() && !c) {
     const step = CW.onboardingStep(ob);
     const legacy = !ob.account && (() => { try { return !!JSON.parse(localStorage.getItem('kabul:portal:nordhavn') || '{}').accepted; } catch (e) { return false; } })();
-    if (!legacy && !ob.account) { /* ingen række: at kunden endnu ikke har oprettet en bruger står ikke i Afventer kunden */ }
+    if (!legacy && !ob.account) { /* ingen række: at kunden endnu ikke har oprettet en bruger står ikke i Anmodet materiale */ }
     else if (!legacy && step) rows.push({ k: 'ob', at: null, text: wsFill(t('Kunden er i gang med opstarten i portalen: {step} (trin {n} af {m}).'), { step: typeof obLabel === 'function' ? obLabel(step) : step, n: CW.ONBOARDING_STEPS.indexOf(step) + 1, m: CW.ONBOARDING_STEPS.length }) });
     else if (ob.agreement && ob.agreement.declined) rows.push({ k: 'ob', at: ob.agreement.at, text: wsFill(t('Kunden sagde nej til datadeling {when} og sender tallene selv.'), { when: wsDay(ob.agreement.at) }) });
     else if (ob.erp && ob.erp.waiting && !ob.sharing) rows.push({ k: 'ob', at: ob.erp.at, text: t('Kunden venter på sin revisor med regnskabssystemet og har ikke taget stilling til datadeling endnu.') });
@@ -2211,12 +2259,14 @@ function WSCustomerEvents() {
 }
 
 /**
- * Overblikkets to materialekort. "Udestående" (WSOutstandingCard) er det, der
- * kræver handling: det, kunden har sendt, og som venter på din gennemgang, og
- * det, kunden mangler at sende. "Materiale på sagen" (WSMaterialCard) er det,
- * sagen har: offentlige data til venstre (ca. 2/5) og det godkendte fra kunden
- * til højre. Et godkendt punkt flytter fra det første kort til det andet, og
- * Fortryd flytter det tilbage. Under ca. 900 px stables kolonnerne (styles.css).
+ * Overblikkets to materialekort. "Anmodet materiale" (WSOutstandingCard) er det,
+ * der stadig er åbent, delt efter hvem der skal handle: "Til din gennemgang"
+ * (kunden har sendt, du godkender eller beder om rettelse) og "Hos kunden" (ikke
+ * sendt endnu, afvist eller sendt videre til revisor/bank). "Materiale på sagen"
+ * (WSMaterialCard) er det, sagen har: offentlige data til venstre (ca. 2/5) og
+ * det godkendte fra kunden til højre. Et punkt står kun ét sted ad gangen: et
+ * godkendt punkt flytter fra det første kort til det andet, og Fortryd flytter det
+ * tilbage. Under ca. 900 px stables kolonnerne (styles.css).
  */
 
 // Hvor et af kundens punkter står: 'review' (venter på din gennemgang),
@@ -2287,16 +2337,16 @@ function WSOutstandingCard({ locked, caseData }) {
       {reminding && <WSRemindModal onClose={() => setReminding(false)}/>}
       <div className="card-head ws-mat-cardhead">
         <I.Inbox size={15} aria-hidden="true" style={{ color: 'var(--c-text-2)' }}/>
-        <h2 id="ws-outstanding-title" tabIndex={-1} className="card-title">{t('Afventer kunden')}{waiting.length > 0 && <span className="n"> ({waiting.length})</span>}</h2>
+        <h2 id="ws-outstanding-title" tabIndex={-1} className="card-title">{t('Anmodet materiale')}</h2>
       </div>
       <div className="ws-out-body">
         {/* Ændringer i anmodningen, der ikke er sendt, og kundens hændelser */}
         <WSDraftBar caseData={caseData}/>
         <WSCustomerEvents/>
         {empty && <div className="ws-mat-empty">{empty}</div>}
-        {group('review', t('Til gennemgang'), review,
+        {group('review', t('Til din gennemgang'), review,
           !locked && withFile.length >= 2 && <button type="button" className="btn-link" onClick={approveAll}>{t('Godkend alle med fil')}</button>)}
-        {group('waiting', null, waiting)}
+        {group('waiting', t('Hos kunden'), waiting)}
         {optional.length > 0 && (
           <CWFold id="ws-mat-optional" className="ws-mat-fold" label={t('Valgfrit materiale')} count={optional.length}>
             <WSItemList entries={optional} locked={locked} onRemind={() => setReminding(true)}/>
@@ -2316,9 +2366,8 @@ function WSMaterialCard({ go, caseId, locked }) {
   const kept = wsCustomerList().filter(e => { const p = wsItemPlace(e); return p === 'done' || p === 'dropped'; })
     .sort((a, b) => (wsItemPlace(a) === 'dropped') - (wsItemPlace(b) === 'dropped'));
   const approved = kept.filter(e => wsItemPlace(e) === 'done').length;
-  // Det kunden har sendt, som venter på gennemgang: står allerede under Dokumenter,
-  // men kommer først her, når det er godkendt
-  const inReview = request ? wsCustomerList().filter(e => wsItemPlace(e) === 'review').length : 0;
+  // Det, kunden har sendt, og som venter på gennemgang, står under Anmodet materiale
+  // (og Dokumenter) og kommer først her, når det er godkendt
   // Bankens og EIFO's egne dokumenter (ansøgning, sikkerheder, rating) står under
   // Dokumenter fra start; her får de en plads, så de to lister dækker det samme
   const caseDocs = (DATA.DOCS || []).filter(d => d.origin === 'uploaded' && !d.superseded && d.type !== 'Crediwire-eksport'
@@ -2363,10 +2412,10 @@ function WSMaterialCard({ go, caseId, locked }) {
         </div>
         <div className="ws-mat-col">
           <div className="ws-mat-head">
-            <h3 id="ws-cust-title" className="ws-mat-h">{t('Fra kunden')}{request && <> <span className="n">({approved})</span></>}</h3>
+            <h3 id="ws-cust-title" className="ws-mat-h">{t('Godkendt fra kunden')}{request && <> <span className="n">({approved})</span></>}</h3>
           </div>
           {!request ? <div className="ws-mat-empty">{t('Kunden er ikke bedt om materiale endnu.')}</div>
-            : !kept.length ? (inReview ? null : <div className="ws-mat-empty">{t('Intet godkendt endnu. Det, du godkender under Afventer kunden, kommer til at stå her.')}</div>)
+            : !kept.length ? <div className="ws-mat-empty">{t('Intet godkendt endnu. Det, du godkender under Anmodet materiale, kommer til at stå her.')}</div>
             : <WSItemList entries={kept} locked={locked} labelledBy="ws-cust-title"/>}
         </div>
       </div>
@@ -2466,13 +2515,13 @@ function WSRejectModal({ it, onClose, onDone }) {
   const [subjectEdit, setSubjectEdit] = React.useState(null);
   const [bodyEdit, setBodyEdit] = React.useState(null);
   const mail = CW.requestMail({ items: [it], deadline: request && request.deadline, to: { name: to.name, email: to.email }, link: request && request.link });
-  const defSubject = wsFill(t('Vi mangler en ny version af {item}'), { item: label }) + ' · ' + mail.caseLine;
+  const defSubject = wsFill(t('Vi har et spørgsmål til {item}'), { item: label }) + ' · ' + mail.caseLine;
   const defBody = [
     mail.greeting, '',
-    wsFill(t('Vi har gennemgået det, I har sendt, og kan desværre ikke godkende "{item}".'), { item: label }), '',
-    reason.trim() ? t('Hvorfor:') + ' ' + reason.trim() : '',
+    wsFill(t('Tak for det, I har sendt. Vi har kigget på "{item}" og har et spørgsmål:'), { item: label }), '',
+    reason.trim() ? reason.trim() : '',
     reason.trim() ? '' : null,
-    request && request.deadline ? wsFill(t('Upload en ny version via linket senest {date}:'), { date: CW.fmtDate(request.deadline) }) : t('Upload en ny version via linket:'),
+    request && request.deadline ? wsFill(t('Skal noget rettes, så upload gerne en ny version via linket senest {date}:'), { date: CW.fmtDate(request.deadline) }) : t('Skal noget rettes, så upload gerne en ny version via linket:'),
     mail.link, '',
     t('Skriv endelig til mig, hvis I har spørgsmål.'), '',
     adv.name,
@@ -2487,16 +2536,16 @@ function WSRejectModal({ it, onClose, onDone }) {
         style={{ width: 720, maxWidth: 'calc(100vw - 32px)', maxHeight: 'calc(100vh - 80px)' }}>
         <div className="modal-head" style={{ alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 id="ws-reject-title" className="modal-title" tabIndex={-1} style={{ margin: 0, outline: 'none' }}>{wsFill(t('Afvis "{item}"'), { item: label })}</h2>
+            <h2 id="ws-reject-title" className="modal-title" tabIndex={-1} style={{ margin: 0, outline: 'none' }}>{wsFill(t('Stil spørgsmål til "{item}"'), { item: label })}</h2>
             <div style={{ fontSize: 13, color: 'var(--c-text-2)', marginTop: 2, lineHeight: 1.5 }}>{t('Kunden kan se din note på sin side. Du kan også sende en mail.')}</div>
           </div>
           <button type="button" className="icon-btn" aria-label={t('Luk')} title={t('Luk')} onClick={onClose}><I.X size={15}/></button>
         </div>
         <div className="modal-body" style={{ padding: '14px 24px 18px', display: 'flex', flexDirection: 'column', gap: 12, overflow: 'auto' }}>
           <div className="field">
-            <label htmlFor="ws-reject-reason">{t('Hvorfor afvises det?')}</label>
+            <label htmlFor="ws-reject-reason">{t('Hvad vil du spørge om?')}</label>
             <input id="ws-reject-reason" className="input" autoFocus value={reason} onChange={e => setReason(e.target.value)}
-              placeholder={t('Kort note til kunden, fx "Mangler noterne til årsrapporten"')}
+              placeholder={t('Dit spørgsmål til kunden, fx "Kan I sende noterne til årsrapporten?"')}
               onKeyDown={e => { if (e.key === 'Enter' && !sendMail) go(); }}/>
           </div>
           <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13.5, lineHeight: 1.5, cursor: 'pointer' }}>
@@ -2504,7 +2553,7 @@ function WSRejectModal({ it, onClose, onDone }) {
             <span>
               {wsFill(t('Send en mail til kunden ({email})'), { email: to.email || t('kunden') })}
               {!sendMail && (
-                <span style={{ display: 'block', fontSize: 12, color: 'var(--c-text-3)' }}>{t('Der sendes ingen mail. Kundens side viser stadig afvisningen og din note.')}</span>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--c-text-3)' }}>{t('Der sendes ingen mail. Kundens side viser stadig din note.')}</span>
               )}
             </span>
           </label>
@@ -2531,7 +2580,7 @@ function WSRejectModal({ it, onClose, onDone }) {
           <span style={{ flex: 1 }}/>
           <button type="button" className="btn btn-sm" onClick={onClose}>{t('Annullér')}</button>
           <button type="button" className="btn btn-sm btn-primary" aria-disabled={!ok} style={wsOff(!ok)} onClick={go}>
-            {sendMail ? t('Afvis og send mail') : t('Afvis uden mail')}
+            {sendMail ? t('Send spørgsmål og mail') : t('Send spørgsmål uden mail')}
           </button>
         </div>
       </div>
@@ -2647,8 +2696,8 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
   const doReject = ({ reason, sendMail }) => {
     CW.reject(it.id, reason);
     setRejecting(false);
-    if (sendMail) CW.log('rejection-mail', wsFill(t('Mail om afvisning sendt til {to}: {item}'), { to: (request && request.to && (request.to.name || request.to.email)) || t('kunden'), item: label }), { who: 'rådgiver', itemId: it.id });
-    CW.toast(sendMail ? wsFill(t('"{item}" er afvist, og kunden har fået en mail.'), { item: label }) : wsFill(t('"{item}" er afvist. Der er ikke sendt en mail.'), { item: label }), { tone: 'info' });
+    if (sendMail) CW.log('rejection-mail', wsFill(t('Mail med spørgsmål sendt til {to}: {item}'), { to: (request && request.to && (request.to.name || request.to.email)) || t('kunden'), item: label }), { who: 'rådgiver', itemId: it.id });
+    CW.toast(sendMail ? wsFill(t('Spørgsmålet om "{item}" er sendt, og kunden har fået en mail.'), { item: label }) : wsFill(t('Spørgsmålet om "{item}" er sendt. Der er ikke sendt en mail.'), { item: label }), { tone: 'info' });
     wsFocusAfterReview(it.id);
   };
 
@@ -2666,16 +2715,16 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
   let at = null;
   if (showFiles) {
     at = s && s.at;
-    if (status === 'rejected' && s && s.reviewedAt) parts.push(t('Afvist') + ' ' + wsDay(s.reviewedAt));
+    if (status === 'rejected' && s && s.reviewedAt) parts.push(t('Spørgsmål stillet') + ' ' + wsDay(s.reviewedAt));
   } else if (review || status === 'approved') {
     at = s.at;
     const who = s.viaPreview ? wsFill(t('tilføjet i forhåndsvisning af {name}'), { name: adv.name }) : byAdvisor ? t('uploadet af dig') : t('modtaget');
     if (status !== 'approved' || !s.reviewedAt) parts.push(who + ' ' + wsDay(s.at));
-    if (status === 'noted') lead = <><span style={{ color: 'var(--c-text-2)' }}>{s.noteKind === 'anden-maade' ? t('Sendt på anden måde:') : s.noteKind === 'ikke-relevant' ? t('Ikke relevant for kunden:') : t('Kunden har ingen fil:')}</span> <span style={{ color: 'var(--c-ink)' }}>{s.note || t('ingen forklaring')}</span></>;
+    if (status === 'noted') lead = <><span style={{ color: 'var(--c-text-2)' }}>{s.noteKind === 'anden-maade' ? t('Sendt på anden måde:') : s.noteKind === 'ikke-relevant' ? t('Ikke relevant for kunden:') : t('Kunden har ingen fil:')}</span> <span style={{ color: 'var(--c-ink)' }}>{s.note || (s.answer ? '' : t('ingen forklaring'))}</span></>;
     else if (!files.length && !s.answers) lead = <span style={{ color: 'var(--c-text-2)' }}>{t('Markeret som sendt uden fil')}</span>;
   } else if (status === 'rejected' && s) {
     at = s.reviewedAt;
-    parts.push(t('Afvist') + ' ' + wsDay(s.reviewedAt));
+    parts.push(t('Spørgsmål stillet') + ' ' + wsDay(s.reviewedAt));
   } else if (status === 'delegated' && del) {
     at = del.at || (s && s.at);
     // Kunden har sendt punktet videre: en ventetilstand som "Afventer kunden"
@@ -2687,7 +2736,7 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
     at = request ? wsItemRequestedAt(request, it.id) : null;
     if (optional) parts.push(t('Valgfri'), t('ikke modtaget'));
     else {
-      // Gruppen hedder allerede "Afventer kunden"; rækken siger, hvornår der blev spurgt
+      // Gruppen hedder allerede "Hos kunden"; rækken siger, hvornår der blev spurgt
       // Anmodet og frist står som tooltip på titlen, ikke som en linje under den
       tipParts.push(at ? wsFill(t('Anmodet {date}'), { date: wsDay(at) }) : t('Afventer kunden'));
       if (request && request.deadline) tipParts.push(t('frist') + ' ' + wsDay(request.deadline));
@@ -2748,7 +2797,7 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
               {review && (
                 <>
                   <button type="button" className="btn btn-sm btn-primary" data-act="approve" onClick={approve} aria-label={wsFill(t('Godkend {item}'), { item: label })}>{t('Godkend')}</button>
-                  <button type="button" className="btn btn-sm" onClick={() => setRejecting(true)} aria-label={wsFill(t('Afvis {item}'), { item: label })}>{t('Afvis')}</button>
+                  <button type="button" className="btn btn-sm" onClick={() => setRejecting(true)} aria-label={wsFill(t('Stil spørgsmål til {item}'), { item: label })}>{t('Stil spørgsmål til materialet')}</button>
                 </>
               )}
               {status === 'approved' && (
@@ -2831,6 +2880,14 @@ function OutstandingItem({ it, s, locked, dropped, recipient, request, groupStar
           </div>
         )}
 
+        {/* Kundens svar på dit spørgsmål til punktet (status 'rejected' -> svar) */}
+        {s && s.answer && review && (
+          <div style={{ fontSize: 13, color: 'var(--c-text)', marginTop: 4, lineHeight: 1.45 }}>
+            {s.question && <div><span style={{ color: 'var(--c-text-2)' }}>{t('Dit spørgsmål:')}</span> {s.question}</div>}
+            <div style={{ marginTop: s.question ? 2 : 0 }}><span style={{ color: 'var(--c-text-2)' }}>{t('Kundens svar:')}</span> {s.answer}</div>
+          </div>
+        )}
+
         {noting && <WSInotePop anchor={noting} initial={inote ? inote.text : ''} note={inote} label={label}
           onSave={(txt) => { CW.setInternalNote(it.id, txt, adv.name); setNoting(null); }}
           onDelete={() => { CW.setInternalNote(it.id, '', adv.name); setNoting(null); }}
@@ -2903,7 +2960,7 @@ function wsReadiness(stage, opts) {
         return;
       }
       const text = waitingOnMe ? t('Modtaget, afventer din gennemgang')
-        : status === 'rejected' ? t('Afvist, afventer ny levering fra kunden')
+        : status === 'rejected' ? t('Spørgsmål stillet, afventer svar fra kunden')
         : status === 'delegated' ? t('Hos kundens rådgiver')
         : t('Ikke modtaget fra kunden');
       rows.push({ id: 'item-' + it.id, group: 'block', title: t(it.label) + (optional ? ' (' + t('valgfri') + ')' : ''), text, action: toOutstanding });

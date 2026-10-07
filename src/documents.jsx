@@ -63,7 +63,7 @@ function suggestItemFor(files, requested) {
   return hit ? hit.id : '';
 }
 
-const DOC_ITEM_STATUS = { received: 'Modtaget', approved: 'Godkendt', rejected: 'Afvist' };
+const DOC_ITEM_STATUS = { received: 'Modtaget', approved: 'Godkendt', rejected: 'Spørgsmål stillet' };
 
 // En upload fra CW vist som en række i listen
 function docFromUpload(f) {
@@ -764,7 +764,7 @@ function DocRow({ d, older, openOlder, hiKey, selectedKey, onSelect, preview, on
       <span title={CW.fmtWhen(d.at)}>{docDay(d)}</span>,
       d.size,
       d.itemId
-        ? <span>{t(d.itemLabel)}, {st === 'Afvist' ? <CWStatus tone="danger">{t('afvist')}</CWStatus> : t(st).toLowerCase()}</span>
+        ? <span>{t(d.itemLabel)}, {st === 'Spørgsmål stillet' ? <CWStatus tone="danger">{t('spørgsmål stillet')}</CWStatus> : t(st).toLowerCase()}</span>
         : t('ikke knyttet til et punkt'),
     ]);
   } else {
