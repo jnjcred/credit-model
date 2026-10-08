@@ -1,0 +1,415 @@
+// Memoets dokument: indholdet af det indbyggede memos afsnit, dvs. den gemte HTML i hvert redigerbare
+// afsnit (div.memo-body) og AI'ens forhåndsvisninger af samme HTML. Global, fordi Vue ikke kompilerer
+// indholdet (scoped CSS når det ikke), og main.js indlæser den én gang.
+// Undtagelse for rich text: ant-design-vue 3.2.13 har ingen rich-text-editor, så afsnittene er et
+// contenteditable-element, og deres markup er memoets datamodel (tpl-*, memo-cite, data-ai). Her står kun
+// indholdets regler fra prototypens indsprøjtede <style id="memo-ed-css"> (memo.jsx linje 3-261), med
+// farver, størrelser og afstande fra ant-design-vue's Less-variabler. Resten af det stylesheet er ikke
+// flyttet hertil: sidelayoutet (kolonner, brudpunkter, .memo-target) ligger i memoets komponenter, og
+// kontrollerne (værktøjslinjen, kommentarerne, statusprikkerne, faktaboksen, sammenligningen m.m.) er
+// antdv-komponenter. Død CSS og den ugyldige "gap: 4" (virkede aldrig) er ikke porteret.
+// Komponenterne sætter de klasser, reglerne hænger på: .memo-doc (+ .show-origin) på dokumentet,
+// .memo-sec (+ .guide-folded og data-reviewed="1") på hvert afsnit, .memo-body på afsnittets tekst og på
+// AI-forhåndsvisninger, .memo-facts på faktaboksen. src/domain/memo/index.js lægger AI-mærkets to tekster i
+// --memo-ai-label og --memo-ai-label-edited på <html>.
+@import (reference) 'ant-design-vue/lib/style/themes/default.less';
+
+// Ophavsvisningens farver, de samme som forklaringen over dokumentet kan vise med a-badge:
+// udkast = color "geekblue", gennemgået = status "success", rettet udkast = status "default"
+@memo-origin-draft: @geekblue-6;
+@memo-origin-reviewed: @success-color;
+@memo-origin-edited: @normal-color;
+
+// AI-mærket i teksten har samme ikon som AiBadge.vue: RobotOutlined (@ant-design/icons-svg 4.6.0)
+@memo-ai-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='64 64 896 896'%3E%3Cpath d='M300 328a60 60 0 10120 0 60 60 0 10-120 0zM852 64H172c-17.7 0-32 14.3-32 32v660c0 17.7 14.3 32 32 32h680c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-32 660H204V128h616v596zM604 328a60 60 0 10120 0 60 60 0 10-120 0zm250.2 556H169.8c-16.5 0-29.8 14.3-29.8 32v36c0 4.4 3.3 8 7.4 8h729.1c4.1 0 7.4-3.6 7.4-8v-36c.1-17.7-13.2-32-29.7-32zM664 508H360c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h304c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z'/%3E%3C/svg%3E");
+
+// Gemt HTML (skabelonen, gemte afsnit, indstillede versioner) bruger fire af prototypens CSS-variabler
+// inline, fx style="color:var(--c-text-2)" og diagrammet i Bilag 3 med font-family: var(--mono). De
+// defineres her med temaets værdier; --mono er en fast bredde, så diagrammets kolonner står lige.
+.memo-doc,
+.memo-body {
+  --c-text-2: @text-color-secondary;
+  --c-text-3: @text-color-secondary;
+  --c-surface-2: @background-color-light;
+  --mono: @code-family;
+}
+
+// ── Tekst, overskrifter, lister og tabeller ──
+.memo-body {
+  outline: none;
+
+  > * + * {
+    margin-top: @margin-xs;
+  }
+
+  p {
+    margin: 0;
+    line-height: 1.7;
+  }
+
+  h2,
+  h3 {
+    margin: 0;
+    color: @heading-color;
+    font-size: @font-size-base;
+  }
+
+  h2 {
+    font-weight: 700;
+  }
+
+  h3 {
+    font-weight: 600;
+  }
+
+  ul,
+  ol {
+    margin: 0;
+    padding-left: @padding-lg;
+  }
+
+  li {
+    line-height: 1.8;
+  }
+
+  blockquote {
+    margin: 0;
+    padding: @padding-xss 0 @padding-xss @padding-sm;
+    border-left: (@border-width-base * 2) @border-style-base @border-color-base;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: @font-size-sm;
+  }
+
+  th {
+    padding: @table-padding-vertical-sm @table-padding-horizontal-sm;
+    color: @table-header-color;
+    font-weight: 600;
+    text-align: left;
+    background: @table-header-bg;
+    border-bottom: @border-width-base @border-style-base @border-color-split;
+  }
+
+  td {
+    padding: @table-padding-vertical-sm @table-padding-horizontal-sm;
+    border-bottom: @border-width-base @border-style-base @border-color-split;
+  }
+
+  // Den aktive celle under redigering
+  td:focus-within,
+  th:focus-within {
+    background: fade(@primary-color, 5%);
+  }
+}
+
+// Under redigering skal cellerne kunne ses. Uden lodrette linjer ligner to tomme rækker bare to blanke
+// linjer, og man kan ikke sigte efter en celle.
+.memo-body[contenteditable='true'] {
+  td,
+  th {
+    border-right: @border-width-base @border-style-base @border-color-split;
+  }
+
+  tr > *:last-child {
+    border-right: none;
+  }
+
+  td:empty::after,
+  td:has(> br:only-child)::after {
+    display: inline-block;
+    min-height: 1em;
+    content: '';
+  }
+}
+
+// Afsnittet, markøren står i
+.memo-body:focus-within {
+  background: fade(@primary-color, 2%);
+  border-radius: @border-radius-base;
+}
+
+// ── Skabelonens vejledning, felter og udkast (EIFO-skabelonen) ──
+.memo-body {
+  .tpl-hint {
+    display: block;
+    margin: @margin-xs 0 @margin-xss;
+    color: @text-color-secondary;
+    font-size: @font-size-sm;
+    font-style: italic;
+  }
+
+  .tpl-hints {
+    margin: @margin-xss 0 @margin-xs;
+    padding-left: @padding-lg;
+    color: @text-color-secondary;
+  }
+
+  .tpl-hints li {
+    color: @text-color-secondary;
+    font-size: @font-size-sm;
+    line-height: 1.65;
+  }
+
+  // Et felt, der skal udfyldes ("[dato]"); et tomt felt viser en ellipse. Teksten er guld 9: på feltets gule
+  // baggrund består guld 8 ikke WCAG AA (ca. 4:1), guld 9 gør (ca. 6:1)
+  .tpl-blank {
+    padding: 0 @padding-xss;
+    color: @gold-9;
+    font-style: normal;
+    background: fade(@warning-color, 14%);
+    border-bottom: @border-width-base dashed @warning-color;
+    border-radius: @border-radius-base;
+  }
+
+  .tpl-blank:empty::before {
+    opacity: 0.6;
+    content: '\2026';
+  }
+
+  .tpl-note {
+    margin-top: @margin-xss;
+    color: @text-color-secondary;
+    font-size: @font-size-sm;
+    font-style: italic;
+  }
+
+  .tpl-subhead {
+    margin: @margin-md 0 @margin-xs;
+    padding-top: @padding-xs;
+    color: @heading-color;
+    font-weight: 600;
+    font-size: @font-size-base;
+    border-top: @border-width-base dashed @border-color-split;
+  }
+
+  .tpl-subhead:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  // Udkastblokke ser ud som den øvrige tekst. Mærket og klassen bliver i teksten, så Word-eksporten og
+  // "Vis ophav" virker; afsnittets status står i gennemgangslinjen og i afsnitslisten.
+  .tpl-draft {
+    margin: @margin-xs 0;
+  }
+
+  // AI-mærket over hver tekst, AI har skrevet, som AiBadge (a-tag med RobotOutlined). Spannets egen tekst
+  // ("Udkast"/"AI-udkast") er skjult; mærket viser AI-genereret, eller AI-genereret + rådgiverens rettelser,
+  // når rådgiveren har rettet i blokken. Mærket fjernes, når afsnittet er gennemgået, og kommer ikke med i
+  // eksporten.
+  .tpl-draft-label {
+    display: flex;
+    gap: (@padding-xs - @border-width-base); // som a-tag: 7 px mellem ikon og tekst
+    align-items: center;
+    width: fit-content;
+    margin: 0 0 @margin-xss;
+    padding: 0 (@padding-xs - @border-width-base); // som a-tag: 0 7px
+    color: @tag-default-color;
+    font-size: 0;
+    line-height: @tag-line-height;
+    background: @tag-default-bg;
+    border: @border-width-base @border-style-base @border-color-base;
+    border-radius: @border-radius-base;
+    user-select: none;
+  }
+
+  .tpl-draft-label::before {
+    width: @tag-font-size;
+    height: @tag-font-size;
+    background: currentColor;
+    content: '';
+    -webkit-mask: @memo-ai-icon center / contain no-repeat;
+    mask: @memo-ai-icon center / contain no-repeat;
+  }
+
+  .tpl-draft-label::after {
+    font-size: @tag-font-size;
+    content: var(--memo-ai-label);
+  }
+
+  .tpl-draft[data-ai='edited'] > .tpl-draft-label::after,
+  .tpl-draft:has([data-ai='edited']) > .tpl-draft-label::after {
+    content: var(--memo-ai-label-edited);
+  }
+
+  // Indstillings- og bevillingspåtegningen (afsnit 11)
+  .tpl-bevtable {
+    margin: @margin-xs 0;
+  }
+
+  .tpl-bevtable td {
+    vertical-align: top;
+  }
+
+  .tpl-bevtable td.label {
+    width: 130px;
+    color: @text-color-secondary;
+  }
+
+  // Risikovurderingen er et valgfelt: samme neutrale mærke uanset niveau. Niveauet står i teksten
+  // (lav, middel, høj); klasserne lav/mid/hoj bliver i teksten uden farve.
+  .tpl-risk {
+    display: inline-block;
+    margin-left: @margin-xs;
+    padding: 0 (@padding-xs - @border-width-base); // som a-tag: 0 7px
+    color: @tag-default-color;
+    font-weight: normal;
+    font-size: @tag-font-size;
+    line-height: @tag-line-height;
+    background: @tag-default-bg;
+    border: @border-width-base @border-style-base @border-color-base;
+    border-radius: @border-radius-base;
+  }
+}
+
+// Skabelonens vejledning foldes, når afsnittet har tekst ("Vejledning (n)" viser den igen)
+.memo-sec.guide-folded .memo-body {
+  .tpl-hints,
+  .tpl-hint,
+  .tpl-note,
+  .tpl-guide {
+    display: none;
+  }
+}
+
+// ── Lange ord, tal og diagrammer i dokumentet ──
+.memo-doc .memo-body {
+  overflow-wrap: anywhere;
+
+  table {
+    table-layout: auto;
+  }
+
+  // Tegnede diagrammer (koncerndiagrammet) kan ikke ombrydes; de ruller i deres egen boks
+  pre {
+    box-sizing: border-box;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  // Tal og kolonneoverskrifter brydes ikke midt i ord. Den gemte HTML sætter tallenes justering og
+  // skrift inline, så reglerne følger de inline-stile.
+  table,
+  td,
+  th {
+    hyphens: manual;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  td[style*='text-align:right'],
+  th[style*='text-align:right'],
+  td[style*='text-align: right'],
+  th[style*='text-align: right'],
+  td[style*='monospace'] {
+    white-space: nowrap;
+  }
+}
+
+// ── "Vis ophav": hvem der skrev hver blok ──
+// Etiketten (data-ai-label, sat af memoets side) står i normal flow over blokken.
+.memo-doc.show-origin {
+  [data-ai] {
+    padding-left: @padding-xs;
+    border-left: (@border-width-base * 2) @border-style-base transparent;
+  }
+
+  [data-ai]::before {
+    display: block;
+    color: @text-color-secondary;
+    font-weight: normal;
+    font-style: normal;
+    font-size: @font-size-sm;
+    font-family: @font-family;
+    line-height: @line-height-base;
+    text-align: right;
+    content: attr(data-ai-label);
+    pointer-events: none;
+  }
+
+  table[data-ai]::before {
+    display: table-caption;
+  }
+
+  [data-ai='ai'],
+  [data-ai='chat'],
+  [data-ai='seed'] {
+    background: fade(@memo-origin-draft, 5%);
+    border-left-color: @memo-origin-draft;
+  }
+
+  [data-ai='edited'] {
+    background: fade(@memo-origin-edited, 10%);
+    border-left-color: @memo-origin-edited;
+  }
+
+  .memo-sec[data-reviewed='1'] [data-ai] {
+    background: fade(@memo-origin-reviewed, 4%);
+    border-left-color: @memo-origin-reviewed;
+  }
+}
+
+// ── Kildehenvisninger: kun når kildevisningen er slået til ──
+// case_facts.js sætter klassen no-source-view på <html>, når window.CW_SOURCE_VIEW ikke er true. Så er
+// henvisningerne almindelig tekst. Ellers kan de nås med Tab og åbnes med Enter eller mellemrum, og en
+// henvisning, kilden ikke bekræfter (data-check), eller til et dokument, der ikke er i sagen (data-nodoc),
+// får et mærke (decorateCite i domain/memo/memoCite.js sætter attributterne).
+html:not(.no-source-view) {
+  .memo-body .memo-cite,
+  .memo-facts .memo-cite {
+    border-bottom: @border-width-base dotted @primary-color;
+    cursor: pointer;
+  }
+
+  .memo-body .memo-cite:hover {
+    background: fade(@primary-color, 8%);
+    border-bottom-style: solid;
+  }
+
+  .memo-body .memo-cite:focus-visible,
+  .memo-facts .memo-cite:focus-visible {
+    background: fade(@primary-color, 8%);
+    border-radius: @border-radius-base;
+    outline: @outline-width solid @primary-color;
+    outline-offset: 1px;
+  }
+
+  // Mørk rød (red-7), så det hvide tegn i mærket kan læses (WCAG AA), som prototypens #b91c1c
+  .memo-doc .memo-cite[data-nodoc] {
+    background: fade(@error-color, 6%);
+    border-bottom: @border-width-base dashed @red-7;
+  }
+
+  .memo-doc .memo-cite[data-check] {
+    border-bottom: @border-width-base dashed @red-7;
+  }
+
+  .memo-doc .memo-cite[data-check]:not([data-nodoc])::after,
+  .memo-doc .memo-cite[data-nodoc]::after {
+    display: inline-grid;
+    place-items: center;
+    width: @badge-height-sm;
+    height: @badge-height-sm;
+    margin-left: @margin-xss;
+    color: @text-color-inverse;
+    font-weight: 700;
+    font-size: @badge-font-size-sm;
+    line-height: 1;
+    vertical-align: text-bottom;
+    background: @red-7;
+    border-radius: 50%;
+  }
+
+  .memo-doc .memo-cite[data-check]:not([data-nodoc])::after {
+    content: '?';
+  }
+
+  .memo-doc .memo-cite[data-check='contra']:not([data-nodoc])::after,
+  .memo-doc .memo-cite[data-nodoc]::after {
+    content: '!';
+  }
+}

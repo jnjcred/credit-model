@@ -32,6 +32,7 @@ const os = require('os');
 const { spawn, spawnSync } = require('child_process');
 
 const ROOT = __dirname;
+const DIST = path.join(ROOT, 'dist');
 const PORT = Number(process.env.PORT || 8080);
 
 /* ── Find de lokale kommandolinjer ────────────────────────────────────────── */
@@ -151,15 +152,16 @@ function run(cmd, args) {
 
 /* ── Generering ───────────────────────────────────────────────────────────── */
 
-function runClaude(system, prompt, onDelta, onDone, onError, signalRef) {
+function runClaude(system, prompt, onDelta, onDone, onError, signalRef, webSearch) {
   const args = [
     '-p',
     '--output-format', 'stream-json',
     '--include-partial-messages',
     '--verbose',
-    '--max-turns', '1',
-    // Ingen værktøjer: det her er ren tekstgenerering, ikke en agentopgave.
-    '--allowed-tools', '',
+    // Normalt ingen værktøjer: ren tekstgenerering. Med webSearch må Claude Code
+    // søge og hente sider (flere ture), og kun det endelige svar sendes videre.
+    '--max-turns', webSearch ? '12' : '1',
+    '--allowed-tools', webSearch ? 'WebSearch WebFetch' : '',
     // Ingen MCP-servere: de tager tid at starte og bruges ikke her
     '--strict-mcp-config',
     '--mcp-config', '{"mcpServers":{}}',
@@ -184,13 +186,14 @@ function runClaude(system, prompt, onDelta, onDone, onError, signalRef) {
       let ev;
       try { ev = JSON.parse(line); } catch (e) { continue; }
 
-      if (ev.type === 'stream_event' && ev.event && ev.event.type === 'content_block_delta') {
+      if (!webSearch && ev.type === 'stream_event' && ev.event && ev.event.type === 'content_block_delta') {
         const d = ev.event.delta;
         if (d && d.type === 'text_delta' && d.text) { text += d.text; onDelta(d.text); }
       } else if (ev.type === 'result') {
         sawResult = true;
         if (ev.is_error) {
-          onError(ev.result || 'Claude Code returnerede en fejl.');
+          // ev.subtype siger hvorfor, fx error_max_turns (AI'en ville bruge et værktøj, den ikke må)
+          onError(ev.result || ('Claude Code returnerede en fejl' + (ev.subtype ? ' (' + ev.subtype + ')' : '') + '.'));
           return;
         }
         // Faldback hvis delta-strømmen svigtede
@@ -270,6 +273,7 @@ const MIME = {
   '.js': 'application/javascript; charset=utf-8',
   '.jsx': 'application/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
@@ -345,7 +349,8 @@ const server = http.createServer(async (req, res) => {
       (delta) => send({ delta }),
       (text) => { send({ done: true, text }); finish(); },
       (message) => { send({ error: message }); finish(); },
-      signalRef
+      signalRef,
+      engine === 'claude' && !!payload.webSearch
     );
 
     if (engine === 'claude') {
@@ -354,11 +359,56 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Statiske filer
+  /* Prompt-værkstedet (src/views/prompts) gemmer prompts/*.md her. Kun lokalt:
+     på et hosted domæne findes endpointet ikke, og værkstedet gemmer i browseren.
+     Før en fil overskrives, lægges den forrige version i prompts/.historik/. */
+  if (pathname.startsWith('/local-prompts/')) {
+    const PROMPTS = path.join(ROOT, 'prompts');
+    const HIST = path.join(PROMPTS, '.historik');
+    const okName = (n) => typeof n === 'string' && /^[a-z0-9_-]+\.md$/i.test(n) && n.toLowerCase() !== 'readme.md';
+    const json = (code, obj) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(obj)); };
+    if (pathname === '/local-prompts/status') return json(200, { ok: true, writable: true });
+    if (pathname === '/local-prompts/history' && req.method === 'GET') {
+      const file = url.searchParams.get('file');
+      if (!okName(file)) return json(400, { error: 'ugyldigt filnavn' });
+      let list = [];
+      try {
+        const base = file.replace(/\.md$/i, '');
+        list = fs.readdirSync(HIST).filter(n => n.startsWith(base + '.') && n.endsWith('.md'))
+          .map(n => ({ name: n, at: fs.statSync(path.join(HIST, n)).mtime.toISOString(), content: fs.readFileSync(path.join(HIST, n), 'utf8') }))
+          .sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20);
+      } catch (e) { list = []; }
+      return json(200, { file, versions: list });
+    }
+    if (pathname === '/local-prompts/save' && req.method === 'POST') {
+      let payload;
+      try { payload = JSON.parse(await readBody(req)); } catch (e) { return json(400, { error: 'ugyldig forespørgsel' }); }
+      const file = payload && payload.file;
+      if (!okName(file) || typeof payload.content !== 'string' || payload.content.length > 200000) return json(400, { error: 'ugyldigt filnavn eller indhold' });
+      const full = path.join(PROMPTS, file);
+      try {
+        if (fs.existsSync(full)) {
+          fs.mkdirSync(HIST, { recursive: true });
+          const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+$/, '').replace('T', '-');
+          fs.copyFileSync(full, path.join(HIST, file.replace(/\.md$/i, '') + '.' + stamp + '.md'));
+        }
+        fs.writeFileSync(full, payload.content, 'utf8');
+        return json(200, { ok: true, savedAt: new Date().toISOString() });
+      } catch (e) {
+        return json(500, { error: 'kunne ikke gemme: ' + e.message });
+      }
+    }
+    return json(404, { error: 'ukendt' });
+  }
+
+  // Statiske filer. Appen bygges med Vite til dist/ (npm run build). Prompterne
+  // (prompts/*.md) og demoens data (data/*) serveres direkte fra roden, så en gemt
+  // prompt virker med det samme uden et nyt build.
   let rel = pathname.replace(/^\/+/, '');
   if (!rel) rel = 'index.html';
-  const full = path.join(ROOT, rel);
-  if (!full.startsWith(ROOT)) { res.writeHead(403); res.end('nej'); return; }
+  const base = /^(prompts|data)\//.test(rel) || !fs.existsSync(DIST) ? ROOT : DIST;
+  const full = path.join(base, rel);
+  if (!full.startsWith(base)) { res.writeHead(403); res.end('nej'); return; }
 
   fs.readFile(full, (err, data) => {
     if (err) { res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }); res.end('ikke fundet'); return; }
@@ -373,6 +423,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   const s = probe();
   console.log('Prototypen kører på http://localhost:' + PORT + '/');
+  if (!fs.existsSync(DIST)) console.log('  (dist/ findes ikke endnu: kør "npm run build" først, eller brug "npm run dev")');
   console.log('Lokal AI-bro:');
   console.log('  Claude Code : ' + (s.claude.available ? 'klar · ' + s.claude.detail : 'ikke klar · ' + s.claude.detail));
   console.log('  Codex CLI   : ' + (s.codex.available ? 'klar · ' + s.codex.detail : 'ikke klar · ' + s.codex.detail));

@@ -1,7 +1,30 @@
 {
   "name": "credit-model",
   "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "build": "echo done"
+    "dev": "vite",
+    "build": "vite build && node scripts/pages-root.mjs",
+    "preview": "vite preview",
+    "lint": "eslint ."
+  },
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24"
+  },
+  "dependencies": {
+    "@ant-design/icons-vue": "6.1.0",
+    "ant-design-vue": "3.2.13",
+    "dayjs": "1.11.8",
+    "vue": "3.5.43"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@vitejs/plugin-vue": "6.0.9",
+    "eslint": "10.12.0",
+    "eslint-plugin-vue": "10.11.1",
+    "globals": "17.13.0",
+    "less": "4.9.1",
+    "vite": "8.3.3",
+    "vue-eslint-parser": "10.4.1"
   }
 }

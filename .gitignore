@@ -1,2 +1,20 @@
 # Dropbox sync-rester
 *.tmp.*
+
+# Interne data (rigtige kundedata). Repoet er offentligt og Cloudflare udgiver roden:
+# må aldrig committes.
+internal_data.zip
+internal_data/
+external_material/EIFO 2026/
+external_material/Online møde med Jesper Hammer/
+internal_annual_reports/
+product_specs/
+Indsamlingsflow_i_dag/
+research/
+
+# Prompt-værkstedets lokale historik (tidligere versioner af prompts/*.md)
+prompts/.historik/
+
+# Byggeværktøjer (Vite)
+node_modules/
+dist/

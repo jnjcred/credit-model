@@ -1,0 +1,44 @@
+// Synligt tastaturfokus (WCAG 2.4.7). ant-design-vue 3.2.13 fjerner fokusrammen på fanerne, på
+// foldenes overskrifter, på knapperne og på links. Den aktive fanes fokusfarve er den samme som dens
+// almindelige farve, tekst-, ikon- og linkknapper skifter kun svagt farve eller baggrund, og et
+// afkrydset felt eller en valgt radioknap ændrer sig slet ikke, så tastaturfokus ikke kunne ses.
+// Prototypen havde en ring på alt med tastaturfokus.
+// Ringen er primærfarvens mørkere trin (@primary-7), så den også står tydeligt (over 3:1) på sidens
+// grå baggrund. Tekstfelter og lister beholder antdv's egen fokusmarkering (kant og glød).
+// Reglerne rammer elementer og ARIA-roller, ikke antdv's interne klasser. Attributterne ([tabindex],
+// [type], [href]) giver mindst samme specificitet som antdv's egne fokusregler (klasse + :focus), og
+// filen indlæses efter antd, så den vinder uden særregler.
+@import (reference) 'ant-design-vue/lib/style/themes/default.less';
+
+@focus-ring: @primary-7;
+
+[role='tab']:focus-visible {
+  outline: 2px solid @focus-ring;
+  outline-offset: 2px;
+}
+
+[role='button'][aria-expanded][tabindex]:focus-visible {
+  outline: 2px solid @focus-ring;
+  outline-offset: -2px;
+}
+
+button[type]:focus-visible,
+a[href]:focus-visible {
+  outline: 2px solid @focus-ring;
+  outline-offset: 2px;
+}
+
+// Afkrydsningsfelter og radioknapper: selve feltet er skjult, så ringen tegnes om etiketten
+label:has(input[type='checkbox']:focus-visible),
+label:has(input[type='radio']:focus-visible) {
+  outline: 2px solid @focus-ring;
+  outline-offset: 2px;
+}
+
+// Menupunkter (dropdown-menuer) og hovedmenuens punkter (knapper i navigationen, AppSidebar.vue):
+// antdv giver punkterne tabindex="-1", og antd's grundstil fjerner outline på dem, så ringen tegnes
+// indvendigt med box-shadow
+[role^='menuitem']:focus-visible,
+nav li[role='button']:focus-visible {
+  box-shadow: inset 0 0 0 2px @focus-ring;
+}
