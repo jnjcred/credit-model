@@ -375,7 +375,8 @@ function cleanHtml(raw) {
   if (fence) s = fence[1].trim();
   s = s.replace(/^```(?:html)?/i, '').replace(/```$/, '').trim();
 
-  const tmp = document.createElement('div');
+  // Fortolkes i et tomt dokument uden vindue, så fx <img onerror> i et AI-svar eller i indsat HTML ikke kan køre
+  const tmp = document.implementation.createHTMLDocument('').createElement('div');
   tmp.innerHTML = s;
 
   tmp.querySelectorAll('*').forEach(el => {
