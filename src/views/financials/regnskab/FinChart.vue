@@ -122,6 +122,14 @@ const askBox = computed(() => {
   }
 })
 
+// "Budget" over budgettets kolonner, når de har tal (står boksen "Intet budget" der, siger den det selv)
+const budBand = computed(() => {
+  if (askBox.value) return null
+  const idx = props.view.cols.map((c, i) => (c.budget ? i : -1)).filter(i => i >= 0)
+  if (!idx.length) return null
+  return { gridColumn: (idx[0] + 2) + ' / ' + (idx[idx.length - 1] + 3), gridRow: 1 }
+})
+
 // Kolonnens navn for skærmlæsere: "Jan-aug 2026: Omsætning 29.080, EBITDA 1.680 DKK t."
 const colLabel = (c) => c.label + ': ' + c.bars.slice().reverse().map(b => nameOf(b.k) + ' ' + (b.label || t('ikke oplyst'))).join(', ') + ' ' + unitShort.value
 </script>
@@ -339,6 +347,16 @@ const colLabel = (c) => c.label + ': ' + c.bars.slice().reverse().map(b => nameO
           </div>
         </div>
 
+        <!-- Budgettets kolonner: navnet øverst (søjlerne er i seriens farve som en lys gradient) -->
+        <div
+          v-if="budBand"
+          class="fin-chart-band"
+          :style="budBand"
+          aria-hidden="true"
+        >
+          {{ t('Budget') }}
+        </div>
+
         <!-- Intet budget (og evt. ingen periodetal): boks over de tomme kolonner -->
         <div
           v-if="askBox"
@@ -448,14 +466,12 @@ const colLabel = (c) => c.label + ': ' + c.bars.slice().reverse().map(b => nameO
 @import (reference) 'ant-design-vue/lib/style/themes/default.less';
 
 /* Domænetegning (antdv har ingen diagrammer). Designets lilla er appens blå: Omsætning i
-   primærfarven og Bruttofortjeneste i dens lyse trin. EBITDA er blågrøn og budgettet orange;
-   tallene over EBITDA-søjlerne er i det mørke blågrønne trin, så de kan læses (kontrast over 4,5:1). */
+   primærfarven og Bruttofortjeneste i dens lyse trin. EBITDA er blågrøn; budgettet er seriens farve
+   som en lys gradient med kant (Jesper 9. oktober); tallene over EBITDA-søjlerne er i det mørke blågrønne trin, så de kan læses (kontrast over 4,5:1). */
 @fin-rev: @primary-color;
 @fin-bf: @primary-3;
 @fin-eb: #17a398;
 @fin-eb-text: #0b7a70;
-@fin-eb-bud: #a8e6df;
-@fin-bud: #fb8f67;
 @fin-bud-bg: #fdfaf7;
 @fin-ease: 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
 
@@ -644,18 +660,27 @@ const colLabel = (c) => c.label + ': ' + c.bars.slice().reverse().map(b => nameO
 .fin-chart-bar.bf .fin-chart-fill { background: @fin-bf; }
 .fin-chart-bar.eb .fin-chart-fill { background: @fin-eb; }
 
-/* Budget: skraveret orange; EBITDA-budgettet lys blågrøn med kant */
-.fin-chart-col.bud .fin-chart-bar.rev .fin-chart-fill,
-.fin-chart-col.bud .fin-chart-bar.bf .fin-chart-fill {
-  border: 1px solid @fin-bud;
+/* Budget: seriens egen farve som en lys gradient (stærkest øverst) med en tynd kant i farven */
+.fin-bud-fill(@c) {
+  border: 1px solid fade(@c, 70%);
   border-bottom: 0;
-  background: repeating-linear-gradient(135deg, @fin-bud 0 2px, @component-background 2px 6px);
+  background: linear-gradient(180deg, fade(@c, 45%) 0%, fade(@c, 12%) 100%);
 }
 
-.fin-chart-col.bud .fin-chart-bar.eb .fin-chart-fill {
-  border: 1px solid @fin-eb;
-  border-bottom: 0;
-  background: @fin-eb-bud;
+.fin-chart-col.bud .fin-chart-bar.rev .fin-chart-fill { .fin-bud-fill(@fin-rev); }
+.fin-chart-col.bud .fin-chart-bar.bf .fin-chart-fill { .fin-bud-fill(@fin-bf); }
+.fin-chart-col.bud .fin-chart-bar.eb .fin-chart-fill { .fin-bud-fill(@fin-eb); }
+
+/* "Budget" øverst over budgettets kolonner; musen går igennem til kolonnerne */
+.fin-chart-band {
+  z-index: 1;
+  align-self: start;
+  padding-top: 8px;
+  font-size: @font-size-sm;
+  font-weight: 600;
+  text-align: center;
+  color: @text-color-secondary;
+  pointer-events: none;
 }
 
 /* Negativt tal (f.eks. et underskud): stiplet omrids i seriens farve, også i budgettet */
