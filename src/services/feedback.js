@@ -70,7 +70,7 @@ export function toast (text, opts) {
   toastKey = key
   let endsAt = 0
   const open = (duration) => {
-    // En senere besked har erstattet denne: rør den ikke igen (fx når fokus forlader dens knap)
+    // En senere besked har erstattet denne: rør den ikke igen (f.eks. når fokus forlader dens knap)
     if (toastKey !== key) return
     const own = key
     endsAt = duration ? Date.now() + duration * 1000 : 0

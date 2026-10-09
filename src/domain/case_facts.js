@@ -20,7 +20,8 @@
    Ejes af indholdsagenten. Indlæses efter case_documents.js og data.js.
    ──────────────────────────────────────────────────────────────────────────── */
 (function () {
-  var AR25 = 'Aarsrapport_2025.pdf', AR24 = 'Aarsrapport_2024.pdf', PER = 'Periodetal_jan-aug_2026.xlsx',
+  // INT25: den interne årsrapport (case_documents_public.js). Den offentlige (§ 32) har ikke omsætningen
+  var AR25 = 'Aarsrapport_2025.pdf', AR24 = 'Aarsrapport_2024.pdf', INT25 = 'Intern_aarsrapport_2025.pdf', PER = 'Periodetal_jan-aug_2026.xlsx',
       BUD = 'Budget_2026-28_v3.xlsx', BANK = 'Bankansoegning_Nordjyske_Bank.pdf', GE = 'GE_Vernova_rammekontrakt.pdf',
       SIK = 'Sikkerhedsdokumenter.pdf', EJ = 'Ejerbog_2026.pdf', RAT = 'Ratingberegning_2026-0184.pdf';
   var src = function (doc, ref) { return { doc: doc, ref: ref }; };
@@ -229,7 +230,7 @@
         values: { '2023': 28.0, '2024': 32.8, '2025': 41.1 },
         ytd: { period: 'jan-aug 2026', periodEn: 'Jan-Aug 2026', value: 29.08, source: src(PER, 'ark Resultat') },
         budget: { period: '2026E', value: 44.4, source: src(BUD, 'ark Resultat') },
-        source: src(AR25, 's. 9') },
+        source: src(INT25, 's. 9') },
       { key: 'ebitda', label: 'EBITDA', labelEn: 'EBITDA', unit: 'DKK mio.', unitEn: 'DKK million',
         values: { '2023': 1.3, '2024': 1.9, '2025': 2.4 },
         ytd: { period: 'jan-aug 2026', periodEn: 'Jan-Aug 2026', value: 1.68, source: src(PER, 'ark Resultat') },
@@ -239,7 +240,7 @@
         values: { '2023': 4.6, '2024': 5.8, '2025': 5.8 },
         ytd: { period: 'jan-aug 2026', periodEn: 'Jan-Aug 2026', value: 5.8, source: src(PER, 'ark Resultat') },
         budget: { period: '2026E', value: 6.1, source: src(BUD, 'ark Resultat') },
-        source: src(AR25, 's. 9') },
+        source: src(INT25, 's. 9') },
       { key: 'equity', label: 'Egenkapital', labelEn: 'Equity', unit: 'DKK mio.', unitEn: 'DKK million',
         values: { '2023': 3.5, '2024': 4.8, '2025': 6.2 },
         ytd: { period: '31.8.2026', periodEn: '31 Aug 2026', value: 6.85, source: src(PER, 'ark Balance') },

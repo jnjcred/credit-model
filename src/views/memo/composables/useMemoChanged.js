@@ -4,7 +4,7 @@
 // når et afsnit gemmes, en kommentar løses m.m.) tæller memoVersion op efter 250 ms ro.
 //
 //   const memoVersion = useMemoChanged()   // ref; læs .value i en computed for at følge med
-//   memoVersion.value++                    // med det samme (fx når et afsnit lige er markeret som gennemgået)
+//   memoVersion.value++                    // med det samme (f.eks. når et afsnit lige er markeret som gennemgået)
 import { onBeforeUnmount, ref } from 'vue'
 import { useWindowEvent } from '@/composables/useWindowEvent'
 

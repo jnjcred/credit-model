@@ -1,6 +1,6 @@
 <script setup>
-// Punktets side, øverst (new_case_portal.jsx: PortalItemHead, L1993–2023): titlen (h1), beskrivelsen og
-// "Hvorfor". Et spørgsmål fra rådgiveren står i en boks med svarfeltet (PortalQuestion). Er punktet hos
+// Punktets side, øverst (new_case_portal.jsx: PortalItemHead, L1993–2023): titlen (h1) og beskrivelsen
+// med "hvorfor" i samme afsnit. Et spørgsmål fra rådgiveren står i en boks med svarfeltet (PortalQuestion). Er punktet hos
 // en hjælper efter et spørgsmål, står rådgiverens note. Har kunden sendt en bemærkning, står den med
 // "Fortryd bemærkning".
 //
@@ -11,7 +11,7 @@ import { computed } from 'vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { csCanUndo, csConfirmUndo } from '@/domain/customer'
-import { PORTAL_CONTACT, ncFill } from '@/domain/new_case_portal'
+import { ncFill } from '@/domain/new_case_portal'
 import { useCase } from '@/composables/useCaseVersion'
 import PortalQuestion from './PortalQuestion.vue'
 
@@ -23,7 +23,7 @@ const props = defineProps({
 const emit = defineEmits(['update:answer', 'answered'])
 
 const s = useCase(() => CW.itemState(props.item.id))
-const adv = PORTAL_CONTACT.first
+const adv = 'EIFO'   // kunden skriver til og hører fra EIFO; rådgiverens navn står kun på kontaktkortet
 const asked = computed(() => !!s.value && s.value.status === 'rejected')
 const note = computed(() => (s.value && s.value.status === 'delegated' && s.value.reviewNote ? s.value.reviewNote : ''))
 const noted = computed(() => !!s.value && s.value.status === 'noted')
@@ -31,11 +31,9 @@ const noted = computed(() => !!s.value && s.value.status === 'noted')
 
 <template>
   <a-typography-title>{{ t(item.label) }}</a-typography-title>
-  <a-typography-paragraph class="portal-ih-desc">
-    {{ t(item.desc) }}
-  </a-typography-paragraph>
-  <a-typography-paragraph type="secondary">
-    {{ t('Hvorfor') }}: {{ t(item.why) }}
+  <!-- Hvorfor punktet er med, står i samme afsnit som beskrivelsen (ikke som en grå linje for sig) -->
+  <a-typography-paragraph>
+    {{ t(item.desc) }}{{ item.why ? ' ' + t(item.why) : '' }}
   </a-typography-paragraph>
   <PortalQuestion
     v-if="asked"
@@ -84,10 +82,6 @@ const noted = computed(() => !!s.value && s.value.status === 'noted')
 </template>
 
 <style scoped>
-.portal-ih-desc {
-  margin-bottom: 4px;
-}
-
 .portal-ih-noted {
   display: flex;
   flex-wrap: wrap;

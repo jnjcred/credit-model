@@ -53,7 +53,7 @@ watch(open, (on) => {
 useWindowEvent('keydown', (e) => {
   if (e.key === 'Escape' && open.value) { open.value = false; CW.focusSoon('#cwp-demo-items-btn') }
 })
-// Tab fra panelets sidste knap fortsætter efter knappen (fx Udfyld alt), som før
+// Tab fra panelets sidste knap fortsætter efter knappen (f.eks. Udfyld alt), som før
 const onPanelKeydown = usePopoverTabOut({
   panel: () => panel.value,
   trigger: () => document.getElementById('cwp-demo-items-btn'),

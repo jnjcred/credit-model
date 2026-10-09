@@ -77,7 +77,7 @@ function csSourceText(s) {
 }
 
 // Filtyper, kunden kan sende ("PDF, Excel, Word eller billeder"). Bruges både som
-// accept på filfelterne og til at afvise filer, der trækkes ind (fx .exe).
+// accept på filfelterne og til at afvise filer, der trækkes ind (f.eks. .exe).
 const CS_ACCEPT = '.pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg,.heic,.webp,.tif,.tiff';
 function csAllowed(f, accept) {
   const name = String((f && f.name) || '').toLowerCase();
@@ -144,12 +144,12 @@ function csOpenFile(f) {
  */
 function csRemoveOwnFile(itemId, file) {
   if (!CW.canRemoveFile(itemId, file.id, 'kunde')) {
-    CW.toast(csFill(t('{navn} har tilføjet filen, så kun hun kan fjerne den.'), { navn: csFirst(csAdvisor().name) }), { tone: 'info' });
+    CW.toast(t('Filen er tilføjet af EIFO, så kun EIFO kan fjerne den.'), { tone: 'info' });
     return Promise.resolve(false);
   }
   return CW.confirm({
     title: csFill(t('Fjern {navn}?'), { navn: file.name }),
-    text: csFill(t('{navn} har allerede fået filen. Hun kan se i sagens historik, at I har fjernet den.'), { navn: csFirst(csAdvisor().name) }),
+    text: t('EIFO har allerede fået filen og kan se i sagens historik, at I har fjernet den.'),
     confirmLabel: t('Fjern filen'), danger: true,
   }).then(r => {
     if (!r.ok) return false;
@@ -171,7 +171,7 @@ function csConfirmUndo(itemId) {
   const s = CW.itemState(itemId);
   const it = CW.itemById(itemId);
   const label = it ? t(it.label) : '';
-  const adv = csFirst(csAdvisor().name);
+  const adv = 'EIFO';
   const text = s && s.status === 'noted' ? t('Bemærkningen trækkes tilbage, og punktet står igen som manglende.')
     : s && s.status === 'delegated' ? t('Linket til hjælperen lukkes, og punktet står igen som manglende.')
     : csFill(t('Det, I har sendt, trækkes tilbage, og punktet står igen som manglende. {navn} kan se det i sagens historik.'), { navn: adv });
@@ -222,7 +222,7 @@ const CS_TRADE_ACCEPT = '.pdf,.xlsx,.xls,.csv';
 
 /* ── Samtalen mellem kunde og rådgiver ───────────────────────────────────── */
 
-// Emnet på en besked uden for punkterne gemmes på dansk (fx "Årsrapport 2024") og oversættes, når det vises
+// Emnet på en besked uden for punkterne gemmes på dansk (f.eks. "Årsrapport 2024") og oversættes, når det vises
 function csAboutLabel(about) {
   if (!about) return '';
   const m = /^Årsrapport (\d{4})$/.exec(about);

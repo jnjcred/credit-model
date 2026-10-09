@@ -16,7 +16,7 @@
 // - Programmatiske ændringer (AI, chat, nulstil, gennemgang, tabel) tager et fortryd-trin først
 //   (memo4:snap:<afsnit>); "Fortryd" i overskriften ruller det sidste trin tilbage.
 // - "Nulstil afsnit" (resetTrigger tæller op) nulstiller kun, når tælleren ændrer sig i et redigerbart afsnit.
-//   Tælleren overlever genmonteringer, men en genmontering (fx når en anden version vises) nulstiller ikke
+//   Tælleren overlever genmonteringer, men en genmontering (f.eks. når en anden version vises) nulstiller ikke
 //   igen, og en låst visning nulstiller eller gemmer aldrig noget.
 // Ikke porteret (død kode): API-metoderne replace, replaceSelection og snapCount (ingen kalder dem) og
 // pladsholdervisningen isPlaceholder (altid false).
@@ -185,7 +185,7 @@ function markReviewed () {
 function onReview () { if (markReviewed()) emit('reviewed-next', props.sKey) }
 
 /* Fortryd gennemgangen fra linjen "Gennemgået af …". Var gennemgangen det seneste trin, rulles teksten
-   tilbage med udkastmærkerne. Ellers (fx en gennemgang fra før fortryd-trinene) fjernes kun gennemgangen. */
+   tilbage med udkastmærkerne. Ellers (f.eks. en gennemgang fra før fortryd-trinene) fjernes kun gennemgangen. */
 function undoReview () {
   const last = loadSnaps(props.sKey).slice(-1)[0]
   if (last && last.action === 'review') undoAi()

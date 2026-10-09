@@ -15,6 +15,12 @@
 // landingssiden (eller flowStart) med skærmrækken øverst. I begge vælges rollen øverst: Rådgiver
 // (forhåndsvisningen som ovenfor) eller Kunde, hvor portalen virker som for kunden: svar, filer og beskeder
 // gemmes, som om kunden havde sendt dem. Rollen huskes i browseren (kabul:flow-role).
+// Kundeside har også rækken med kundens skærme øverst (landing, bruger, log ind, oversigt osv.), så rådgiveren kan
+// klikke sig gennem hele kundens vej fra Kundeside; Kundeflow har ikke længere en knap i menuen.
+//
+// Demoknapperne til Regnskabs kilder (forbind e-conomic, upload saldobalance, intern årsrapport og budget;
+// PortalSourceDemo i oversigtens rækker) står i kundens portal og på Kundeside, når anmodningen er sendt,
+// men ikke i Kundeflow.
 //
 // Props: preview, flow, flowStart ('landing' | 'account' | 'signup' | 'login' | 'hub' | 'material'),
 //        onOpenFlow (funktion: Kundeside → Kundeflow på kundens trin; en prop, ikke en emit, så portalen kan
@@ -34,12 +40,10 @@ import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { DATA } from '@/domain/data'
 import { csClearDraft } from '@/domain/customer'
-import {
-  DEMO_COUNTRIES, PORTAL_CONTACT, PORTAL_SESSION_KEY, demoFileName, demoPdf, ncFill, portalFlowRole, portalKind,
-  portalMem, portalStatus, portalTrusted, setPortalMem,
-} from '@/domain/new_case_portal'
+import { DEMO_COUNTRIES, PORTAL_SESSION_KEY, demoFileName, demoPdf, ncFill, portalKind, portalMem, portalSetFiscalYear, portalStatus, portalTrusted, setPortalMem } from '@/domain/new_case_portal'
 import { obDemoLabel, obDemoSkip, obDemoStage, obDemoState, pvScreenLabel } from '@/domain/onboarding'
 import { useCase } from '@/composables/useCaseVersion'
+import { previewMemory, setPreviewMemory } from '@/composables/usePreviewMemory'
 import { useFreshThreads } from '@/views/customer/useFreshThreads'
 import PortalPreviewBar from './components/PortalPreviewBar.vue'
 import PortalHeader from './components/PortalHeader.vue'
@@ -56,6 +60,8 @@ import PortalUpload from './PortalUpload.vue'
 import PortalConnect from './PortalConnect.vue'
 import PortalTradeScreen from './PortalTradeScreen.vue'
 import PortalOnboarding from './onboarding/PortalOnboarding.vue'
+import PortalAiNotice from './PortalAiNotice.vue'
+import { aiNoticeDone } from '@/domain/aiNotice'
 import CrediwireAuth from './onboarding/CrediwireAuth.vue'
 import ErpSetup from './onboarding/ErpSetup.vue'
 import OnboardingDemoBar from './onboarding/OnboardingDemoBar.vue'
@@ -96,6 +102,9 @@ const demoKey = ref(0)
 const landing = computed(() => !props.preview && !loggedIn.value && !ob.value.account && !legacy.value && !landed.value)
 // Afslået eller indstillet sag: kunden kan ikke længere sende noget
 const lock = useCase(() => CW.customerLock())
+// Oplysningen om AI (aiNotice.js): efter opstarten og før alt andet, også for kunder, der allerede er i gang
+// (ny version af teksten = ny kvittering). Ikke i rådgiverens forhåndsvisning og ikke på en låst sag
+const needAi = computed(() => !aiNoticeDone(ob.value) && !lock.value)
 // Opstarten: det trin, kunden mangler, eller et tidligere, kunden er gået tilbage til
 const obView = ref(null)
 const obNext = computed(() => (legacy.value || lock.value ? null : CW.onboardingStep(ob.value)))
@@ -109,14 +118,18 @@ function initialPvOb () {
   if (k === 'account' && !ob.value.account) return 'landing'
   return ['hub', 'material'].includes(k) ? null : k
 }
-const pvOb = ref(initialPvOb())
+// Forhåndsvisningen efter en genindlæsning: samme skærm som før (Kundeflows skærm og portalens visning)
+const pvMem0 = props.preview ? previewMemory() : null
+const pvOb = ref(pvMem0 && pvMem0.pvOb !== undefined ? pvMem0.pvOb : initialPvOb())
+watch(pvOb, (k) => { if (props.preview) setPreviewMemory({ pvOb: k }) })
 const pvNote = ref(null)
 // Hvem bruger siden? Rådgiveren (forhåndsvisning, spærret) eller kunden (alt virker)
-const flowRole = ref(props.preview ? portalFlowRole() : 'rådgiver')
+// Rådgiveren ser altid Rådgiver-visningen som udgangspunkt, også hvis den sidst valgte rolle var Kunde
+const flowRole = ref('rådgiver')
 const asAdvisor = computed(() => props.preview && flowRole.value !== 'kunde')
-// Spærren sættes, før noget i portalen tegnes (fx dialogen, der ellers markerer beskeder som læst af kunden)
+// Spærren sættes, før noget i portalen tegnes (f.eks. dialogen, der ellers markerer beskeder som læst af kunden)
 if (asAdvisor.value) CW.setPreview(true)
-// Spærren skiftes med det samme, så alt, der spørger CW.isPreview(), fx mail-afkrydsningen i dialogen og
+// Spærren skiftes med det samme, så alt, der spørger CW.isPreview(), f.eks. mail-afkrydsningen i dialogen og
 // "Skriv som rådgiver", følger rollen. CW.isPreview() er ikke reaktiv: skiftet meldes som en ændring af
 // sagen (CW.bump), så portalens dele læser den igen uden at miste det, der er skrevet (som React's gentegning).
 function setFlowRole (r) {
@@ -139,6 +152,12 @@ const initial = (() => {
   // Forhåndsvisningen (Kundeside og Kundeflow) åbner på oversigten
   if (props.preview && s !== 'status') s = 'hub'
   if (props.preview && !props.flow) s = 'hub'
+  // ... medmindre rådgiveren stod på en anden skærm, før siden blev genindlæst
+  const pm = props.preview ? previewMemory() : null
+  if (pm && pm.screen) {
+    const okItem = !pm.itemId || CW.requestedItems().some(it => it.id === pm.itemId)
+    if (okItem) { s = pm.screen; id = pm.itemId || null }
+  }
   return { s, id }
 })()
 const screen = ref(initial.s)
@@ -151,6 +170,7 @@ let returnTo = null
 function go (s, itemId = null, backTo = null) {
   returnTo = backTo
   if (!props.preview) setPortalMem({ screen: s, itemId })
+  else setPreviewMemory({ screen: s, itemId })
   activeId.value = itemId
   screen.value = s
 }
@@ -174,7 +194,7 @@ onBeforeUnmount(() => { if (asAdvisor.value) lockOff() })
 const pvStop = (e, fallback) => {
   // Uploadfelterne i punkterne (og knappen, der sender filerne) virker: rådgiveren uploader på kundens vegne
   if (e.target && e.target.closest && e.target.closest('[data-pv-allow]')) return
-  // Links i teksten (fx "brugsvilkår") er ikke kundens handling, selv om de står i en afkrydsning
+  // Links i teksten (f.eks. "brugsvilkår") er ikke kundens handling, selv om de står i en afkrydsning
   const link = e.type === 'click' && e.target && e.target.closest && e.target.closest('.cwp-linkbtn')
   if (link && !link.hasAttribute('data-cust-act')) return
   const el = (e.target && e.target.closest && e.target.closest('[data-cust-act]'))
@@ -209,7 +229,7 @@ const active = computed(() => { requested.value; return activeId.value ? CW.item
 // ulæste beskeder markeres som læst, når portalen vises for kunden (ikke i rådgiverens forhåndsvisning)
 useFreshThreads(() => asAdvisor.value, () => view.value + ':' + (activeId.value || ''))
 
-// Sidetitel pr. trin, fx "Intern årsrapport · Materiale til EIFO"
+// Sidetitel pr. trin, f.eks. "Intern årsrapport · Materiale til EIFO"
 const pageName = computed(() => (!hasReq.value && lock.value !== 'declined' ? t('Ingen aktiv anmodning')
   : landing.value ? t('Anmodning fra EIFO')
   : !loggedIn.value ? (!cwAuth.value ? ncFill(t('Opstart: {step}'), { step: pvScreenLabel('account') }) : ob.value.account ? t('Crediwire: Log ind') : t('Crediwire: Opret bruger'))
@@ -218,7 +238,7 @@ const pageName = computed(() => (!hasReq.value && lock.value !== 'declined' ? t(
   : view.value === 'hub' ? t('Oversigt')
   : view.value === 'status' ? t('Status') : view.value === 'erp' ? t('Regnskabssystem') : active.value ? t(active.value.label) : t('Oversigt')))
 // Titlen sættes ikke tilbage, når portalen lukkes: appen sætter selv titlen for den nye rute
-watch(pageName, (n) => { if (!props.preview) document.title = n + ' · ' + t('Materiale til EIFO') }, { immediate: true })
+watch(pageName, (n) => { if (!props.preview) document.title = n + ' - ' + t('Materiale til EIFO') }, { immediate: true })
 
 // Fokus ved skift af visning (ikke første gang): til overskriften, eller tilbage til punktet, man kom fra
 watch([view, activeId, loggedIn, obStep, pvOb, cwAuth, landing], (_n, _o, onCleanup) => {
@@ -239,16 +259,18 @@ watch([view, activeId, loggedIn, obStep, pvOb, cwAuth, landing], (_n, _o, onClea
 const openItem = (id) => go(portalKind(id), id)
 const toHub = (fromId) => go('hub', null, fromId || null)
 
-// Kunden afslutter et uploadpunkt: filerne registreres i CW og punktet markeres som sendt
-function finish (id, files, note) {
+// Kunden afslutter et uploadpunkt: filerne registreres i CW og punktet markeres som sendt.
+// fiscal: regnskabsårets første måned (budgettet), gemmes på sagen
+function finish (id, files, note, fiscal, fiscalLen, fiscalPeriods) {
   const prev = CW.itemState(id)
   // På Kundeside (forhåndsvisning) uploader rådgiveren på kundens vegne: filen står som rådgiverens
   const by = CW.isPreview() ? 'rådgiver' : 'kunde'
+  if (fiscal) portalSetFiscalYear(fiscal, by, id, fiscalLen, fiscalPeriods)
   // Svar på rådgiverens spørgsmål uden ny fil: det, der allerede er sendt, gælder stadig
   if (prev && prev.status === 'rejected' && !(files || []).length && note) {
     if (!CW.answerItem(id, note, { by })) return
     csClearDraft(id)
-    CW.toast(by === 'rådgiver' ? t('Svaret er gemt på kundens vegne') : ncFill(t('Svaret er sendt til {name}'), { name: PORTAL_CONTACT.first }))
+    CW.toast(by === 'rådgiver' ? t('Svaret er gemt på kundens vegne') : ncFill(t('Svaret er sendt til {name}'), { name: 'EIFO' }))
     toHub(id)
     return
   }
@@ -261,7 +283,7 @@ function finish (id, files, note) {
     CW.markReceived(id, { by, files: metas, note: note != null ? note : (stale ? '' : undefined), noteKind: noteOnly ? 'ikke-relevant' : undefined })
     CW.toast(by === 'rådgiver'
       ? ncFill(t('{item} er uploadet på kundens vegne'), { item: t(CW.itemById(id).label) })
-      : ncFill(t('{item} er sendt til {name}'), { item: t(CW.itemById(id).label), name: PORTAL_CONTACT.first }))
+      : ncFill(t('{item} er sendt til {name}'), { item: t(CW.itemById(id).label), name: 'EIFO' }))
   }
   toHub(id)
 }
@@ -366,6 +388,7 @@ const content = computed(() => {
   if (!props.preview && !loggedIn.value && !cwAuth.value) return 'pre'
   if (!props.preview && !loggedIn.value) return 'auth'
   if (obStep.value) return 'onboarding'
+  if (!props.preview && needAi.value) return 'ai'
   if (view.value === 'upload' && active.value && !lock.value) return 'upload'
   if (view.value === 'connect' && active.value && !lock.value) return 'connect'
   // Ingen kontrol af samtykket her: det skrives midt i forbindelsen, og dialogen skal blive stående til
@@ -376,7 +399,13 @@ const content = computed(() => {
   return 'hub'
 })
 // Kundeside: hvor kunden er i opstarten, øverst på oversigten
-const showPvObStatus = computed(() => asAdvisor.value && !props.flow && !!req.value && !lock.value && view.value === 'hub')
+// (også i Kundeflow på Oversigt, når kunden endnu ikke er nået dertil)
+const showPvObStatus = computed(() => asAdvisor.value && !lock.value && view.value === 'hub')
+// "Anmod om materiale" i boksen, når anmodningen ikke er sendt: forhåndsvisningen lukkes, og materialevalget åbnes
+function requestMaterial () {
+  emit('back')
+  if (typeof window.CW_REQUEST_MORE === 'function') window.CW_REQUEST_MORE(() => CW.focusSoon('#ws-material-title'))
+}
 const demoSkipLabel = computed(() => (!loggedIn.value && (ob.value.doneAt || legacy.value) ? t('Log ind (demo)') : t('Spring opstarten over (demo)')))
 </script>
 
@@ -399,8 +428,9 @@ const demoSkipLabel = computed(() => (!loggedIn.value && (ob.value.doneAt || leg
           :flow="flow"
           :flow-role="flowRole"
           :has-request="!!req"
-          :jump="flow && lock !== 'declined'"
+          :jump="lock !== 'declined'"
           :current="pvCurrent"
+          :demo="!flow && !!req && !lock"
           @role="setFlowRole"
           @close="emit('back')"
           @jump="pvGo"
@@ -498,12 +528,17 @@ const demoSkipLabel = computed(() => (!loggedIn.value && (ob.value.doneAt || leg
             />
           </template>
         </PortalOnboarding>
+        <PortalAiNotice
+          v-else-if="content === 'ai'"
+          :updated="!!ob.aiNotice || CW.allUploads().some(f => f.by === 'kunde')"
+          @done="go('hub')"
+        />
         <PortalUpload
           v-else-if="content === 'upload'"
           :key="'upload:' + active.id"
           :item="active"
           @back="toHub(active.id)"
-          @finish="(files, note) => finish(active.id, files, note)"
+          @finish="(files, note, fiscal, fiscalLen, fiscalPeriods) => finish(active.id, files, note, fiscal, fiscalLen, fiscalPeriods)"
           @noted="toHub(active.id)"
         />
         <PortalConnect
@@ -511,7 +546,7 @@ const demoSkipLabel = computed(() => (!loggedIn.value && (ob.value.doneAt || leg
           :key="'connect:' + active.id"
           :item="active"
           @back="toHub(active.id)"
-          @finish="(files, note) => finish(active.id, files, note)"
+          @finish="(files, note, fiscal, fiscalLen, fiscalPeriods) => finish(active.id, files, note, fiscal, fiscalLen, fiscalPeriods)"
           @noted="toHub(active.id)"
         />
         <ErpSetup
@@ -534,11 +569,14 @@ const demoSkipLabel = computed(() => (!loggedIn.value && (ob.value.doneAt || leg
         <template v-else>
           <PortalPvObStatus
             v-if="showPvObStatus"
+            :flow="flow"
             :on-open-flow="onOpenFlow"
+            @request="requestMaterial"
           />
           <PortalHub
             :requested="requested"
             :lock="lock"
+            :demo="!flow && !!req"
             @open="openItem"
             @open-bundle="(preselect) => { bundle = { preselect: preselect || null } }"
             @other="otherOpen = true"

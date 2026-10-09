@@ -11,7 +11,7 @@
 // forudfyldes efter en tilbagetrækning. Logikken står i src/domain/workspace/readiness.js.
 //
 // Props: caseId.
-// Emits: focus-overview(target): gå til Overblik og rul til afsnittet (fx 'ws-outstanding');
+// Emits: focus-overview(target): gå til Overblik og rul til afsnittet (f.eks. 'ws-outstanding');
 //        sagen gør det med sagshovedets focusOverview.
 import { computed, onMounted, reactive, ref } from 'vue'
 import { t } from '@/i18n'
@@ -213,7 +213,7 @@ const reasonBad = (r) => check.value.isBad(r, tried.value, touched)
                             v-if="c.done"
                             type="secondary"
                           >
-                            {{ ' · ' + c.text }}
+                            {{ ' - ' + c.text }}
                           </a-typography-text>
                           <template v-if="c.source">
                             {{ ' ' }}<SourceLink
@@ -249,7 +249,7 @@ const reasonBad = (r) => check.value.isBad(r, tried.value, touched)
           id="ws-submit-note"
           :value="note"
           :rows="3"
-          :placeholder="t('Fx: Indstilles til bevilling på vilkårene i Bilag 1.')"
+          :placeholder="t('F.eks. indstilles til bevilling på vilkårene i Bilag 1.')"
           @update:value="setNote"
         />
       </a-form-item>

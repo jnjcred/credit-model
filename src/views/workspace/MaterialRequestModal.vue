@@ -13,8 +13,8 @@
 //   sent      kvitteringen { name, count, deadline, update, noMail }, eller null
 // Emits: close (Luk, Esc, klik udenfor, Kassér ændringer og Tilbage til sagen), sent(info) (sendt;
 //        Overblik viser kvitteringen)
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ArrowRightOutlined } from '@ant-design/icons-vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { wsDiscardDraft, wsMaterialHeading, wsMaterialModel, wsMaterialSend } from '@/domain/workspace/request'
@@ -116,9 +116,12 @@ onBeforeUnmount(() => {
       >{{ heading.title }}</span>
     </template>
 
-    <!-- id: andre skærme ruller og sætter fokus hertil (fx Dataanmodninger og "Åbn anmodningen") -->
+    <!-- id: andre skærme ruller og sætter fokus hertil (f.eks. Dataanmodninger og "Åbn anmodningen") -->
     <div id="ws-material">
-      <a-typography-paragraph type="secondary">
+      <a-typography-paragraph
+        v-if="heading.subtitle"
+        type="secondary"
+      >
         {{ heading.subtitle }}
       </a-typography-paragraph>
       <RequestSentResult

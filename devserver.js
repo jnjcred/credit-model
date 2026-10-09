@@ -405,7 +405,8 @@ const server = http.createServer(async (req, res) => {
   // (prompts/*.md) og demoens data (data/*) serveres direkte fra roden, så en gemt
   // prompt virker med det samme uden et nyt build.
   let rel = pathname.replace(/^\/+/, '');
-  if (!rel) rel = 'index.html';
+  // Appens egne adresser (fx /sag/1/kundeside) har ingen fil: de får index.html, og appen læser adressen
+  if (!rel || (!path.extname(rel) && !/^(prompts|data)\//.test(rel))) rel = 'index.html';
   const base = /^(prompts|data)\//.test(rel) || !fs.existsSync(DIST) ? ROOT : DIST;
   const full = path.join(base, rel);
   if (!full.startsWith(base)) { res.writeHead(403); res.end('nej'); return; }

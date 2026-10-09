@@ -57,7 +57,7 @@ const deptOf = (c) => MEMO_DEPT_MAP[c.dept] || MEMO_DEPTS[0]
           type="secondary"
           class="memo-cmt-ov-n"
         >
-          {{ g.open + ' ' + memoOpenWord(g.open) + (g.all > g.open ? ' · ' + (g.all - g.open) + ' ' + t('løst') : '') }}
+          {{ g.open + ' ' + memoOpenWord(g.open) + (g.all > g.open ? ' - ' + (g.all - g.open) + ' ' + t('løst') : '') }}
         </a-typography-text>
       </a-button>
       <a-button
@@ -75,7 +75,7 @@ const deptOf = (c) => MEMO_DEPT_MAP[c.dept] || MEMO_DEPTS[0]
               type="secondary"
               class="memo-cmt-dept"
             >
-              {{ '· ' + t(deptOf(c).label) }}
+              {{ '- ' + t(deptOf(c).label) }}
             </a-typography-text>
             <a-typography-text
               type="danger"

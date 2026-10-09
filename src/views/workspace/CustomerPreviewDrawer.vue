@@ -5,7 +5,7 @@
 // Kundeside kan skifte til Kundeflow på det trin, kunden er på (portalens open-flow).
 //
 // Spærren for kundehandlinger (CW.setPreview: kundehandlinger afvises, og beskeder skjules) slås
-// til, før portalen tegnes første gang, så intet i portalen (fx "læst af kunden") når at ske uden
+// til, før portalen tegnes første gang, så intet i portalen (f.eks. "læst af kunden") når at ske uden
 // spærre, og slås fra, når forhåndsvisningen er lukket. Undtagen med rollen Kunde (vælgeren øverst
 // i portalen): der virker portalen som for kunden, og portalen styrer selv spærren (wsPreviewLockOn).
 //
@@ -18,6 +18,7 @@
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
+import { previewMemory, setPreviewMemory } from '@/composables/usePreviewMemory'
 import { useSelectEscape } from '@/composables/useSelectEscape'
 import { FOCUSABLE } from '@/composables/focusable'
 import { wsPreviewLockOn } from '@/domain/workspace/actions'
@@ -31,9 +32,11 @@ const emit = defineEmits(['close'])
 // Spærren slås til nu, før portalen tegnes første gang
 if (wsPreviewLockOn()) CW.setPreview(true)
 
-const pv = ref({ flow: !!props.flow, step: null })
+// Efter en genindlæsning: samme tilstand og trin som før
+const mem0 = previewMemory()
+const pv = ref({ flow: !!props.flow || !!(mem0 && mem0.mode === 'flow'), step: (mem0 && mem0.step) || null })
 const box = ref(null)
-// Elementet, der havde fokus, da forhåndsvisningen åbnede (fx knappen Kundeside)
+// Elementet, der havde fokus, da forhåndsvisningen åbnede (f.eks. knappen Kundeside)
 const prev = document.activeElement
 const selectEsc = useSelectEscape()
 
@@ -74,20 +77,25 @@ function onKeydown (e) {
 
 function openFlow (step) {
   pv.value = { flow: true, step }
+  setPreviewMemory({ mode: 'flow', step, pvOb: undefined, screen: null, itemId: null })
   if (box.value) box.value.scrollTop = 0
 }
-const close = () => emit('close')
+// Lukning: skuffen glider først ned (som når den åbner), og forhåndsvisningen fjernes, når den er nede
+const open = ref(true)
+const close = () => { open.value = false }
+const afterVisible = (v) => { if (!v) emit('close') }
 </script>
 
 <template>
   <a-drawer
-    :visible="true"
+    :visible="open"
     placement="bottom"
     height="100%"
     :closable="false"
     :autofocus="false"
     :body-style="{ padding: 0 }"
     @close="close"
+    @after-visible-change="afterVisible"
   >
     <div
       ref="box"

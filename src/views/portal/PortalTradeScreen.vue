@@ -27,42 +27,45 @@ const answer = ref('')
 <template>
   <div class="portal-item">
     <PortalBackNav @back="emit('back')" />
-    <PortalItemHead
-      v-model:answer="answer"
-      :item="item"
-      own-button
-      @answered="emit('done')"
-    />
-    <PortalNotedToggle
-      v-if="notedOpen"
-      :item="item"
-      open
-      @update:open="(v) => { notedOpen = v }"
-      @done="emit('done')"
-    />
-    <TradeForm
-      v-else
-      :item-id="item.id"
-      id-prefix="cwp"
-      :answer="answer.trim()"
-      @done="emit('done')"
-    />
-    <template v-if="!notedOpen && (!s || s.status === 'rejected')">
-      <a-divider />
-      <PortalNotedToggle
+    <!-- Punktets indhold i et kort; tilbage-knappen står over det -->
+    <a-card :bordered="false">
+      <PortalItemHead
+        v-model:answer="answer"
         :item="item"
-        :open="false"
+        own-button
+        @answered="emit('done')"
+      />
+      <PortalNotedToggle
+        v-if="notedOpen"
+        :item="item"
+        open
         @update:open="(v) => { notedOpen = v }"
         @done="emit('done')"
       />
-    </template>
+      <TradeForm
+        v-else
+        :item-id="item.id"
+        id-prefix="cwp"
+        :answer="answer.trim()"
+        @done="emit('done')"
+      />
+      <template v-if="!notedOpen && (!s || s.status === 'rejected')">
+        <a-divider />
+        <PortalNotedToggle
+          :item="item"
+          :open="false"
+          @update:open="(v) => { notedOpen = v }"
+          @done="emit('done')"
+        />
+      </template>
+    </a-card>
   </div>
 </template>
 
 <style scoped>
-/* Punktets spalte, som før */
+/* Punktets spalte: indholdet er 640 px bredt som før, plus kortets 24 px på hver side */
 .portal-item {
-  max-width: 640px;
+  max-width: 688px;
   margin: 0 auto;
 }
 </style>

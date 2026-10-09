@@ -15,14 +15,14 @@ const telHref = 'tel:' + PORTAL_CONTACT.phone.replace(/\s/g, '')
   <div>
     <a-typography-text type="secondary">
       {{ PORTAL_CONTACT.name }}, {{ t(PORTAL_CONTACT.title) }}, {{ PORTAL_CONTACT.org }}
-      ·
+      -
       <a-typography-link
         class="portal-contact-nowrap"
         :href="telHref"
       >
         {{ PORTAL_CONTACT.phone }}
       </a-typography-link>
-      ·
+      -
       <a-typography-link
         class="portal-contact-nowrap"
         :href="'mailto:' + PORTAL_CONTACT.email"

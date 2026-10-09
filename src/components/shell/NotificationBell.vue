@@ -124,7 +124,7 @@ useWindowEvent('keydown', (e) => {
             <a-typography-text strong>{{ t('Notifikationer') }}</a-typography-text><a-typography-text
               v-if="model.n > 0"
               type="secondary"
-            > · {{ model.n }} {{ model.n === 1 ? t('ny') : t('nye') }}</a-typography-text>
+            > - {{ model.n }} {{ model.n === 1 ? t('ny') : t('nye') }}</a-typography-text>
           </span>
           <a-button
             v-if="model.n > 0"
@@ -173,7 +173,7 @@ useWindowEvent('keydown', (e) => {
                     <span class="bell-row-text">
                       <a-typography-text :strong="g.fresh">{{ item.caseId ? t(item.text) : item.text }}</a-typography-text>
                       <a-typography-text type="secondary">
-                        {{ item.company || company }} · <span :title="CW.fmtWhen(item.at)">{{ bellWhen(item.at) }}</span><span
+                        {{ item.company || company }} - <span :title="CW.fmtWhen(item.at)">{{ bellWhen(item.at) }}</span><span
                           v-if="g.fresh"
                           class="sr-only"
                         > {{ t('ny') }}</span>

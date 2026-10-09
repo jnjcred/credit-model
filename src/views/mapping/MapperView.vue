@@ -72,7 +72,7 @@ const counts = computed(() => {
   leaves.value.forEach(a => { const m = methodOf(a); if (m === 'changed') counts.changed++; if (m === 'none') counts.none++; else if (eff(a.nr).method === 'auto') counts.auto++; else counts.manual++ })
   return counts
 })
-// Bliver den valgte gruppe tom (fx "Ikke gemt" efter Gem), vises alle igen
+// Bliver den valgte gruppe tom (f.eks. "Ikke gemt" efter Gem), vises alle igen
 const fil = computed(() => ((filter.value === 'none' && !counts.value.none) || (filter.value === 'changed' && !counts.value.changed) ? 'all' : filter.value))
 const q = computed(() => query.value.trim().toLowerCase())
 const filtering = computed(() => fil.value !== 'all' || !!q.value)
@@ -263,7 +263,7 @@ const autoCat = (a) => { const d = M.defaultCat(a.nr); return d && eff(a.nr).cat
             {{ t('Kontomapping') }}
             <!-- Siden ligger i venstremenuen, så sagen står i titlen -->
             <a-typography-text type="secondary">
-              · {{ company }}
+              - {{ company }}
             </a-typography-text>
             {{ ' ' }}<a-tag>{{ t('demo') }}</a-tag>
           </a-typography-title>
@@ -416,7 +416,7 @@ const autoCat = (a) => { const d = M.defaultCat(a.nr); return d && eff(a.nr).cat
               <!-- Usynlig, til den får fokus med Tab: springer de mange konti over -->
               <a-button
                 type="link"
-                class="skip-link"
+                class="skip-link cw-link"
                 @click="CW.focusSoon('#map-side-start')"
               >
                 {{ t('Gå til kategorierne') }}
@@ -458,6 +458,7 @@ const autoCat = (a) => { const d = M.defaultCat(a.nr); return d && eff(a.nr).cat
                   <template v-if="column.key === 'nr'">
                     <a-button
                       v-if="isLeaf(a)"
+                      class="cw-link"
                       type="link"
                       size="small"
                       :aria-expanded="openAcc === a.nr"

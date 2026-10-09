@@ -1,20 +1,14 @@
 <script setup>
-// Sagshovedet (WorkspaceShell i workspace.jsx L697–740): sagens navn (sidens h1), en grå linje med
+// Sagshovedet (WorkspaceShell i workspace.jsx L697–740): sagens navn (sidens h1) og en grå linje med
 // facilitet (andelen af bankens facilitet som tooltip), sagsnummer, CVR og dage i fasen (kun tæt på
-// eller over SLA; rød, når den er over), og til højre den ansvarlige, Kundeside, Kundeflow,
-// Flere handlinger og næste skridt. Uden levende data står kun navn, linjen og den ansvarlige (ikke
-// ved en ukendt sag). Teksterne og knapperne regnes af wsHeaderModel (src/domain/workspace/header.js)
-// i WorkspaceView.
+// eller over SLA; rød, når den er over). Næste skridt står til højre i fanelinjen (WorkspaceView), og
+// Kundeside og Kundeflow står i sidemenuen (AppSidebar). Giv afslag og de øvrige handlinger står ikke
+// i sagshovedet. Teksterne regnes af wsHeaderModel (src/domain/workspace/header.js) i WorkspaceView.
 //
 // Props: caseData, hasData, name, facility ({ text, note } | null), cvr, phaseDays, phaseLate,
-//        phaseWarn, moreItems (menuen Flere handlinger), nextStep ({ label, onClick } | null; knappen
-//        har id 'ws-next-btn'), nextPrimary (næste skridt er sidens primære knap).
-// Emits: open-preview(flow): Kundeside (flow false) eller Kundeflow (flow true).
-import { ArrowRightOutlined, EyeOutlined } from '@ant-design/icons-vue'
+//        phaseWarn.
 import { t } from '@/i18n'
 import { wsPlural } from '@/domain/workspace/format'
-import CaseMoreActions from './CaseMoreActions.vue'
-import CaseOwnerSelect from './CaseOwnerSelect.vue'
 
 defineProps({
   caseData: { type: Object, required: true },
@@ -25,11 +19,7 @@ defineProps({
   phaseDays: { type: Number, default: 0 },
   phaseLate: { type: Boolean, default: false },
   phaseWarn: { type: Boolean, default: false },
-  moreItems: { type: Array, default: () => [] },
-  nextStep: { type: Object, default: null },
-  nextPrimary: { type: Boolean, default: true },
 })
-const emit = defineEmits(['open-preview'])
 </script>
 
 <template>
@@ -59,7 +49,7 @@ const emit = defineEmits(['open-preview'])
               type="secondary"
               aria-hidden="true"
             >
-              ·
+              -
             </a-typography-text>
           </template>
           <a-tooltip
@@ -82,46 +72,9 @@ const emit = defineEmits(['open-preview'])
             :title="t('Hverdage siden sagen kom i den nuværende fase')"
           >
             <a-typography-text :type="phaseLate ? 'danger' : 'secondary'">
-              {{ wsPlural(phaseDays, t('1 hverdag i fasen'), t('{n} hverdage i fasen')) + ' · ' + (phaseLate ? t('over SLA') : t('tæt på SLA')) }}
+              {{ wsPlural(phaseDays, t('1 hverdag i fasen'), t('{n} hverdage i fasen')) + ' - ' + (phaseLate ? t('over SLA') : t('tæt på SLA')) }}
             </a-typography-text>
           </a-tooltip>
-        </a-space>
-      </a-col>
-      <a-col flex="none">
-        <a-space wrap>
-          <CaseOwnerSelect
-            v-if="!caseData.unknown"
-            :case-data="caseData"
-          />
-          <template v-if="hasData">
-            <a-button
-              :title="t('Se kundens side')"
-              @click="emit('open-preview', false)"
-            >
-              <template #icon>
-                <EyeOutlined aria-hidden="true" />
-              </template>
-              {{ t('Kundeside') }}
-            </a-button>
-            <!-- Demo: kundens vej gennem opstarten, fra landingssiden -->
-            <a-button
-              type="dashed"
-              :title="t('Demo: de skærme, kunden kommer igennem, fra landingssiden')"
-              @click="emit('open-preview', true)"
-            >
-              {{ t('Kundeflow') }}
-            </a-button>
-            <CaseMoreActions :items="moreItems" />
-            <a-button
-              v-if="nextStep"
-              id="ws-next-btn"
-              :type="nextPrimary ? 'primary' : 'default'"
-              @click="nextStep.onClick()"
-            >
-              {{ nextStep.label }}
-              <ArrowRightOutlined aria-hidden="true" />
-            </a-button>
-          </template>
         </a-space>
       </a-col>
     </a-row>

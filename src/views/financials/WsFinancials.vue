@@ -19,12 +19,10 @@ const unit = ref('thousand')
 
 <template>
   <div class="fin-page">
-    <div>
-      <a-typography-title>{{ t('Virksomheden') }}</a-typography-title>
-      <a-typography-text type="secondary">
-        {{ t('Kunden samlet ét sted: stamdata, regnskab og budget, marked og ejerskab.') }}
-      </a-typography-text>
-    </div>
+    <!-- Fanen og sagens navn viser allerede, hvor man er; overskriften er kun til skærmlæsere -->
+    <h2 class="sr-only">
+      {{ t('Virksomheden') }}
+    </h2>
     <AnnualReportSection v-model:unit="unit" />
     <MarketSection />
     <TrustpilotSection />
@@ -34,10 +32,11 @@ const unit = ref('thousand')
 </template>
 
 <style scoped>
-/* Afsnittene giver selv afstanden over sig (Regnskab og FinSection 28 px, Trustpilot 20 px) */
+/* Afsnittene giver selv afstanden over sig (Regnskab og FinSection 28 px, Trustpilot 20 px),
+   også det første under fanerne, så siden har ingen luft i toppen selv */
 .fin-page {
   max-width: 1080px;
   margin: 0 auto;
-  padding: 24px 32px 80px;
+  padding: 0 32px 80px;
 }
 </style>

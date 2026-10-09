@@ -7,7 +7,8 @@
 //   en opdatering lukkes, og ellers skjules modalen, til "Åbn anmodningen" ('cw-open-material');
 // - dialogen med kunden: venter kunden på et svar fra rådgiveren, står den før materialet og
 //   bliver stående, når rådgiveren har svaret (så feltet ikke hopper væk midt i skrivningen);
-// - Anmodet materiale, Materiale på sagen og Seneste aktivitet.
+// - Til din gennemgang, Afventer kunden og Materiale på sagen (designet "Anmodet materiale v5")
+//   og Seneste aktivitet.
 // Kommer man fra sagshovedet, Dataanmodninger ('kabul:focus-material') eller tilbage fra en kilde
 // under Dokumenter ('kabul:ws-focus'), rulles der til afsnittet (useFocusTarget).
 // Reglerne står i wsOverviewModel i src/domain/workspace/header.js.
@@ -25,7 +26,8 @@ import StageHeroCard from './StageHeroCard.vue'
 import DeclineNoteCard from './DeclineNoteCard.vue'
 import MaterialRequestModal from './MaterialRequestModal.vue'
 import CustomerDialogPanel from './CustomerDialogPanel.vue'
-import OutstandingCard from './OutstandingCard.vue'
+import ReviewCard from './ReviewCard.vue'
+import WaitingCard from './WaitingCard.vue'
 import MaterialOnCaseCard from './MaterialOnCaseCard.vue'
 import ActivityCard from './ActivityCard.vue'
 
@@ -104,8 +106,9 @@ function onMaterialClose () {
 
     <CustomerDialogPanel v-if="dialogFirst" />
 
-    <!-- Det, der kræver handling: til gennemgang og det, kunden mangler -->
-    <OutstandingCard :locked="locked" />
+    <!-- Det, der kræver handling: til din gennemgang og det, kunden mangler -->
+    <ReviewCard :locked="locked" />
+    <WaitingCard :locked="locked" />
 
     <!-- Det, sagen har: offentlige data og det godkendte fra kunden -->
     <MaterialOnCaseCard :locked="locked" />

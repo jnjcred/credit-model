@@ -95,6 +95,9 @@ function obDemoState(k) {
 /* ── ② Datadeling: hvor meget EIFO må se, regnskabssystemet og aftalen ──── */
 
 const OB_TOP_SYSTEMS = ['ec', 'bi', 'di'];
+// Listen under fliserne (som i Crediwire i dag)
+const OB_OTHER_SYSTEMS = ['e-conomic nøgle forbindelse', '24SevenOffice', 'Microsoft Dynamics 365', 'Exact Netherlands', 'Reviso', 'Xena',
+  'Sage One', 'EG One', 'SIE4', 'SAF-T', 'Fortnox'];
 
 /* ── Forbindelsen: regnskabssystemets login og samtykke, derefter hentning ── */
 
@@ -162,6 +165,6 @@ Object.assign(window, { obLabel, OB_ORDER, PV_SCREENS, pvScreenLabel, obDemoStag
 // Modul-eksport til Vue-komponenterne
 export {
   OB_ORDER, obLabel, obPwHash, obPwProblems, OB_DEMO_PW, obLastMonth, obMonthEnd, obFmt, obSharingText,
-  OB_DEMO_STAGES, obDemoLabel, obDemoStage, obDemoState, OB_TOP_SYSTEMS, ERP_RUN_DONE,
+  OB_DEMO_STAGES, obDemoLabel, obDemoStage, obDemoState, OB_TOP_SYSTEMS, OB_OTHER_SYSTEMS, ERP_RUN_DONE,
   PV_SCREENS, pvScreenLabel, pvBlockedText, obDemoSkip,
 };

@@ -56,7 +56,7 @@ defineProps({
           {{ x.label }}
         </a-typography-text>{{ x.optional ? ' (' + t('valgfri') + ')' : '' }}
         <a-typography-text type="secondary">
-          · {{ x.why }}
+          - {{ x.why }}
         </a-typography-text>
       </li>
     </ul>

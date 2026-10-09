@@ -78,7 +78,7 @@ const removedNames = computed(() => props.model.removedItems.map(it => t(it.labe
             </a-typography-text>
             {{ ' ' }}<a-typography-text strong>
               {{ draft.name }}
-            </a-typography-text>{{ draft.role ? ', ' + draft.role : '' }} · {{ draft.email }}
+            </a-typography-text>{{ draft.role ? ', ' + draft.role : '' }} - {{ draft.email }}
           </div>
           <!-- En frist i fortiden eller efter sagens frist: teksten står i normal farve med et gult
                advarselsikon foran (advarselsfarven er for lys til tekst) -->
@@ -224,7 +224,7 @@ const removedNames = computed(() => props.model.removedItems.map(it => t(it.labe
       </a-typography-text>
     </a-checkbox>
 
-    <!-- Rådgiveren kan altid lade være med at sende mailen (fx fordi de selv ringer til kunden) -->
+    <!-- Rådgiveren kan altid lade være med at sende mailen (f.eks. fordi de selv ringer til kunden) -->
     <a-checkbox
       v-if="model.hasMail"
       id="ws-req-sendmail"

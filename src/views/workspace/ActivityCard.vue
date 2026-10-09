@@ -5,7 +5,6 @@
 //
 // Props: ingen. Emits: ingen.
 import { computed, ref } from 'vue'
-import { ClockCircleOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { wsDay } from '@/domain/workspace/format'
@@ -25,7 +24,6 @@ const a = computed(() => {
     <a-card :bordered="false">
       <template #title>
         <a-space :size="8">
-          <ClockCircleOutlined aria-hidden="true" />
           <span
             id="ws-activity-title"
             role="heading"
@@ -38,6 +36,7 @@ const a = computed(() => {
         #extra
       >
         <a-button
+          class="cw-link"
           type="link"
           size="small"
           :aria-expanded="all"
@@ -63,7 +62,7 @@ const a = computed(() => {
               <div>{{ wsActivityText(e) }}</div>
               <a-tooltip :title="CW.fmtWhen(e.at)">
                 <a-typography-text type="secondary">
-                  {{ a.who(e) }} · {{ wsDay(e.at) }}
+                  {{ a.who(e) }} - {{ wsDay(e.at) }}
                 </a-typography-text>
               </a-tooltip>
             </div>

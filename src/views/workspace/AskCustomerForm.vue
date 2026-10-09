@@ -25,7 +25,7 @@ const emit = defineEmits(['update:text', 'update:category', 'cancel', 'add'])
 
 const missing = computed(() => props.tried && !props.text.trim())
 const options = computed(() => props.categories.map(c => ({ value: c, label: t(c) })).concat([{ value: 'Øvrigt', label: t('Andet') }]))
-const placeholder = t('Fx "Kan I forklare faldet i bruttofortjenesten i 2024?"')
+const placeholder = t('F.eks. "Kan I forklare faldet i bruttofortjenesten i 2024?"')
 // Esc i den åbne emneliste lukker kun listen, ikke "Anmod om materiale"
 const selectEsc = useSelectEscape()
 </script>

@@ -3,13 +3,13 @@
 // Tallene regnes af sagsmodellen og er grå: tallet siger nok i sig selv.
 import { computed, onMounted, onUpdated, ref } from 'vue'
 import {
-  BranchesOutlined, CheckOutlined, EllipsisOutlined, ExperimentOutlined, FilterOutlined,
-  PlusOutlined, ProfileOutlined, ReloadOutlined, SendOutlined,
+  CheckOutlined, EllipsisOutlined, ExperimentOutlined, EyeOutlined,
+  PlusOutlined, ProfileOutlined, ReloadOutlined,
 } from '@ant-design/icons-vue'
 import { lang, setLang, t } from '@/i18n'
 import { CW } from '@/domain/case_state'
-import { DATA } from '@/domain/data'
 import { cwTasksAwaitingMe } from '@/domain/tasks'
+import { wsCaseData, wsCaseHasData } from '@/domain/workspace/caseData'
 import { useCaseVersion } from '@/composables/useCaseVersion'
 import { useWindowEvent } from '@/composables/useWindowEvent'
 import { useMenuKeyboard } from '@/composables/useMenuKeyboard'
@@ -30,14 +30,23 @@ const counts = computed(() => {
   return {
     // Samme tal som fanen "Afventer dig" i Mine opgaver
     awaitingMe: cwTasksAwaitingMe(),
-    stuck: DATA.requestRows().filter(r => r.status === 'stuck').length,
   }
 })
 
 const isActive = (r) => route.value === r || (r === 'cases' && route.value.startsWith('workspace'))
-const selectedKeys = computed(() => ['cases', 'requests', 'analyse', 'mapping', 'prompts'].filter(isActive))
+const selectedKeys = computed(() => ['cases'].filter(isActive))
 
-function onMenuClick ({ key }) { go(key) }
+// I en sag med data står Kundeside i menuen (de åbner forhåndsvisningen i sagen)
+const inLiveCase = computed(() => {
+  caseVersion.value
+  const r = route.value
+  return r.startsWith('workspace:') && wsCaseHasData(wsCaseData(Number(r.split(':')[1])))
+})
+
+function onMenuClick ({ key }) {
+  if (key === 'preview') { window.dispatchEvent(new CustomEvent('cw-open-customer-preview')); return }
+  go(key)
+}
 
 // Hovedmenuen er sidenavigation: knapper i en navigation, og den aktuelle side har aria-current,
 // som prototypens knapper. a-menu er kun det visuelle: punkterne har role="button" (prop'en), og
@@ -150,71 +159,20 @@ function onUserMenu ({ key }) {
             </a-typography-text>
           </span>
         </a-menu-item>
-        <a-menu-item
-          key="requests"
-          role="button"
-          :aria-current="isActive('requests') ? 'page' : undefined"
-        >
-          <template #icon>
-            <SendOutlined aria-hidden="true" />
-          </template>
-          <span
-            class="menu-label"
-            :title="counts.stuck + ' ' + t('sidder fast (ingen aktivitet i 3 hverdage)')"
+        <!-- Sagen: kundens side og kundens vej gennem opstarten (vises kun i en sag med data) -->
+        <template v-if="inLiveCase">
+          <a-menu-divider />
+          <a-menu-item
+            key="preview"
+            role="button"
+            :title="t('Se kundens side')"
           >
-            <span>{{ t('Dataanmodninger') }}</span>
-            <a-typography-text type="secondary">
-              {{ counts.stuck }}<span class="sr-only"> {{ t('sidder fast (ingen aktivitet i 3 hverdage)') }}</span>
-            </a-typography-text>
-          </span>
-        </a-menu-item>
-        <a-menu-item
-          key="analyse"
-          role="button"
-          :aria-current="isActive('analyse') ? 'page' : undefined"
-        >
-          <template #icon>
-            <FilterOutlined aria-hidden="true" />
-          </template>
-          {{ t('Porteføljeanalyse') }}
-        </a-menu-item>
-        <!-- Demo: kontomappingen. Markeret, fordi det ikke er aftalt, hvem der mapper,
-             og hvor det skal ligge i produktet. -->
-        <a-menu-item
-          id="nav-mapper"
-          key="mapping"
-          role="button"
-          :aria-current="isActive('mapping') ? 'page' : undefined"
-        >
-          <template #icon>
-            <BranchesOutlined aria-hidden="true" />
-          </template>
-          <span
-            class="menu-label"
-            :title="t('Demo: mapping af kundens konti fra e-conomic til Crediwires kategorier. Hvem der mapper, og hvor det skal ligge, er ikke aftalt.')"
-          >
-            <span>{{ t('Kontomapping') }}</span>
-            <a-tag class="menu-tag">{{ t('demo') }}</a-tag>
-          </span>
-        </a-menu-item>
-        <!-- Internt: produktteamets værksted til promptene bag "Kør AI igen" -->
-        <a-menu-item
-          id="nav-prompts"
-          key="prompts"
-          role="button"
-          :aria-current="isActive('prompts') ? 'page' : undefined"
-        >
-          <template #icon>
-            <ExperimentOutlined aria-hidden="true" />
-          </template>
-          <span
-            class="menu-label"
-            :title="t('Internt: ret promptene bag &quot;Kør AI igen&quot; og prøv dem på en sag')"
-          >
-            <span>{{ t('Prompt-værksted') }}</span>
-            <a-tag class="menu-tag">{{ t('internt') }}</a-tag>
-          </span>
-        </a-menu-item>
+            <template #icon>
+              <EyeOutlined aria-hidden="true" />
+            </template>
+            {{ t('Kundeside') }}
+          </a-menu-item>
+        </template>
       </a-menu>
     </nav>
 
@@ -309,6 +267,41 @@ function onUserMenu ({ key }) {
         </a-button>
         <LanguageSwitcher />
       </div>
+      <!-- Demoskærmene, der ikke står i hovedmenuen: dataanmodninger, porteføljeanalyse, kontomapping og prompt-værkstedet -->
+      <a-dropdown
+        :trigger="['click']"
+        placement="topLeft"
+      >
+        <a-button
+          id="cw-demo-btn"
+          block
+        >
+          <template #icon>
+            <ExperimentOutlined aria-hidden="true" />
+          </template>
+          {{ t('Demo') }}
+        </a-button>
+        <template #overlay>
+          <a-menu
+            id="cw-demo-menu"
+            :aria-label="t('Demo')"
+            @click="({ key }) => go(key)"
+          >
+            <a-menu-item key="requests">
+              {{ t('Dataanmodninger') }}
+            </a-menu-item>
+            <a-menu-item key="analyse">
+              {{ t('Porteføljeanalyse') }}
+            </a-menu-item>
+            <a-menu-item key="mapping">
+              {{ t('Kontomapping') }}
+            </a-menu-item>
+            <a-menu-item key="prompts">
+              {{ t('Prompt-værksted') }}
+            </a-menu-item>
+          </a-menu>
+        </template>
+      </a-dropdown>
     </div>
   </div>
 </template>

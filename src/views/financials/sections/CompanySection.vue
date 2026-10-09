@@ -18,6 +18,7 @@ import { useCaseVersion } from '@/composables/useCaseVersion'
 import { useWindowEvent } from '@/composables/useWindowEvent'
 import FinSection from './FinSection.vue'
 import FinIconBtn from './FinIconBtn.vue'
+import FinSourceBar from './FinSourceBar.vue'
 
 const co = DATA.COMPANY
 // Rettelserne ligger i localStorage: tegn igen, når de ændres ('fin-cvr')
@@ -69,12 +70,18 @@ function onEditKey (key, ev) {
 
 const sub = computed(() => {
   ver.value + caseVersion.value
-  return fetching.value ? t('Henter fra CVR …') : finFill(t('Fra CVR-registret, opdateret {date}.'), { date: cvrUpdated() })
+  return fetching.value ? t('Henter fra CVR …') : t('Virksomhedens registrerede oplysninger.')
 })
 // Felterne med rådgiverens rettelse (e) og den viste værdi (v)
 const fields = computed(() => {
   ver.value
   return CVR_FIELDS.map(f => ({ key: f.key, copy: f.copy, label: t(f.label), e: cvrEdit(f.key), v: cvrVal(f.key) }))
+})
+// Kilden nederst i kortet: CVR, og rådgiver, når rådgiveren har rettet et felt
+// Hover på kilden viser, hvornår stamdata sidst blev hentet
+const sources = computed(() => {
+  ver.value + caseVersion.value
+  return [{ text: fields.value.some(f => f.e) ? t('CVR API og rådgiver') : t('CVR API'), title: finFill(t('Hentet {date}'), { date: cvrUpdated() }) }]
 })
 </script>
 
@@ -97,6 +104,7 @@ const fields = computed(() => {
         </FinIconBtn>
         <a-button
           v-if="co.cvrUrl"
+          class="cw-link"
           type="link"
           size="small"
           :href="co.cvrUrl"
@@ -109,7 +117,11 @@ const fields = computed(() => {
     </template>
 
     <a-spin :spinning="fetching">
-      <a-card :bordered="false">
+      <!-- Tabellen står inde i kortet med samme 24 px indrykning som de andre kort; kildelinjen går ud til kanten -->
+      <a-card
+        :bordered="false"
+        :body-style="{ padding: '0 24px' }"
+      >
         <a-descriptions
           bordered
           size="small"
@@ -206,7 +218,7 @@ const fields = computed(() => {
                 </a-tooltip>
                 <div v-if="f.e">
                   <a-typography-text type="secondary">
-                    {{ finFill(t('Rettet af {who} · {date}'), { who: f.e.by || '', date: CW.fmtDate(f.e.at) }) + ' · CVR: ' + (cvrOrig(f.key) || t('Ikke oplyst')) }}
+                    {{ finFill(t('Rettet af {who} - {date}'), { who: f.e.by || '', date: CW.fmtDate(f.e.at) }) + ' - CVR: ' + (cvrOrig(f.key) || t('Ikke oplyst')) }}
                   </a-typography-text>
                 </div>
               </div>
@@ -232,6 +244,10 @@ const fields = computed(() => {
             </div>
           </a-descriptions-item>
         </a-descriptions>
+        <FinSourceBar
+          :sources="sources"
+          flush
+        />
       </a-card>
     </a-spin>
   </FinSection>

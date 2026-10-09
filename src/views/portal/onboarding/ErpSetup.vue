@@ -1,14 +1,13 @@
 <script setup>
 // Forbind regnskabssystemet uden for opstarten (portal_onboarding.jsx: PortalErpSetup), fra punktet
-// Periodetal eller oversigten: samme kort som i opstarten (ErpSharingCard.vue), med kundens
-// tidligere valg udfyldt. Er der allerede forbundet, når siden åbner, går den straks tilbage.
+// Periodetal eller oversigten: samme fliser og liste som under punktet Periodetal (ErpConnectPicker.vue). Er der allerede forbundet, når siden åbner, går den straks tilbage.
 //
 // Props: backLabel (teksten på tilbage-knappen; uden den "Tilbage til oversigten").
 // Emits: back (tilbage, eller der er allerede forbundet), done (tallene er hentet).
 import { onMounted } from 'vue'
 import { CW } from '@/domain/case_state'
 import PortalBackNav from '@/views/portal/components/PortalBackNav.vue'
-import ErpSharingCard from './ErpSharingCard.vue'
+import ErpConnectPicker from './ErpConnectPicker.vue'
 
 defineProps({
   backLabel: { type: String, default: '' },
@@ -24,10 +23,7 @@ onMounted(() => { if (CW.consent()) emit('back') })
       :label="backLabel"
       @back="emit('back')"
     />
-    <ErpSharingCard
-      @finished="emit('done')"
-      @back="emit('back')"
-    />
+    <ErpConnectPicker @finished="emit('done')" />
   </div>
 </template>
 

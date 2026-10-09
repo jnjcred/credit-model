@@ -12,7 +12,7 @@ import { wsItemRequestedAt } from './request.js';
 import { wsRequestMore, wsScrollTo } from './actions.js';
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Seneste aktivitet (fra CW.activity). Kun tekst og "Navn · dato".
+   Seneste aktivitet (fra CW.activity). Kun tekst og "Navn - dato".
    Faseskift står i trinene og gentages ikke her.
    ──────────────────────────────────────────────────────────────────────── */
 function wsWhoName(who) {
@@ -124,7 +124,7 @@ function wsItemHistory(itemId) {
   const who = (w) => w === 'rådgiver' ? eifo : t('kunde');
   const list = CW.activity().filter(e => e.itemId === itemId && types.indexOf(e.type) >= 0);
   // Fortrudte skridt står ikke i historikken: en fortrudt godkendelse eller et fortrudt spørgsmål fjernes sammen med "fortrudt"-rækken,
-  // så kun det, der stod til sidst, er med (fx den endelige Godkendt)
+  // så kun det, der stod til sidst, er med (f.eks. den endelige Godkendt)
   let lastReviewId = null;
   const undone = {};
   list.forEach(e => {
@@ -164,7 +164,7 @@ function wsItemHistory(itemId) {
 }
 
 /* Seneste aktivitet (WSActivity, workspace.jsx L1396–1423): de 5 seneste hændelser, eller op
-   til 30 med "Vis alle". who(e) er navnet i linjen "navn · dato"; toggleLabel er knappens tekst. */
+   til 30 med "Vis alle". who(e) er navnet i linjen "navn - dato"; toggleLabel er knappens tekst. */
 function wsActivity(all) {
   // Beskeder står i "Dialog med kunden", og faseskift står i trinene
   const list = CW.activity().filter(e => e.type !== 'question' && e.type !== 'reply' && e.type !== 'stage').reverse();
@@ -197,7 +197,7 @@ function wsCustomerEvents() {
     const scope = (c.scope || []).map(s => t(s).toLowerCase()).join(', ');
     const until = c.until === 'løbende' ? t('løbende') : c.mode === 'until' ? wsFill(t('tal til og med {date}'), { date: CW.fmtDate(c.until + 'T12:00:00') }) : c.until ? wsFill(t('gælder til {date}'), { date: CW.fmtDate(c.until) }) : '';
     rows.push({ k: 'consent', at: c.at, text: wsFill(t('Læseadgang til {system}'), { system: c.system || 'e-conomic' })
-      + (scope ? ' (' + scope + ')' : '') + (until ? ', ' + until : '') + ' · ' + wsFill(t('givet {date}'), { date: wsDay(c.at) })
+      + (scope ? ' (' + scope + ')' : '') + (until ? ', ' + until : '') + ' - ' + wsFill(t('givet {date}'), { date: wsDay(c.at) })
       + (c.by && c.by.name ? ' ' + wsFill(t('af {name} (revisor eller rådgiver) på kundens vegne'), { name: c.by.name }) : '') });
   } else if (revoked) {
     rows.push({ k: 'revoked', at: revoked.at, text: wsDot(revoked.who === 'system'
@@ -329,9 +329,9 @@ function wsOutstandingItem(it, s, locked, dropped, request, rejecting, ui) {
     if (!request) { CW.toast(t('Anmodningen er ikke sendt endnu'), { tone: 'warn' }); return; }
     onRemind && onRemind();
   };
-  // Rådgiveren har alligevel ikke brug for punktet. Hun vælger selv, om kunden får en mail om det.
+  // Rådgiveren har alligevel ikke brug for punktet. Knappen fravælger ikke noget selv: den åbner anmodningen,
+  // og rådgiveren fravælger punktet der og vælger selv, om kunden får en mail om det.
   const withdraw = () => {
-    CW.setSelection({ ...CW.selection(), [it.id]: false });
     wsRequestMore(() => { setTimeout(() => wsScrollTo('ws-material'), 80); CW.focusSoon('#ws-material-title'); });
   };
   // Punktet bliver i listen med et grønt flueben; beskeden har Fortryd
@@ -404,7 +404,7 @@ function wsOutstandingItem(it, s, locked, dropped, request, rejecting, ui) {
   if ((status === 'rejected' || status === 'delegated' || status === 'approved') && s && s.reviewNote) parts.push(t('Din note:') + ' ' + s.reviewNote);
   if (optional && (review || status === 'approved')) parts.push(t('valgfri'));
   if (dropped) parts.push(t('fravalgt i en opdatering'));
-  const meta = parts.join(' · ');
+  const meta = parts.join(' - ');
 
   // Hvem sendte filen, og hvornår (filens egne felter, ellers punktets)
   const fileWhen = (f) => f.at || (s && s.at);
@@ -419,7 +419,7 @@ function wsOutstandingItem(it, s, locked, dropped, request, rejecting, ui) {
   // Statusikonet (14 px): grøn = modtaget/godkendt, rød = afvist, blå = venter
   // Status som ikon på overskriften: grøn = godkendt, blå = modtaget og venter på din gennemgang, rød = afvist, grå = venter på kunden
   const icon = quiet ? { kind: 'quiet' }
-    : status === 'approved' ? { kind: 'approved', label: t('Godkendt'), title: s && s.reviewedAt ? t('Godkendt') + ' · ' + wsFill(t('{date} af {name}'), { date: wsDay(s.reviewedAt), name: s.reviewedBy || wsAdvisor().name }) : undefined }
+    : status === 'approved' ? { kind: 'approved', label: t('Godkendt'), title: s && s.reviewedAt ? t('Godkendt') + ' - ' + wsFill(t('{date} af {name}'), { date: wsDay(s.reviewedAt), name: s.reviewedBy || wsAdvisor().name }) : undefined }
     : review ? { kind: 'received', label: t('Venter på din gennemgang') }
     : status === 'rejected' ? { kind: 'question' }
     : { kind: 'pending' };
@@ -444,7 +444,10 @@ function wsOutstandingItem(it, s, locked, dropped, request, rejecting, ui) {
   // "+" (Tilføj en fil mere) står efter den sidste fil (L3004)
   const addFileAt = (i) => i === files.length - 1 && !locked && !rejecting && !quiet && (status === 'received' || status === 'approved');
   // Leverandørens bemærkning (L3049–3055) og kundens svar på dit spørgsmål (L3057–3063)
-  const supplierNote = s && s.note && status !== 'noted' ? { label: s.noteKind === 'system' ? t('Kilde:') : byAdvisor && !s.viaPreview ? t('Din bemærkning ved upload:') : t('Kundens bemærkning:'), text: s.noteKind === 'system' ? t(s.note) : s.note } : null;
+  // Står bemærkningen allerede i historikken (den vises, når der er mindst to hændelser), vises den ikke to gange
+  const hist = s && s.note ? wsItemHistory(it.id) : [];
+  const inHistory = hist.length >= 2 && hist.some(r => r.quote === s.note);
+  const supplierNote = s && s.note && status !== 'noted' && !inHistory ? { label: s.noteKind === 'system' ? t('Kilde:') : byAdvisor && !s.viaPreview ? t('Din bemærkning ved upload:') : t('Kundens bemærkning:'), text: s.noteKind === 'system' ? t(s.note) : s.note } : null;
   const answer = s && s.answer && review ? { question: s.question, answer: s.answer } : null;
   // Den interne note (L3065–3068); kunden ser den ikke
   const saveNote = (txt) => CW.setInternalNote(it.id, txt, adv.name);

@@ -13,7 +13,7 @@ import { SendOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { csClearDraft } from '@/domain/customer'
-import { PORTAL_CONTACT, ncFill } from '@/domain/new_case_portal'
+import { ncFill } from '@/domain/new_case_portal'
 import { useCase } from '@/composables/useCaseVersion'
 import PortalAskMark from './PortalAskMark.vue'
 
@@ -25,7 +25,7 @@ const props = defineProps({
 const emit = defineEmits(['update:value', 'answered'])
 
 const s = useCase(() => CW.itemState(props.item.id))
-const adv = PORTAL_CONTACT.first
+const adv = 'EIFO'   // kunden skriver til og hører fra EIFO; rådgiverens navn står kun på kontaktkortet
 const v = computed(() => props.value || '')
 const FULL = { span: 24 }
 
@@ -66,7 +66,7 @@ function onKeydown (e) {
       {{ s.reviewNote }}
     </a-typography-paragraph>
     <a-form-item
-      :label="ncFill(t('Jeres svar til {adv}'), { adv })"
+      :label="ncFill(t('Svar til {adv}'), { adv })"
       html-for="cwp-answer"
       :label-col="FULL"
       :colon="false"
@@ -98,7 +98,7 @@ function onKeydown (e) {
         <template #icon>
           <SendOutlined aria-hidden="true" />
         </template>
-        {{ t('Send svar') }}
+        {{ t('Send') }}
       </a-button>
     </div>
   </a-card>

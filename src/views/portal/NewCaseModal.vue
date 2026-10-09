@@ -7,7 +7,7 @@
 //
 // Props: go (værtens binding; erklæret, så den ikke falder igennem som attribut. Navigationen
 //            sker med useNavigation's go, som er den samme funktion),
-//        prefill ({ name, cvr, type?, amount? } fra en anden skærm, fx en række i
+//        prefill ({ name, cvr, type?, amount? } fra en anden skærm, f.eks. en række i
 //            Porteføljeanalyse: virksomheden vælges, hvis demoen kender den; type og beløb udfyldes).
 // Emits: close (værten afmonterer guiden).
 //

@@ -85,8 +85,8 @@ const slots = computed(() => {
 const metaText = computed(() => {
   const c = counts.value
   return c.openTotal + ' ' + memoOpenWord(c.openTotal) +
-    (c.resolvedTotal > 0 ? ' · ' + c.resolvedTotal + ' ' + t('løst') : '') +
-    (c.blocking > 0 ? ' · ' + c.blocking + ' ' + t('blokerer') : '')
+    (c.resolvedTotal > 0 ? ' - ' + c.resolvedTotal + ' ' + t('løst') : '') +
+    (c.blocking > 0 ? ' - ' + c.blocking + ' ' + t('blokerer') : '')
 })
 </script>
 

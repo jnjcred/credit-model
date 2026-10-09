@@ -1,14 +1,12 @@
 <script setup>
 // Sidehovedet øverst på hver skærm: brødkrumme til venstre; søgning, klokke og hjælp til højre.
 // crumbs: ['Tekst', ...] eller { label, onClick } for et led, der kan klikkes.
-// Slot "right": ekstra handlinger før klokken (fx på sagen).
+// Slot "right": ekstra handlinger før klokken (f.eks. på sagen).
 import { MenuOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { useShellNarrow } from '@/composables/useShellNarrow'
 import { navOpen, openNav } from '@/composables/useAppShell'
 import CaseSearch from './CaseSearch.vue'
-import NotificationBell from './NotificationBell.vue'
-import HelpButton from './HelpButton.vue'
 
 const props = defineProps({
   crumbs: { type: Array, required: true },
@@ -60,17 +58,14 @@ const isLast = (i) => i === props.crumbs.length - 1
         </a-breadcrumb>
       </nav>
     </div>
-    <!-- Under 1000 px står søgning, klokke og hjælp på en linje for sig, og søgefeltet tager den plads, der
+    <!-- Under 1000 px står søgningen på en linje for sig, og søgefeltet tager den plads, der
          er (op til 360 px), som før. Så ruller siden ikke vandret ved 320 px (400 % zoom) -->
     <div class="topbar-right">
       <CaseSearch class="topbar-search" />
-      <a-divider type="vertical" />
       <template v-if="$slots.right">
-        <slot name="right" />
         <a-divider type="vertical" />
+        <slot name="right" />
       </template>
-      <NotificationBell />
-      <HelpButton />
     </div>
   </a-layout-header>
 </template>

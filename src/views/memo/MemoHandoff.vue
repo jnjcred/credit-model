@@ -87,12 +87,10 @@ const toOverview = () => {
 
 <template>
   <div class="ho-page">
-    <div>
-      <a-typography-title>{{ t('Credit memo') }}</a-typography-title>
-      <a-typography-text type="secondary">
-        {{ t('Hent sagens materiale her og fortsæt i Copilot.') }}
-      </a-typography-text>
-    </div>
+    <!-- Fanen og sagens navn viser allerede, hvor man er; overskriften er kun til skærmlæsere -->
+    <h2 class="sr-only">
+      {{ t('Credit memo') }}
+    </h2>
 
     <!-- Næste skridt: hent materialet -->
     <section aria-labelledby="ho-title">
@@ -139,6 +137,7 @@ const toOverview = () => {
           </a-typography-text>
           {{ pendingText }}
           <a-button
+            class="cw-link"
             type="link"
             size="small"
             @click="toOverview"
@@ -221,18 +220,19 @@ const toOverview = () => {
           :key="g.key"
         >
           <template #header>
-            <a-typography-text
-              type="secondary"
+            <!-- Samme gruppeoverskrift som i Dokumenter: navnet halvfed, antallet gråt ved siden af -->
+            <div
+              class="ho-group-head"
               role="heading"
               aria-level="3"
             >
-              <component
-                :is="ICONS[g.icon]"
-                v-if="ICONS[g.icon]"
-                aria-hidden="true"
-              />
-              {{ t(g.label) }} ({{ g.items.length }})
-            </a-typography-text>
+              <a-typography-text strong>
+                {{ t(g.label) }}
+              </a-typography-text>
+              <a-typography-text type="secondary">
+                {{ g.items.length }}
+              </a-typography-text>
+            </div>
           </template>
           <!-- Rækkerne har dokumentets nøgle, så fokus følger dokumentet, når listen ændrer sig
                (a-list 3.2.13 giver ikke rækkerne fra data-source en nøgle) -->
@@ -276,6 +276,13 @@ const toOverview = () => {
 }
 
 /* Listen med gruppens filer (som a-list's egen liste) */
+/* Gruppens overskrift: navnet halvfed, antallet gråt ved siden af (som i Dokumenter) */
+.ho-group-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
 .ho-list {
   margin: 0;
   padding: 0;

@@ -122,7 +122,7 @@ function openAnalyseRow(r, go) {
   } catch (e) {}
 }
 /* Kundens sag i samme sagsliste som Mine opgaver (DATA.CASES): den faste sag
-   (caseId), ellers den nyeste åbne sag med samme CVR eller navn, fx en sag
+   (caseId), ellers den nyeste åbne sag med samme CVR eller navn, f.eks. en sag
    oprettet i Ny sag. null hvis kunden ingen sag har. */
 function analyseCaseFor(r) {
   if (r.caseId) return DATA.caseById(r.caseId);
@@ -142,7 +142,7 @@ function fmtVal(val, unit) {
   return unit === "kr." ? n.toLocaleString(numLocale()) : n.toLocaleString(numLocale(), { maximumFractionDigits: 2 });
 }
 
-// Kriteriets tekst på den grå chip, fx "Ændring i omsætning (%) > 25 %".
+// Kriteriets tekst på den grå chip, f.eks. "Ændring i omsætning (%) > 25 %".
 // (Før migrationen de første linjer i komponenten ChipSummary; uændrede.)
 function chipText(c) {
   const m = metaFor(c.metric);

@@ -30,8 +30,9 @@ export function useMenuKeyboard () {
     clearTimeout(timer)
   }
 
-  /** menuId: id på <a-menu>; trigger: () => knappen; close: lukker dropdownen. */
-  function attach ({ menuId, trigger, close }) {
+  /** menuId: id på <a-menu>; trigger: () => knappen; close: lukker dropdownen; initial (valgfri):
+   *  () => punktet, der får fokus, når menuen åbner (f.eks. det valgte), ellers det første. */
+  function attach ({ menuId, trigger, close, initial }) {
     detach()
     const items = () => {
       const menu = document.getElementById(menuId)
@@ -46,12 +47,14 @@ export function useMenuKeyboard () {
       detach()
       if (focusEl && focusEl.focus) focusEl.focus()
     }
-    // Fokus på det første punkt, så snart menuen er synlig (den tegnes med en animation)
+    // Fokus på det første (eller det valgte) punkt, så snart menuen er synlig (den tegnes med en animation)
     let n = 0
     const first = () => {
       const list = items()
-      if (list.length) list[0].focus()
-      if (list.length && document.activeElement === list[0]) return
+      const pick = initial && initial()
+      const el = pick && list.indexOf(pick) >= 0 ? pick : list[0]
+      if (el) el.focus()
+      if (el && document.activeElement === el) return
       if (++n < 40) timer = setTimeout(first, 25)
     }
     nextTick(first)

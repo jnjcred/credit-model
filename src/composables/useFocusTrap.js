@@ -1,7 +1,7 @@
 // Tab bliver i et åbent panel, som før migrationen (CW.useDialog i case_state.js og navigations-
 // panelet i app.jsx). ant-design-vue 3.2.13's modaler holder selv fokus inde, men popover og drawer
 // gør ikke: Tab fra panelets sidste element gik videre til siden bagved.
-// Står fokus uden for panelet (fx i brugermenuen, som antdv lægger i body), styrer den menu selv Tab.
+// Står fokus uden for panelet (f.eks. i brugermenuen, som antdv lægger i body), styrer den menu selv Tab.
 //
 // Brug: const focusTrap = useFocusTrap()
 //       focusTrap.trap(() => panelEl)   når panelet åbner

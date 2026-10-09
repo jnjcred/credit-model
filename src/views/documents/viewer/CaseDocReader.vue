@@ -6,7 +6,7 @@
 // Viseren vises kun, når window.CW_SOURCE_VIEW er sat (DOC_PREVIEW).
 //
 // Props: doc (dokumentet fra CASE_DOCS eller CW_EXPORT_DOCS), focus ({ ref, n }: hop til en bestemt
-//        side, fx fra afvigelsespanelet; n skifter ved hvert hop)
+//        side, f.eks. fra afvigelsespanelet; n skifter ved hvert hop)
 import { computed, ref, watch } from 'vue'
 import { t } from '@/i18n'
 import { docBlocks, docDa, docRefLabel } from '@/domain/documents'

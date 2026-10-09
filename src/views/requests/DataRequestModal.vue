@@ -113,6 +113,7 @@ const onFoldKeydown = useCollapseKeyboard()
               #actions
             >
               <a-button
+                class="cw-link"
                 type="link"
                 size="small"
                 :title="t('Åbner sagen. Anmodningen ændres og sendes derfra.')"
@@ -126,11 +127,12 @@ const onFoldKeydown = useCollapseKeyboard()
           <a-list-item v-else-if="item === 'recipient'">
             <a-list-item-meta
               :title="shown.contact || t('Ingen modtager valgt')"
-              :description="shown.email ? shown.email + (shown.role ? ' · ' + t(shown.role) : '') : undefined"
+              :description="shown.email ? shown.email + (shown.role ? ' - ' + t(shown.role) : '') : undefined"
             />
             <template #actions>
               <a-button
                 v-if="isNordhavn"
+                class="cw-link"
                 type="link"
                 size="small"
                 @click="showCustomerPage"
@@ -166,6 +168,7 @@ const onFoldKeydown = useCollapseKeyboard()
             <a-list-item-meta :title="shown.openQuestions + ' ' + t('spørgsmål fra kunden venter på svar')" />
             <template #actions>
               <a-button
+                class="cw-link"
                 type="link"
                 size="small"
                 @click="openRequestCase(shown, 'ws-dialog-title')"

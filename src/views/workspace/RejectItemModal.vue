@@ -75,7 +75,7 @@ onUnmounted(() => {
           id="ws-reject-reason"
           v-model:value="reason"
           autofocus
-          :placeholder="t('Dit spørgsmål til kunden, fx &quot;Kan I sende noterne til årsrapporten?&quot;')"
+          :placeholder="t('Dit spørgsmål til kunden, f.eks. &quot;Kan I sende noterne til årsrapporten?&quot;')"
           @press-enter="onEnter"
         />
       </a-form-item>

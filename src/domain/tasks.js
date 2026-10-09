@@ -185,7 +185,7 @@ function taskPasses(r, f) {
   if (f.fresh && !r.hasNew) return false;
   return true;
 }
-// Filterets chips. setF er valgfri (uden den kan chipsene ikke fjernes, fx til visningsnavne)
+// Filterets chips. setF er valgfri (uden den kan chipsene ikke fjernes, f.eks. til visningsnavne)
 function taskChips(f, setF) {
   const set = setF || (() => {});
   const chips = [];

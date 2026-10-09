@@ -34,11 +34,6 @@ const line = (o) => o.type === 'holding' ? t('Reel ejer') + ': ' + DATA.COMPANY.
         <span class="fin-owner-share">{{ pctFmt(item.share) }}</span>
       </a-list-item>
     </template>
-    <template #footer>
-      <a-typography-text type="secondary">
-        {{ t('Medarbejderwarrants (NC-W2022) svarende til 5,0 % ved fuld udnyttelse står kun i ejerbogen, ikke i CVR.') }}
-      </a-typography-text>
-    </template>
   </a-list>
 </template>
 

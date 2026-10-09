@@ -9,7 +9,7 @@
 //   runner.reset()     tilbage til start
 //
 // Som før: en fejl giver error = fejlens tekst (AI-lagets venlige beskeder) og done = false; Stop (fejlkoden
-// 'abort') giver hverken fejl eller done. Kørslen afbrydes ikke, når komponenten forsvinder (fx når
+// 'abort') giver hverken fejl eller done. Kørslen afbrydes ikke, når komponenten forsvinder (f.eks. når
 // assistenten lukkes), som i prototypen.
 // AbortController'en er et DOM-objekt og ligger derfor i en almindelig variabel, aldrig i Vue's reaktivitet.
 import { reactive } from 'vue'

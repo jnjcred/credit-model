@@ -3,7 +3,7 @@
 // inde i komponenten WSIndstil, er løftet ud i navngivne funktioner med de samme linjer (kilden
 // står over hver). Bare globaler (t, CW) læses via window. Memoets status, kildetjek og frosne
 // version kommer fra memoets kode (window.CW_MEMO_STATUS, CW_CITE_ISSUES, CW_MEMO_SNAPSHOT); mangler
-// de, gør tjekket som før (fx blokerer "Memoets status kan ikke læses").
+// de, gør tjekket som før (f.eks. blokerer "Memoets status kan ikke læses").
 import { wsAdvisor, wsFact, wsFacts } from './caseData.js';
 import { wsDay, wsDot, wsFill, wsPlural, wsRef } from './format.js';
 import { wsBlockingComments, wsMaterialReady, wsMemoReviewed, wsMemoStatus, wsStage } from './stage.js';
@@ -125,7 +125,7 @@ function wsReadiness(stage, opts) {
         rows.push({
           id: 'blank-tpl', group: 'reason', n: 1, title: t('Tomme skabelonfelter'),
           text: wsFill(wsPlural(tpl.length, t('1 skabelonfelt uden sagsdata'), t('{n} skabelonfelter uden sagsdata')), {})
-            + ' ' + wsPlural(nSec, t('i 1 afsnit'), t('i {n} afsnit')) + (ex ? ' (' + t('fx') + ' ' + ex + ')' : '') + '. ' + t('Én begrundelse dækker dem alle.'),
+            + ' ' + wsPlural(nSec, t('i 1 afsnit'), t('i {n} afsnit')) + (ex ? ' (' + t('f.eks.') + ' ' + ex + ')' : '') + '. ' + t('Én begrundelse dækker dem alle.'),
           action: { label: t('Gå til første felt'), aria: wsFill(t('Gå til første tomme skabelonfelt i {section}'), { section: secName(tpl[0].section) }), memo: { section: tpl[0].section, field: tpl[0].id } },
         });
       }
@@ -162,14 +162,14 @@ function wsReadiness(stage, opts) {
           const doc = [c.doc || c.docName || '', c.page || c.ref ? wsRef(c.page || c.ref) : ''].filter(Boolean).join(', ');
           return {
             key: i, text: '"' + (c.claim || c.text || '') + '"' + (where ? ' ' + wsFill(t('i {section}'), { section: where }) : '')
-              + (doc ? ' · ' + doc : '') + (c.state === 'contra' ? ' · ' + t('modsiger kilden') : ' · ' + t('ikke fundet i kilden')),
+              + (doc ? ' - ' + doc : '') + (c.state === 'contra' ? ' - ' + t('modsiger kilden') : ' - ' + t('ikke fundet i kilden')),
             label: t('Åbn'), aria: wsFill(t('Åbn henvisningen i {section}'), { section: where || t('memoet') }),
             memo: c.section ? { section: c.section } : null,
           };
         }),
       });
     }
-    // Henvisninger, der kun kan bekræftes delvist (fx fundet i andet format),
+    // Henvisninger, der kun kan bekræftes delvist (f.eks. fundet i andet format),
     // i afsnit ændret siden sidste gennemgang eller indstilling: til orientering
     if (ci && ci.nUnv > 0) {
       const f0 = ci.unverified[0] || {};
@@ -199,7 +199,7 @@ function wsReadiness(stage, opts) {
     if (!c || !c.text) return;
     rows.push({ id: 'cond-' + (c.id || i), group: 'info', cond: true, done: c.status === 'opfyldt', title: wsFact(c, 'text'), text: c.status === 'opfyldt' ? t('Opfyldt') : t('Skal være opfyldt før udbetaling'), source: c.source });
   });
-  // id'erne bruges i element-id'er og CSS-selektorer (fx "financing:1")
+  // id'erne bruges i element-id'er og CSS-selektorer (f.eks. "financing:1")
   rows.forEach(r => { r.id = String(r.id).replace(/[^\w-]/g, '-'); });
   return rows;
 }
@@ -341,7 +341,7 @@ function wsIndstilReceipt(cs) {
   const released = Array.isArray(cs.submitResolved) ? cs.submitResolved : [];
   if (released.length) rows.push({ key: 'released', label: t('Frigivne kommentarer'), items: released });
   if (cs.submitNote) rows.push({ key: 'note', label: t("Note til komitéen"), value: cs.submitNote });
-  const commentBy = (c) => [c.author, c.dept].filter(Boolean).join(', ') + ' · ' + t('ikke løst ved indstillingen');
+  const commentBy = (c) => [c.author, c.dept].filter(Boolean).join(', ') + ' - ' + t('ikke løst ved indstillingen');
   const releasedBy = (c) => wsDot(wsFill(t('Frigivet af {who} {when}'), { who: [c.resolvedBy, c.resolvedByDept].filter(Boolean).join(', '), when: c.resolvedAt ? wsDay(c.resolvedAt) : '' }) + (c.reason ? '.' : '')) + (c.reason ? ' ' + t('Begrundelse') + ': ' + c.reason : '');
   const lead = wsFill(t('Sendt til kreditkomitéen {date} af {who}. Memoet er låst som version {v}.'), { date: wsDay(cs.submittedAt), who: (last && last.by) || adv.name, v: cs.submitVersion || 1 });
   const notSaved = !snap;

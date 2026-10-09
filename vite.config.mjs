@@ -74,12 +74,22 @@ export default defineConfig({
           // Trustpilot's stars (a-rate) in antd's neutral grey 8 (#595959, 7:1) instead of gold (1.4:1),
           // close to the prototype's grey. 3.x has no @gray-8 variable, so it is mixed from black and white.
           'rate-star-color': 'mix(@black, @white, 65%)',
+          // Foldelister (a-collapse ghost) står på linje med indholdet omkring dem: ingen sidepolstring i
+          // overskriften og indholdet (antd's 16 px gav et indhak ved siden af afkrydsninger og rækker)
+          // Ingen små lodrette streger mellem kolonneoverskrifterne i tabeller (de skilte ikke noget ad)
+          'table-header-cell-split-color': 'transparent',
+          'collapse-header-padding': '@padding-sm 0',
+          'collapse-content-padding': '@padding-md 0',
         },
       },
     },
   },
   server: {
     port: Number(process.env.VITE_PORT || 5173),
+    // No hot reload by default: Claude sessions edit the files while Jesper has the prototype open,
+    // and every edit reloaded his page (and lost its state). Changes show on the next manual refresh.
+    // Set CW_HMR=1 to get hot reload back.
+    hmr: process.env.CW_HMR === '1',
     proxy: {
       '/local-ai': API,
       '/local-prompts': API,

@@ -18,7 +18,7 @@
 // som før (prototypen genbrugte knappen).
 // Kendt fra prototypen (bevaret): at lukke panelet afbryder ikke en kørsel; indikatoren i forhåndsvisningen
 // bliver stående efter Stop og fejl.
-// Mousedown stoppes ved panelet, som før, så sidens lyttere på dokumentet (fx kildelisten i
+// Mousedown stoppes ved panelet, som før, så sidens lyttere på dokumentet (f.eks. kildelisten i
 // værktøjslinjen, der lukker ved klik udenfor) ikke reagerer på klik i panelet.
 //
 // Props: sKey, num, title (dansk nøgle), selection ({ text, range, sKey } eller null; range er et DOM-objekt
@@ -131,7 +131,7 @@ watch(phase, (now, before) => {
           <span>{{ selection ? t('Omskriv markeret tekst') : t(title) }}</span>
           <AiBadge compact />
           <a-typography-text type="secondary">
-            {{ status.ready ? t(status.provider.label) + ' · ' + status.model : t('ikke forbundet') }}
+            {{ status.ready ? t(status.provider.label) + ' - ' + status.model : t('ikke forbundet') }}
           </a-typography-text>
         </a-space>
       </template>
@@ -363,7 +363,7 @@ watch(phase, (now, before) => {
                   <a-input
                     ref="inputRef"
                     v-model:value="instruction"
-                    :placeholder="selection ? t('Hvad skal der ske med den markerede tekst?') : t('Skriv din egen instruktion, fx “tilføj et afsnit om valutarisikoen”')"
+                    :placeholder="selection ? t('Hvad skal der ske med den markerede tekst?') : t('Skriv din egen instruktion, f.eks. “tilføj et afsnit om valutarisikoen”')"
                   />
                 </a-col>
                 <a-col flex="none">

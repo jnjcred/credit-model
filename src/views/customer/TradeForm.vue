@@ -148,7 +148,7 @@ function onFold (keys) {
   repOpen.value = (Array.isArray(keys) ? keys : [keys]).includes('report')
 }
 const onFoldKeydown = useCollapseKeyboard()
-// Esc i den åbne liste lukker kun listen (også når skemaet står i en a-drawer, fx forhåndsvisningen)
+// Esc i den åbne liste lukker kun listen (også når skemaet står i en a-drawer, f.eks. forhåndsvisningen)
 const selectEsc = useSelectEscape()
 // Tastaturet i landefeltet som før, hvor antdv 3.2.13 opfører sig anderledes:
 // - Esc: antdv giver feltet type="search", og i et søgefelt tømmer browseren feltet på Esc (og listen
@@ -207,7 +207,7 @@ useUploadButton(uploadRoot)
         @dropdown-visible-change="(v) => { listOpen = v }"
       >
         <a-input
-          :placeholder="t('Tilføj et land, fx Tyskland')"
+          :placeholder="t('Tilføj et land, f.eks. Tyskland')"
           :aria-label="t('Tilføj et land')"
         >
           <template #prefix>
@@ -388,7 +388,7 @@ useUploadButton(uploadRoot)
         :aria-describedby="hint ? pid + '-hint' : undefined"
         @click="save"
       >
-        {{ t('Færdig med dette punkt') }}
+        {{ t('Send') }}
       </a-button>
     </div>
   </div>

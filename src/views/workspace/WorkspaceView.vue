@@ -1,14 +1,14 @@
 <script setup>
 // Sagen (WorkspaceShell i workspace.jsx L539–772): sidehovedet med brødkrummen, sagshovedet, fanerne
 // og fanens indhold, Kundeside/Kundeflow og Giv afslag.
-// - Over 1000 px står sagshoved og faner stille, og kun indholdet ruller. Under 1000 px (fx 200 %
+// - Over 1000 px står sagshoved og faner stille, og kun indholdet ruller. Under 1000 px (f.eks. 200 %
 //   zoom) ruller hovedet med indholdet, så der er plads til memoet (useShellNarrow). Hver fane husker,
 //   hvor langt den var rullet, så længe sagen er åben (useTabScrollMemory).
 // - Uden levende data (alle andre sager end sag 1) vises den ærlige tomme tilstand (EmptyCaseView).
 // - Sagens fase skifter selv mellem Afventer kunden og Klar, også ved ændringer fra kundeportalen
 //   (useAutoStage).
 // - I piloten (cw_memo_mode 'copilot') er Indstilling skjult; et gammelt link dertil viser Credit memo.
-// - Brødkrummen fører tilbage til skærmen i sessionStorage 'cw_back' (fx Porteføljeanalyse), ellers
+// - Brødkrummen fører tilbage til skærmen i sessionStorage 'cw_back' (f.eks. Porteføljeanalyse), ellers
 //   til Mine opgaver.
 // - Kundeside kan også åbnes fra andre skærme (CW_OPEN_CUSTOMER_PREVIEW / 'cw-open-customer-preview').
 // Tal, tekster og knapper regnes af wsHeaderModel (src/domain/workspace/header.js).
@@ -16,7 +16,8 @@
 // Props: caseId (sagens id fra ruten), tab (fanen fra ruten: overview | financials | documents | memo
 //        | indstil). Emits: ingen (navigation via src/composables/useNavigation.js).
 // App.vue giver den aktive fane fokus via '#ws-tabs [role="tab"][aria-selected="true"]'.
-import { computed, defineAsyncComponent, ref } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import { previewMemory, setPreviewMemory } from '@/composables/usePreviewMemory'
 import { BarChartOutlined, FileOutlined, FileTextOutlined, LayoutOutlined, SendOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { go } from '@/composables/useNavigation'
@@ -56,9 +57,17 @@ const narrow = useShellNarrow()
 const copilot = wsCopilot()
 const declining = ref(false)
 // Kundeside: false, true (Kundeside) eller 'flow' (Kundeflow). Fra en anden skærm åbnes den med det samme.
-const showCustomerStatus = ref(wsInitialPreview(props.caseId))
-useWindowEvent('cw-open-customer-preview', () => {
-  wsOnOpenCustomerPreview(props.caseId, { setShowCustomerStatus: (v) => { showCustomerStatus.value = v } })
+// Var Kundeside eller Kundeflow åben i denne sag før en genindlæsning, åbnes den igen
+const pvMem = previewMemory()
+const showCustomerStatus = ref(wsInitialPreview(props.caseId) || (pvMem && pvMem.caseId === props.caseId ? pvMem.mode : false))
+watch(showCustomerStatus, (v) => {
+  if (!v) setPreviewMemory(null)
+  else if (!pvMem || pvMem.caseId !== props.caseId || pvMem.mode !== v) setPreviewMemory({ caseId: props.caseId, mode: v, step: null, pvOb: undefined, screen: null, itemId: null })
+}, { immediate: true })
+// Sidemenuen åbner Kundeside og Kundeflow: detail.flow = true giver Kundeflow
+useWindowEvent('cw-open-customer-preview', (e) => {
+  const flow = !!(e && e.detail && e.detail.flow)
+  wsOnOpenCustomerPreview(props.caseId, { setShowCustomerStatus: (v) => { showCustomerStatus.value = v && flow ? 'flow' : v } })
 })
 
 // Sagshovedet, fanerne og næste skridt følger sagen og memoets gennemgang
@@ -84,7 +93,6 @@ const contentEl = ref(null)
 const scrollEl = computed(() => (narrow.value ? bodyEl.value : contentEl.value))
 useTabScrollMemory(scrollEl, () => h.value.tab, narrow)
 
-const openPreview = (flow) => { showCustomerStatus.value = flow ? 'flow' : true }
 </script>
 
 <template>
@@ -105,10 +113,6 @@ const openPreview = (flow) => { showCustomerStatus.value = flow ? 'flow' : true 
           :phase-days="h.phaseDays"
           :phase-late="h.phaseLate"
           :phase-warn="h.phaseWarn"
-          :more-items="h.moreItems"
-          :next-step="h.nextStep"
-          :next-primary="h.nextPrimary"
-          @open-preview="openPreview"
         />
         <div
           v-if="h.hasData"

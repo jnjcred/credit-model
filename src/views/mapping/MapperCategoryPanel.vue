@@ -109,9 +109,10 @@ const moveReason = (c) => (props.canMove(c) ? undefined : props.selAcc.length ? 
             <a-typography-text
               v-if="selStmt === 'mixed'"
               type="secondary"
-            >{{ ' · ' + t('både drifts- og statuskonti') }}</a-typography-text>
+            >{{ ' - ' + t('både drifts- og statuskonti') }}</a-typography-text>
           </span>
           <a-button
+            class="cw-link"
             type="link"
             size="small"
             @click="emit('clear')"
@@ -128,6 +129,7 @@ const moveReason = (c) => (props.canMove(c) ? undefined : props.selAcc.length ? 
           {{ blockText }}
           <a-button
             v-if="selStmt !== 'mixed'"
+            class="cw-link"
             type="link"
             size="small"
             @click="showStmt(selStmt)"
@@ -220,7 +222,7 @@ const moveReason = (c) => (props.canMove(c) ? undefined : props.selAcc.length ? 
             v-model:value="catQuery"
             type="search"
             allow-clear
-            :placeholder="t('Fx husleje, debitorer, leasing')"
+            :placeholder="t('F.eks. husleje, debitorer, leasing')"
           />
         </a-form-item>
       </a-form>
@@ -285,6 +287,7 @@ const moveReason = (c) => (props.canMove(c) ? undefined : props.selAcc.length ? 
                   </a-tooltip>
                   <a-tooltip :title="moveReason(c)">
                     <a-button
+                      class="cw-link"
                       type="link"
                       size="small"
                       :disabled="!canMove(c)"

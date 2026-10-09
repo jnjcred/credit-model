@@ -20,7 +20,7 @@ const telHref = 'tel:' + c.phone.replace(/\s/g, '')
         id="cwp-contact-h"
         role="heading"
         aria-level="2"
-      >{{ t('Jeres kontakt') }}</span>
+      >{{ t('Kontakt') }}</span>
     </template>
     <a-card-meta>
       <template #avatar>
@@ -33,7 +33,7 @@ const telHref = 'tel:' + c.phone.replace(/\s/g, '')
       </template>
       <template #title>
         {{ c.name }} <a-typography-text type="secondary">
-          · {{ t(c.title) }}, {{ c.org }}
+          - {{ t(c.title) }}, {{ c.org }}
         </a-typography-text>
       </template>
       <template #description>

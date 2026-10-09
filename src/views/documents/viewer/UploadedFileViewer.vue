@@ -60,7 +60,7 @@ const status = computed(() => t(DOC_ITEM_STATUS[props.doc.itemStatus] || 'Modtag
           >
             {{ t('Punkt:') + ' ' }}<a-typography-text strong>
               {{ t(doc.itemLabel) }}
-            </a-typography-text>{{ ' · ' + status }}
+            </a-typography-text>{{ ' - ' + status }}
           </a-typography-text>
           <a-typography-text
             v-else
@@ -96,7 +96,7 @@ const status = computed(() => t(DOC_ITEM_STATUS[props.doc.itemStatus] || 'Modtag
       >
         {{ t('Punkt:') + ' ' }}<a-typography-text strong>
           {{ t(doc.itemLabel) }}
-        </a-typography-text>{{ ' · ' + status }}
+        </a-typography-text>{{ ' - ' + status }}
       </a-typography-text>
       <a-typography-text
         v-else

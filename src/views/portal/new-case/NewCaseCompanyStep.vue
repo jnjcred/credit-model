@@ -51,9 +51,9 @@ const openCases = computed(() => {
 const companyMeta = computed(() => {
   const c = props.company
   if (!c) return ''
-  return c.primary ? DATA.COMPANY.address + ', ' + DATA.COMPANY.postal + ' · CVR ' + DATA.COMPANY.cvr
-    : c.adhoc ? (c.cvr ? 'CVR ' + c.cvr + ' · ' : '') + t('Ikke kunde i porteføljen endnu')
-      : 'CVR ' + c.cvr + ' · ' + t('Eksisterende kunde hos EIFO') + (c.portfolio && c.dept ? ' · ' + c.dept : '')
+  return c.primary ? DATA.COMPANY.address + ', ' + DATA.COMPANY.postal + ' - CVR ' + DATA.COMPANY.cvr
+    : c.adhoc ? (c.cvr ? 'CVR ' + c.cvr + ' - ' : '') + t('Ikke kunde i porteføljen endnu')
+      : 'CVR ' + c.cvr + ' - ' + t('Eksisterende kunde hos EIFO') + (c.portfolio && c.dept ? ' - ' + c.dept : '')
 })
 // Hårdt mellemrum før "CVR" i søgeresultatets knap (a-button fjerner almindelige mellemrum omkring sin tekst)
 const NBSP = String.fromCharCode(160)
@@ -71,7 +71,7 @@ const caseAmount = (c) => (/^\d+$/.test(String(c.amount)) ? ncFmtDKK(+c.amount) 
         id="nc-q"
         size="large"
         :value="q"
-        :placeholder="t('fx') + ' ' + DATA.COMPANY.cvr"
+        :placeholder="t('f.eks.') + ' ' + DATA.COMPANY.cvr"
         autocomplete="off"
         :aria-invalid="invalid ? 'true' : undefined"
         :aria-describedby="'nc-q-hint' + (invalid ? ' nc-q-err' : '')"
@@ -112,7 +112,7 @@ const caseAmount = (c) => (/^\d+$/.test(String(c.amount)) ? ncFmtDKK(+c.amount) 
     >
       <a-space wrap>
         <a-typography-text type="secondary">
-          {{ t('Indtast CVR eller virksomhedsnavn, prøv fx') }}
+          {{ t('Indtast CVR eller virksomhedsnavn, prøv f.eks.') }}
         </a-typography-text>
         <a-button
           size="small"
@@ -161,7 +161,7 @@ const caseAmount = (c) => (/^\d+$/.test(String(c.amount)) ? ncFmtDKK(+c.amount) 
           <a-button
             type="link"
             block
-            class="nc-result"
+            class="nc-result cw-link"
             @click="emit('pick', c)"
           >
             {{ c.name }}
@@ -188,6 +188,7 @@ const caseAmount = (c) => (/^\d+$/.test(String(c.amount)) ? ncFmtDKK(+c.amount) 
       </template>
       <template #extra>
         <a-button
+          class="cw-link"
           type="link"
           size="small"
           @click="emit('change-company')"
@@ -221,10 +222,11 @@ const caseAmount = (c) => (/^\d+$/.test(String(c.amount)) ? ncFmtDKK(+c.amount) 
             <span>
               <a-typography-text strong>{{ c.caseNr }}</a-typography-text>
               {{ ' ' }}
-              <a-typography-text type="secondary">{{ t(c.type) }} · {{ caseAmount(c) }} · {{ c.responsible }}</a-typography-text>
+              <a-typography-text type="secondary">{{ t(c.type) }} - {{ caseAmount(c) }} - {{ c.responsible }}</a-typography-text>
             </span>
             <template #actions>
               <a-button
+                class="cw-link"
                 type="link"
                 size="small"
                 @click="emit('open-case', c.id)"

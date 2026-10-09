@@ -46,7 +46,7 @@ function exWrap(text, width) {
 function exHead(title) { return exClean(title).toUpperCase(); }
 const exToday = () => DATA.fmt.isoDay(new Date());
 const exWhen = () => DATA.fmt.longDate(exToday());
-const exCompanyLine = () => DATA.COMPANY.name + ' · CVR ' + DATA.COMPANY.cvr;
+const exCompanyLine = () => DATA.COMPANY.name + ' - CVR ' + DATA.COMPANY.cvr;
 
 /* Kilderne under regnskabstabellen og i eksportens noter: kun dokumenter, der
    findes på sagen. Registret (DATA.DOCS) har årsrapporterne. Periodetal og budget
@@ -64,8 +64,10 @@ function finSourceDoc(type, year) {
 /* Regnskabstabellen som tre ark: samlet tabel (år, 2026E, 2027B), kvartalerne og noter.
    Tal i DKK t.; nøgletal og forholdstal uskalerede. */
 function exFinancialsPages() {
-  // Samme tal som tabellen, med rådgiverens rettelser
-  const edits = finLoadEdits();
+  // Samme tal som tabellen, med rådgiverens rettelser. Regnskab v5: eksportens kolonner er årene,
+  // kvartalerne og budgettet; rettelser af en uploadet saldobalances periode (ytd) og en omsætning,
+  // der kun er tastet ind for et år med offentlig årsrapport (fill), indgår ikke i dem og står ikke på listen.
+  const edits = finLoadEdits().filter(x => x.colKey !== 'ytd' && !x.fill);
   const model = finApplyEdits(edits);
   const rawRows = model.rows;
   const rowByLabel = model.byLabel;
@@ -191,7 +193,13 @@ function exFinancialsPages() {
 // Rettet af rådgiveren? Så står det under teksten i eksporten (ellers null)
 function exAiNote(id) {
   const s = finAiState(id);
-  return s.edited != null ? '(' + finFill(t('Rettet af {who} · {date}'), { who: s.editedBy || '', date: CW.fmtDate(s.editedAt) }) + ')' : null;
+  return s.edited != null ? '(' + finFill(t('Rettet af {who} - {date}'), { who: s.editedBy || '', date: CW.fmtDate(s.editedAt) }) + ')' : null;
+}
+// Rådgiverens kommentar til en tekst følger med, når teksten hentes til Credit memo
+function exAiComment(id) {
+  const s = finAiState(id);
+  if (!s.note) return [];
+  return ['', t('Rådgiverens kommentar') + ' (' + [s.noteBy, s.noteAt ? CW.fmtDate(s.noteAt) : ''].filter(Boolean).join(', ') + '):', exWrap(s.note)];
 }
 function exMarketPages() {
   const co = DATA.COMPANY;
@@ -206,7 +214,7 @@ function exMarketPages() {
     t('Hjemsted') + ': ' + co.hq,
     '',
     exHead(t('Produktbeskrivelse')),
-    exWrap(finAiText('product')), exAiNote('product'),
+    exWrap(finAiText('product')), exAiNote('product'), ...exAiComment('product'),
     '',
     exHead(t('Markedet')),
     exWrap(finAiText('market')), exAiNote('market'),
@@ -221,13 +229,13 @@ function exTrustpilotPages() {
   const tp = TRUSTPILOT, co = DATA.COMPANY;
   const body = [
     exHead('Trustpilot'), exCompanyLine(), '',
-    finFill(t('{score} af 5'), { score: DATA.fmt.num(tp.score, 1) }) + ' · ' + tp.totalReviews + ' ' + t('anmeldelser') + ' · ' + t('hentet') + ' ' + finPublicDataDate(),
+    finFill(t('{score} af 5'), { score: DATA.fmt.num(tp.score, 1) }) + ' - ' + tp.totalReviews + ' ' + t('anmeldelser') + ' - ' + t('hentet') + ' ' + finPublicDataDate(),
     'https://www.trustpilot.com/review/' + co.trustpilotDomain, '',
     exHead(t('Fordeling')),
   ];
   tp.dist.forEach(d => body.push(exPad(d.stars + ' ' + (d.stars === 1 ? t('stjerne') : t('stjerner')), 14) + exPad(String(d.count), 6) + exPct(d.count / tp.totalReviews * 100, 0)));
   body.push('', exHead(t('Seneste anmeldelser')));
-  tp.reviews.forEach(r => { body.push(r.stars + '/5 · ' + r.author + ' · ' + DATA.fmt.longDate(r.date)); body.push(exWrap(t(r.text))); body.push(''); });
+  tp.reviews.forEach(r => { body.push(r.stars + '/5 - ' + r.author + ' - ' + DATA.fmt.longDate(r.date)); body.push(exWrap(t(r.text))); body.push(''); });
   body.push(exWrap(t('Trustpilot er et blødt signal: anmeldelserne er skrevet af kunder og leverandører og er ikke kontrolleret. Gengivet som hentet, ikke vurderet.')));
   return [{ ref: 's. 1', title: 'Trustpilot', body: body.join('\n') }];
 }
@@ -244,13 +252,12 @@ function exOwnershipPages() {
   ];
   DATA.OWNERS.forEach(o => body.push(exPad(o.name, 24) + exPad(exPct(o.share), 10) + exPad(exPct(o.diluted), 16) + exPad(o.cvr || '-', 11) + t(kind[o.type] || 'Selskab') + (o.role ? ', ' + t(o.role) : '')));
   body.push('', t('Reel ejer') + ': ' + co.realOwner);
-  body.push(exWrap(t('Medarbejderwarrants (NC-W2022) svarende til 5,0 % ved fuld udnyttelse står kun i ejerbogen, ikke i CVR.')));
   body.push('', exHead(t('Bestyrelse')), exPad(t('Navn'), 24) + exPad(t('Rolle'), 24) + t('Siden'));
   DATA.BOARD.forEach(b => body.push(exPad(b.name, 24) + exPad(t(b.role), 24) + b.since));
   body.push(exWrap(finFill(t("Ingen af de {n} medlemmer er PEP. Tjekket mod EU's sanktionsliste og nationale PEP-registre {date}."), { n: DATA.BOARD.length, date: finPublicDataDate() })));
   body.push('', exHead(t('Direktion')), exPad(t('Navn'), 24) + exPad(t('Rolle'), 30) + t('Anmeldt i CVR'));
   DATA.MANAGEMENT.forEach(m => body.push(exPad(m.name, 24) + exPad(t(m.role), 30) + (m.registered ? t('Ja') : t('Nej'))));
-  body.push('', exHead(t('Koncernforhold')), exWrap(t('Ingen datterselskaber · søsterselskab Nordhavn Production ApS (samhandel på markedsvilkår)')));
+  body.push('', exHead(t('Koncernforhold')), exWrap(t('Ingen datterselskaber - søsterselskab Nordhavn Production ApS (samhandel på markedsvilkår)')));
   return [{ ref: 's. 1', title: t('Ejerskab og finansielle bindinger'), body: body.join('\n') }];
 }
 

@@ -72,7 +72,7 @@ function wsCaseDeadline(caseData) { return (caseData && caseData.deadline) || DA
 function wsSourceLink(source) {
   if (window.CW_SOURCE_VIEW !== true || !source || !source.doc) return null;
   const name = wsDocName(source.doc);
-  const label = name + (source.ref ? ' · ' + wsRef(source.ref) : '');
+  const label = name + (source.ref ? ' - ' + wsRef(source.ref) : '');
   return { name, label };
 }
 

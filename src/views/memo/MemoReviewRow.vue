@@ -69,13 +69,13 @@ const fmtWhen = (at) => (window.CW ? CW.fmtWhen(at) : at)
       :title="fmtWhen(st.reviewed.at)"
     >
       <CheckOutlined aria-hidden="true" />
-      {{ t('Gennemgået af') }} {{ st.reviewed.by }}, {{ _memoFmtDay(st.reviewed.at) }}{{ st.blanks ? ' · ' + st.blanks + ' ' + (st.blanks === 1 ? t('felt mangler') : t('felter mangler')) : '' }}
+      {{ t('Gennemgået af') }} {{ st.reviewed.by }}, {{ _memoFmtDay(st.reviewed.at) }}{{ st.blanks ? ' - ' + st.blanks + ' ' + (st.blanks === 1 ? t('felt mangler') : t('felter mangler')) : '' }}
     </a-typography-text>
     <a-button
       v-if="!readOnly"
       type="link"
       size="small"
-      class="rv-undo"
+      class="rv-undo cw-link"
       :aria-label="t('Fortryd gennemgang') + ': ' + secName"
       @click="emit('undo-review')"
     >

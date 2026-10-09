@@ -3,10 +3,12 @@
    prikken på et rettet tal, kommentar- og nulstil-knappen til venstre for cellen, feltet under
    rettelsen eller tallet. Selve <td> (data-fin-cell, tabindex, aria-label, klik og taster) sættes
    af FinAnnualTable via kolonnens customCell; tilstanden er i useFinCellEditing.
-   Props: cell (fra finTableRows: { col, ref, label, display, fillable, edited }), comments
-          (finCommentsFor), locked, editing (rettelsen i denne celle: { text, bad, typed } eller
+   Props: cell (fra finRegnskabRows: { col, editKey, ref, label, display, fillable, edited, orig, pill }),
+          comments (finCommentsFor), locked, editing (rettelsen i denne celle: { text, bad, typed } eller
           null), notesOpen (kommentarerne til tallet er åbne), unit ('mio' | 'thousand'),
           popupContainer (elementet, kommentarboksen lægges i: sidens rullefelt)
+   Regnskab v5: editKey er rettelsens kolonne (FIN_EDIT_COL: årene, eller 'ytd' for den uploadede
+   saldobalances periode); orig er det oprindelige tal; pill står foran tallet (FinNumPill).
    Emits: set-text(text), editor-keydown(event), commit(how), notes(open, outside),
           add-note(text), delete-note(id), reset(edit) */
 import { computed, nextTick, ref, watch } from 'vue'
@@ -16,6 +18,7 @@ import { FIN_EDIT_COL, finOrigOf } from '@/domain/financials/finEdits'
 import { finFill, finShortDate } from '@/domain/financials/finFormat'
 import { finMakeFmt } from '@/domain/financials/finColumns'
 import FinNotesPopover from './FinNotesPopover.vue'
+import FinNumPill from './FinNumPill.vue'
 
 const props = defineProps({
   cell: { type: Object, required: true },
@@ -31,10 +34,11 @@ const emit = defineEmits(['set-text', 'editor-keydown', 'commit', 'notes', 'add-
 const fmtU = (v) => finMakeFmt(props.unit)(v, {})
 const x = computed(() => props.cell.edited)
 const nCom = computed(() => props.comments.length)
-const name = computed(() => t(props.cell.label) + ' ' + FIN_EDIT_COL[props.cell.col.key].name())
-const origText = computed(() => (x.value ? (fmtU(finOrigOf(x.value)) || '-') : ''))
+const editCol = computed(() => FIN_EDIT_COL[props.cell.editKey || props.cell.col.key])
+const name = computed(() => t(props.cell.label) + ' ' + editCol.value.name())
+const origText = computed(() => (x.value ? (fmtU(props.cell.orig !== undefined ? props.cell.orig : finOrigOf(x.value)) || '-') : ''))
 const markText = computed(() => (x.value
-  ? finFill(t('Rettet af {navn} {dato}. Oprindeligt {tal} ({kilde}).'), { navn: x.value.by, dato: finShortDate(x.value.at), tal: origText.value, kilde: FIN_EDIT_COL[props.cell.col.key].source() }).replace('..', '.')
+  ? finFill(t('Rettet af {navn} {dato}. Oprindeligt {tal} ({kilde}).'), { navn: x.value.by, dato: finShortDate(x.value.at), tal: origText.value, kilde: editCol.value.source() }).replace('..', '.')
   : ''))
 const commentTitle = computed(() => (nCom.value ? finFill(nCom.value === 1 ? t('1 kommentar') : t('{n} kommentarer'), { n: nCom.value }) : t('Tilføj kommentar')))
 const commentLabel = computed(() => finFill(nCom.value ? t('Se kommentarer til {post} ({n})') : t('Tilføj kommentar til {post}'), { post: name.value, n: nCom.value }))
@@ -82,17 +86,17 @@ const onFocus = (e) => { if (props.editing && !props.editing.typed) e.target.sel
         @mousedown.stop
         @click.stop
       >
-        <template #icon>
+        <span class="fin-comment-btn">
           <a-typography-text :type="nCom ? 'warning' : undefined">
             <MessageOutlined aria-hidden="true" />
           </a-typography-text>
-        </template>
-        <a-typography-text
-          v-if="nCom > 0"
-          strong
-        >
-          {{ nCom }}
-        </a-typography-text>
+          <a-typography-text
+            v-if="nCom > 0"
+            strong
+          >
+            {{ nCom }}
+          </a-typography-text>
+        </span>
       </a-button>
     </a-popover>
     <a-button
@@ -104,17 +108,17 @@ const onFocus = (e) => { if (props.editing && !props.editing.typed) e.target.sel
       @mousedown.stop
       @click.stop="emit('notes', true)"
     >
-      <template #icon>
+      <span class="fin-comment-btn">
         <a-typography-text :type="nCom ? 'warning' : undefined">
           <MessageOutlined aria-hidden="true" />
         </a-typography-text>
-      </template>
-      <a-typography-text
-        v-if="nCom > 0"
-        strong
-      >
-        {{ nCom }}
-      </a-typography-text>
+        <a-typography-text
+          v-if="nCom > 0"
+          strong
+        >
+          {{ nCom }}
+        </a-typography-text>
+      </span>
     </a-button>
     <a-button
       v-if="x"
@@ -145,7 +149,7 @@ const onFocus = (e) => { if (props.editing && !props.editing.typed) e.target.sel
       inputmode="decimal"
       :aria-label="finFill(t('Nyt tal for {post}'), { post: name })"
       :aria-invalid="editing.bad ? 'true' : undefined"
-      :title="editing.bad ? t('Skriv et tal, fx 41.100 eller -2.400') : undefined"
+      :title="editing.bad ? t('Skriv et tal, f.eks. 41.100 eller -2.400') : undefined"
       @update:value="(v) => emit('set-text', v)"
       @focus="onFocus"
       @keydown="(e) => emit('editor-keydown', e)"
@@ -154,15 +158,28 @@ const onFocus = (e) => { if (props.editing && !props.editing.typed) e.target.sel
   </template>
   <template v-else-if="cell.display">
     {{ cell.display }}
+    <FinNumPill
+      v-if="cell.pill"
+      :pill="cell.pill"
+    />
   </template>
   <a-typography-text
     v-else-if="cell.fillable"
     type="secondary"
     :title="t('Ikke oplyst i årsrapporten. Klik for at indtaste omsætningen.')"
   >
-    {{ t('Ikke oplyst') }}
+    -
   </a-typography-text>
   <template v-else>
     -
   </template>
 </template>
+
+<style scoped>
+/* Ikon og antal ved siden af hinanden med luft mellem dem, så tallet ikke ligger oven i ikonet */
+.fin-comment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+</style>

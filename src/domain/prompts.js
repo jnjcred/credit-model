@@ -79,7 +79,7 @@ window.CW_PROMPTS = {
   setOverride(file, content) { try { localStorage.setItem(PW_OVERRIDE + file, JSON.stringify({ content, at: new Date().toISOString() })); } catch (e) {} },
   clearOverride(file) { try { localStorage.removeItem(PW_OVERRIDE + file); } catch (e) {} },
   async fetchFile(file) {
-    const r = await fetch('prompts/' + file + '?t=' + Date.now(), { cache: 'no-store' });
+    const r = await fetch('/prompts/' + file + '?t=' + Date.now(), { cache: 'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.text();
   },

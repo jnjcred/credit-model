@@ -1,537 +1,443 @@
 <script setup>
-/* Grafen over regnskabstabellen (fin_chart.jsx: FinChart, C:144-365): Omsætning,
-   Bruttofortjeneste og EBITDA for 2023-2027 med et detaljefelt for det valgte år.
-   ant-design-vue har ingen diagrammer, så søjlerne tegnes som før (domænekomponent): perioder,
-   lag, skala og søjlebredder regnes i src/domain/financials/finChartModel.js, og kolonnerne
-   flugter med tabellens årskolonner (useTableColumnGeometry). Kortet, serievalget, knapperne,
-   tooltip og nøgletallene er ant-design-vue. Farverne er temaets: omsætning i primærfarven,
-   bruttofortjeneste i primærfarvens lyse trin og EBITDA i neutral grå (se stilarket).
-   Props: model (finApplyEdits), unit ('mio' | 'thousand'), fmt (tabellens talformat, finMakeFmt),
-          data (finDataState: { hasBudget, months }), locked (sagen er indstillet),
-          quarters (tabellens kvartaler er foldet ud: kolonnerne måles igen)
-   Emits: import ("Importér budget", når der ingen prognose er: sektionen åbner filvælgeren) */
-import { computed, ref } from 'vue'
+/* Grafen over regnskabstabellen (Regnskab v5, designet "Graph redesign without takt v5"):
+   Omsætning og EBITDA som søjler i hver af tabellens kolonner (Bruttofortjeneste er taget ud af grafen), med et
+   detaljefelt til venstre for den kolonne, musen eller fokus står på (standard: perioden, eller
+   det seneste regnskabsår uden periodetal). ant-design-vue har ingen diagrammer, så søjlerne tegnes
+   som domænekomponent; tallene, skalaen og bredderne regnes i src/domain/financials/finRegnskab.js.
+   Graf og tabel deler kolonner: bredderne måles i tabellens hoved (useTableColumnGeometry), og de
+   to kort ruller vandret sammen (scrollSync). Kortet, serievalget, knapperne og detaljefeltet er
+   ant-design-vue.
+   Farver: Omsætning i primærfarven, Bruttofortjeneste i primærfarvens lyse trin (designets lilla
+   er erstattet af appens blå), EBITDA i blågrøn. Budgettet er skraveret orange og står på
+   en lys orange flade som i tabellen; månederne har deres egen skala og, med sammenligningen,
+   sidste års tal som omrids.
+   Detaljefeltet står fast til venstre, når graf og tabel ruller vandret (som tabellens rækkenavne).
+   Et negativt tal tegnes som omrids. Bruttofortjeneste har en forklaring ved serien og i feltet.
+   Props: ctx ({ model, mask }), view (finRegnskabColumns), unit ('mio' | 'thousand'),
+          fmt (tabellens talformat, finMakeFmt), scrollSync (useScrollSync),
+          demo (demovisningen: valg af serier og Skjul graf gælder kun visningen og gemmes ikke) */
+import { computed, ref, watch } from 'vue'
+import { InfoCircleOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { finFill } from '@/domain/financials/finFormat'
-import {
-  FIN_PLOT_H, FIN_SERIES, finAskCustomer, finBarHeights, finBarWidths, finChartLoad, finChartModel,
-  finChartScale, finChartStore, finPct1, finPer, finRest,
-} from '@/domain/financials/finChartModel'
-import { go } from '@/composables/useNavigation'
+import { finChartLoad, finChartStore, finPct1 } from '@/domain/financials/finChartModel'
+import { FIN_V5_SERIES, finChartColumns, finChartPanel, finSeriesValues } from '@/domain/financials/finRegnskab'
 import { useTableColumnGeometry } from '../composables/useTableColumnGeometry'
 
 const props = defineProps({
-  model: { type: Object, required: true },
+  ctx: { type: Object, required: true },
+  view: { type: Object, required: true },
   unit: { type: String, required: true },
   fmt: { type: Function, required: true },
-  data: { type: Object, required: true },
+  scrollSync: { type: Object, required: true },
+  demo: { type: Boolean, default: false },
   locked: { type: Boolean, default: false },
-  quarters: { type: Boolean, default: false },
 })
-const emit = defineEmits(['import'])
+const emit = defineEmits(['ask', 'import', 'upload-period'])
+const store = (patch) => { if (!props.demo) finChartStore(patch) }
 
 const hidden = ref(!!finChartLoad().hidden)
 const hover = ref(null)
 const userSeries = ref(finChartLoad().series || {})
-const cm = computed(() => finChartModel(props.model, props.data))
-const P = computed(() => cm.value.P)
-const N = computed(() => cm.value.N)
-const B = computed(() => cm.value.B)
-const hasForecast = computed(() => B.value || N.value > 0)
-const sel = computed(() => (hover.value != null ? hover.value : 2))
 const unitShort = computed(() => (props.unit === 'mio' ? t('DKK mio.') : t('DKK t.')))
 
-// Omsætning mangler i årsrapporterne? Alle år: Omsætning kan ikke vises.
-// Nogle år: Bruttofortjeneste vises som standard ved siden af.
-const annualRev = computed(() => P.value.slice(0, 3).map(q => q.g('Nettoomsætning')))
-const noRevAll = computed(() => annualRev.value.every(v => v == null))
-const noRevAny = computed(() => annualRev.value.some(v => v == null))
+// Serierne: Omsætning og EBITDA. Bruttofortjeneste er ikke en mulighed i grafen (kræver mapping af saldotallene, som
+// ikke er lavet): har sagen kun de offentlige årsrapporter, viser grafen kun EBITDA. Omsætningen kan ikke vælges, når
+// den ikke findes i nogen kolonne.
+const SERIES = FIN_V5_SERIES.filter(s => s.k !== 'bf')
+const revAny = computed(() => props.view.cols.some(c => finSeriesValues(props.ctx, c).rev != null))
 const on = computed(() => ({
-  rev: !noRevAll.value && (userSeries.value.rev != null ? userSeries.value.rev : true),
-  bf: userSeries.value.bf != null ? userSeries.value.bf : noRevAny.value,
+  rev: revAny.value && (userSeries.value.rev != null ? userSeries.value.rev : true),
+  bf: false,
   eb: userSeries.value.eb != null ? userSeries.value.eb : true,
 }))
+/* Jesper 9. oktober: første gang sagen får periodetal (ERP eller en uploadet saldobalance), slås
+   Omsætning til og Bruttofortjeneste fra. Derefter gælder rådgiverens eget valg (husket som periodSeen
+   i kabul:fin-chart; "Nulstil demo" rydder det). Demovisningen gemmer intet: dér er det standardvalget ovenfor. */
+watch(() => props.view.hasData && !props.demo, (has) => {
+  if (!has || finChartLoad().periodSeen) return
+  const next = { ...userSeries.value, rev: true, bf: false }
+  userSeries.value = next
+  finChartStore({ series: next, periodSeen: true })
+}, { immediate: true })
+const isDis = (k) => k === 'rev' && !revAny.value
 const toggleSeries = (k) => {
-  if (k === 'rev' && noRevAll.value) return
+  if (isDis(k)) return
   const next = { ...userSeries.value, [k]: !on.value[k] }
   userSeries.value = next
-  finChartStore({ series: next })
+  store({ series: next })
 }
-const visKeys = computed(() => ['eb', 'bf', 'rev'].filter(k => on.value[k])) // søjlernes rækkefølge fra venstre
-const rowOf = (k) => FIN_SERIES.find(s => s.k === k).row
-const nameOf = (k) => t(FIN_SERIES.find(s => s.k === k).name)
-
-// Titlen følger de viste serier: "Omsætning, bruttofortjeneste og EBITDA"
-const title = computed(() => {
-  const titleNames = FIN_SERIES.filter(s => on.value[s.k]).map((s, j) => (j === 0 || s.k === 'eb' ? t(s.name) : t(s.name).toLowerCase()))
-  return titleNames.length === 0 ? t('Ingen serier valgt')
-    : titleNames.length === 1 ? titleNames[0]
-      : titleNames.slice(0, -1).join(', ') + ' ' + t('og') + ' ' + titleNames[titleNames.length - 1]
-})
-
-// Kolonnerne efter tabellen (årene flugter); ellers fem lige brede kolonner
-// (Tabellens hoved tegnes om, når kvartalerne foldes ud og sammen, også når tabellen ikke skifter
-// størrelse, fx på en smal skærm; derfor måles der også ved det.)
-const geom = useTableColumnGeometry(() => document.getElementById('fin-annual-table'),
-  [() => props.unit, hidden, () => props.data.hasBudget, () => props.data.months, () => props.model, () => props.quarters])
-const ws = computed(() => (geom.value ? geom.value.ws : [1, 1, 1, 1, 1]))
-const edges = computed(() => {
-  const totW = ws.value.reduce((a, b) => a + b, 0)
-  return ws.value.map((w, i) => ws.value.slice(0, i + 1).reduce((a, b) => a + b, 0) / totW)
-})
-const pad = computed(() => (geom.value ? geom.value.pad : 16))
-const bw = computed(() => finBarWidths(visKeys.value, geom.value ? Math.min(...geom.value.ws) : 150, pad.value))
-const fcLeft = computed(() => (edges.value[2] * 100) + '%')
-const colTpl = computed(() => ws.value.map(w => w + 'fr').join(' '))
-const gridStyle = computed(() => (geom.value ? { gridTemplateColumns: geom.value.c1 + 'px minmax(0, 1fr)', minWidth: 0, '--fin-chart-pad': pad.value + 'px' } : undefined))
+const vis = computed(() => ['eb', 'rev'].filter(k => on.value[k])) // søjlernes rækkefølge fra venstre
+const nameOf = (k) => t(FIN_V5_SERIES.find(s => s.k === k).name)
+const chipTip = computed(() => t('Årsrapporterne viser ikke omsætningen. Indtast den i tabellen, eller upload en intern årsrapport.'))
 
 const toggle = () => {
   const h = !hidden.value
   hidden.value = h
-  finChartStore({ hidden: h })
+  store({ hidden: h })
   hover.value = null
   CW.focusSoon('#fin-chart-toggle')
 }
 
-// Skala: designets 0,0056 px pr. DKK t., men aldrig højere end feltet
-const scale = computed(() => finChartScale(P.value, visKeys.value, cm.value.stack, rowOf))
-// Søjlerne pr. periode: lagene i px og tallet over søjlen (null: ingen tal)
-const bars = computed(() => P.value.map(qq => visKeys.value.map((k) => {
-  const s = cm.value.stack(rowOf(k), qq)
-  if (!s) return null
-  return { ...finBarHeights(s, scale.value.H), label: (s.ghost ? '≈' : '') + props.fmt(s.tot, {}) }
-})))
-
-// Detaljefeltet: den valgte periode (standard 2025) for den første viste serie
-const q = computed(() => P.value[sel.value])
-const pk = computed(() => (on.value.rev ? 'rev' : on.value.bf ? 'bf' : on.value.eb ? 'eb' : (noRevAll.value ? 'bf' : 'rev')))
-const ps = computed(() => cm.value.stack(rowOf(pk.value), q.value))
-const big = computed(() => (ps.value == null ? '–' : props.fmt(q.value.showYtd ? ps.value.real : ps.value.tot, {})))
-const ebS = computed(() => cm.value.stack('EBITDA', q.value))
-const ebBig = computed(() => (ebS.value == null ? '–' : props.fmt(q.value.showYtd ? ebS.value.real : ebS.value.tot, {})))
-const per = computed(() => finPer(N.value))
-const rest = computed(() => finRest(N.value))
-const facts = computed(() => {
-  const qq = q.value, s = ps.value, fmt = props.fmt
-  let facts
-  if (qq.kind === 'annual') {
-    const edited = !!(props.model.map && props.model.map['Nettoomsætning|y' + qq.idx])
-    facts = [[t('Kilde'), edited ? t('Årsrapport, rettet manuelt') : t('Årsrapport')]]
-    if (qq.g('Nettoomsætning') == null) facts.unshift([t('Omsætning'), t('Ikke oplyst')])
-  } else if (qq.kind === 'fc26') facts = s ? [[finFill(t('Periodetal ({per})'), { per: per.value }), fmt(s.real, {})], [finFill(t('Budget ({per})'), { per: rest.value }), fmt(s.bud, {})]] : []
-  else if (qq.kind === 'bud26') facts = [[t('Periodetal'), t('Ingen')], [finFill(t('Budget ({per})'), { per: t('sep-dec') }), s ? fmt(s.tot, {}) : '–']]
-  else if (qq.kind === 'ytd') facts = s ? [[finFill(t('Periodetal ({per})'), { per: per.value }), fmt(s.real, {})], [t('Fremskrevet helår'), '≈ ' + fmt(s.tot, {})]] : []
-  else if (qq.kind === 'b9') facts = [[t('Kilde'), t('9 mdr. budget')]]
-  else facts = [[t('Kilde'), qq.year.startsWith('2027') ? t('Intet budget') : t('Ingen periodetal eller budget')]]
-  return facts
+// Kolonnerne efter tabellens hoved (samme bredder); før målingen et gitter med lige brede kolonner
+const geom = useTableColumnGeometry(() => document.getElementById('fin-annual-table'),
+  [() => props.view.cols.map(c => c.key).join(','), () => props.unit, hidden])
+const template = computed(() => {
+  const g = geom.value
+  if (!g) return { gridTemplateColumns: '260px repeat(' + props.view.cols.length + ', minmax(84px, 1fr))' }
+  return { gridTemplateColumns: [g.c1, ...props.view.cols.map(c => g.cols[c.key] || 84)].map(w => w + 'px').join(' '), width: g.width + 'px' }
 })
-const selMargins = computed(() => {
-  const qq = q.value
-  const rev = qq.g('Nettoomsætning')
-  const pc = (x) => (rev == null || x == null || !rev ? '–' : finPct1(x / rev * 100))
-  const pers = qq.g('Personaleomkostninger')
-  return [
-    [t('Dækningsgrad'), pc(qq.g('Bruttofortjeneste'))],
-    [t('Løn % af omsætning'), pc(pers == null ? null : -pers)],
-    [t('EBITDA-margin'), pc(qq.g('EBITDA'))],
-  ]
+const pad = computed(() => (geom.value ? geom.value.pad : 8))
+
+const cols = computed(() => finChartColumns(props.ctx, props.view, vis.value, props.fmt))
+const lastAnnual = computed(() => props.view.cols.filter(c => c.grp === 'ar').slice(-1)[0].key)
+const selKey = computed(() => (hover.value && props.view.cols.some(c => c.key === hover.value) ? hover.value : props.view.hasData ? 'real' : lastAnnual.value))
+const selCol = computed(() => props.view.cols.find(c => c.key === selKey.value))
+const panel = computed(() => finChartPanel(props.ctx, props.view, selCol.value, vis.value))
+const fmtV = (v) => (v == null ? '–' : props.fmt(v, {}))
+
+/* Boksen over kolonnerne uden tal (tilbage fra grafen før v5, Jesper 9. oktober): mangler budgettet,
+   og evt. også periodetallene, står en boks over de tomme kolonner med "Anmod kunden om budget",
+   "Importér budget" og "Anmod kunden om periodetal". Er kunden allerede bedt om det, står det i stedet.
+   I demovisningen er knapperne slået fra (de skriver i sagen). Placeres i gitteret over kolonnerne. */
+const askBox = computed(() => {
+  const v = props.view
+  const bud = v.bands.find(b => b.grp === 'bud'), ytd = v.bands.find(b => b.grp === 'ytd')
+  if (!bud || !bud.request) return null
+  const noPeriod = !v.hasData
+  const idx = v.cols.map((c, i) => (c.grp === 'bud' || (noPeriod && c.grp === 'ytd') ? i : -1)).filter(i => i >= 0)
+  if (!idx.length) return null
+  const years = v.cols.filter(c => c.grp === 'bud').map(c => c.chartLabel)
+  const yrs = years.length > 1 ? years.slice(0, -1).join(', ') + ' ' + t('og') + ' ' + years[years.length - 1] : years.join('')
+  return {
+    style: { gridColumn: (idx[0] + 2) + ' / ' + (idx[idx.length - 1] + 3), gridRow: 1 },
+    // Kolonnerne inde under boksen (ikke den første): uden skillelinjer, så det tomme område er én flade
+    inner: idx.slice(1).map(i => v.cols[i].key),
+    title: noPeriod ? finFill(t('Ingen periodetal og intet budget for {aar}'), { aar: yrs }) : finFill(t('Intet budget for {aar}'), { aar: yrs }),
+    text: noPeriod
+      ? t('Der er hverken bogføring eller budget. Bed kunden om periodetal og et budget, så I kan følge, hvor virksomheden er på vej hen.')
+      : t('Bed kunden om et budget for hele regnskabsår, så I kan følge, hvor virksomheden er på vej hen, og sammenligne periodetallene med budgettet.'),
+    budAsked: !!bud.asked, period: noPeriod && !!(ytd && ytd.request), perAsked: !!(ytd && ytd.asked), demo: !!bud.demo,
+  }
 })
-const capOf = (k) => (q.value.showYtd ? finFill(t('{serie} {per} 2026'), { serie: nameOf(k), per: per.value }) : finFill(t('{serie} {aar}'), { serie: nameOf(k), aar: q.value.year }))
 
-const ask = (id) => finAskCustomer(id, go)
-const colLabel = (qq) => {
-  if (qq.blank || qq.empty) return finFill(t('{aar}: ingen tal'), { aar: qq.year })
-  return qq.year + ': ' + visKeys.value.slice().reverse().map(k => { const s = cm.value.stack(rowOf(k), qq); return nameOf(k) + ' ' + (s ? (s.ghost ? '≈ ' : '') + props.fmt(s.tot, {}) : t('ikke oplyst')) }).join(', ') + ' ' + unitShort.value
-}
-const chipTip = computed(() => t('Omsætningen er ikke oplyst i årsrapporterne. Upload kundens interne årsrapport, eller klik på "Ikke oplyst" i tabellen og indtast omsætningen, så vises den i grafen.'))
-const isDis = (k) => k === 'rev' && noRevAll.value
-
+// Kolonnens navn for skærmlæsere: "Jan-aug 2026: Omsætning 29.080, EBITDA 1.680 DKK t."
+const colLabel = (c) => c.label + ': ' + c.bars.slice().reverse().map(b => nameOf(b.k) + ' ' + (b.label || t('ikke oplyst'))).join(', ') + ' ' + unitShort.value
 </script>
 
 <template>
+  <a-button
+    v-if="hidden"
+    id="fin-chart-toggle"
+    type="link"
+    class="fin-chart-show cw-link"
+    aria-expanded="false"
+    @click="toggle"
+  >
+    {{ t('Vis graf') }}
+  </a-button>
   <a-card
+    v-else
     id="fin-chart"
     class="fin-chart"
     :bordered="false"
     :body-style="{ padding: 0 }"
   >
+    <!-- Ingen titel: hvad grafen viser, vælges med serierne, der står på titlens plads -->
     <template #title>
       <span
+        class="sr-only"
         role="heading"
         aria-level="3"
-      >{{ title }}</span>
-    </template>
-    <template #extra>
-      <div class="fin-chart-head">
-        <div
-          class="fin-chart-series"
-          role="group"
-          :aria-label="t('Serier i grafen')"
+      >{{ t('Graf over regnskabet') }}</span>
+      <div
+        class="fin-chart-series"
+        role="group"
+        :aria-label="t('Serier i grafen')"
+      >
+        <a-tooltip
+          v-for="s in SERIES"
+          :key="s.k"
+          :title="isDis(s.k) ? chipTip : s.tip ? t(s.tip) : undefined"
+          :trigger="['hover', 'focus']"
         >
-          <!-- Omsætning kan ikke vælges, når den mangler i alle årsrapporter: feltet kan stadig
-               fokuseres, og forklaringen vises ved hover og fokus (som før migrationen) -->
-          <a-tooltip
-            v-for="s in FIN_SERIES"
-            :key="s.k"
-            :title="isDis(s.k) ? chipTip : undefined"
-            :trigger="['hover', 'focus']"
+          <a-checkbox
+            :checked="on[s.k]"
+            :aria-disabled="isDis(s.k) ? 'true' : undefined"
+            :aria-describedby="isDis(s.k) ? 'fin-chart-chiptip' : s.tip ? 'fin-chart-tip-' + s.k : undefined"
+            @change="toggleSeries(s.k)"
           >
-            <a-checkbox
-              :checked="on[s.k]"
-              :aria-disabled="isDis(s.k) ? 'true' : undefined"
-              :aria-describedby="isDis(s.k) ? 'fin-chart-chiptip' : undefined"
-              @change="toggleSeries(s.k)"
-            >
-              <span class="fin-chart-series-item">
-                <span
-                  :class="['fin-sw', s.k, { off: !on[s.k], dis: isDis(s.k) }]"
-                  aria-hidden="true"
-                />
-                <a-typography-text :disabled="isDis(s.k)">{{ t(s.name) }}</a-typography-text>
-              </span>
-            </a-checkbox>
-          </a-tooltip>
-          <span
-            v-if="noRevAll"
-            id="fin-chart-chiptip"
-            class="sr-only"
-          >{{ chipTip }}</span>
-        </div>
-        <a-typography-text
-          v-if="B"
-          type="secondary"
-          class="fin-chart-legend"
-        >
-          <span
-            class="fin-sw bud"
-            aria-hidden="true"
-          />{{ t('Budget') }}
-        </a-typography-text>
-        <a-typography-text
-          v-if="!B && N > 0"
-          type="secondary"
-          class="fin-chart-legend"
-        >
-          <span
-            class="fin-sw ghost"
-            aria-hidden="true"
-          />{{ t('Fremskrevet helår') }}
-        </a-typography-text>
-        <a-button
-          id="fin-chart-toggle"
-          type="link"
-          size="small"
-          :aria-expanded="!hidden"
-          @click="toggle"
-        >
-          {{ hidden ? t('Vis graf') : t('Skjul graf') }}
-        </a-button>
+            <span class="fin-chart-series-item">
+              <span
+                :class="['fin-sw', s.k]"
+                aria-hidden="true"
+              />
+              <a-typography-text :disabled="isDis(s.k)">{{ t(s.name) }}</a-typography-text>
+            </span>
+          </a-checkbox>
+        </a-tooltip>
+        <span
+          v-if="!revAny"
+          id="fin-chart-chiptip"
+          class="sr-only"
+        >{{ chipTip }}</span>
+        <span
+          v-for="s in SERIES.filter(x => x.tip)"
+          :id="'fin-chart-tip-' + s.k"
+          :key="'tip' + s.k"
+          class="sr-only"
+        >{{ t(s.tip) }}</span>
       </div>
     </template>
+    <template #extra>
+      <a-button
+        id="fin-chart-toggle"
+        class="cw-link"
+        type="link"
+        size="small"
+        aria-expanded="true"
+        @click="toggle"
+      >
+        {{ t('Skjul graf') }}
+      </a-button>
+    </template>
 
+    <!-- Hover gælder søjlerne og navnene under dem: den slippes først, når musen forlader grafen -->
     <div
-      v-if="!hidden"
+      :ref="(el) => scrollSync.register('chart', el)"
       class="fin-chart-scroll"
+      @scroll="scrollSync.onScroll"
+      @mouseleave="hover = null"
     >
       <div
         class="fin-chart-grid"
-        :style="gridStyle"
-        @mouseleave="hover = null"
+        :style="{ ...template, '--fin-chart-pad': pad + 'px' }"
       >
         <!-- Detaljefeltet -->
         <div
           class="fin-chart-side"
+          :style="{ gridColumn: 1, gridRow: 1 }"
           aria-live="polite"
-          :style="geom ? { width: geom.c1 + 'px' } : undefined"
         >
-          <a-statistic :value="big">
-            <template #title>
-              <span class="fin-chart-cap">
-                <span
-                  :class="['fin-sw', pk]"
-                  aria-hidden="true"
-                />{{ capOf(pk) }}
-              </span>
-            </template>
-            <template #formatter>
-              {{ big }}
-            </template>
-            <template #suffix>
-              {{ unitShort }}
-            </template>
-          </a-statistic>
-          <a-statistic
-            v-if="pk !== 'eb'"
-            :value="ebBig"
-          >
-            <template #title>
-              <span class="fin-chart-cap">
-                <span
-                  class="fin-sw eb"
-                  aria-hidden="true"
-                />{{ capOf('eb') }}
-              </span>
-            </template>
-            <template #formatter>
-              {{ ebBig }}
-            </template>
-            <template #suffix>
-              {{ unitShort }}
-            </template>
-          </a-statistic>
-          <div>
-            <a-typography-text
-              v-if="q.kilde"
-              type="secondary"
-              class="fin-chart-lbl"
-            >
-              {{ t('Kilde') }}
-            </a-typography-text>
-            <a-descriptions
-              v-if="facts.length"
-              size="small"
-              :column="1"
-              :colon="false"
-              :content-style="{ justifyContent: 'flex-end' }"
-            >
-              <a-descriptions-item
-                v-for="([k, v], j) in facts"
-                :key="j"
-              >
-                <template #label>
-                  <a-typography-text type="secondary">
-                    {{ k }}
-                  </a-typography-text>
-                </template>
-                <a-typography-text strong>
-                  {{ v }}
-                </a-typography-text>
-              </a-descriptions-item>
-            </a-descriptions>
-          </div>
-          <div>
-            <a-typography-text
-              type="secondary"
-              class="fin-chart-lbl"
-            >
-              {{ q.showYtd ? finFill(t('Nøgletal {per}'), { per }) : t('Nøgletal') }}
-            </a-typography-text>
-            <a-descriptions
-              size="small"
-              :column="1"
-              :colon="false"
-              :content-style="{ justifyContent: 'flex-end' }"
-            >
-              <a-descriptions-item
-                v-for="[k, v] in selMargins"
-                :key="k"
-              >
-                <template #label>
-                  <a-typography-text type="secondary">
-                    {{ k }}
-                  </a-typography-text>
-                </template>
-                <a-typography-text strong>
-                  {{ v }}
-                </a-typography-text>
-              </a-descriptions-item>
-            </a-descriptions>
-          </div>
-          <a-typography-paragraph
-            v-if="q.note"
-            type="secondary"
-            class="fin-chart-note"
-          >
-            {{ q.note }}
-          </a-typography-paragraph>
+          <a-typography-text strong>
+            {{ panel.title }}
+          </a-typography-text>
           <div
-            v-if="B && !N"
-            class="fin-chart-ask"
+            v-for="s in panel.series"
+            :key="s.k"
           >
-            <a-typography-text type="secondary">
-              {{ t('Der er ingen periodetal for 2026.') }}
-            </a-typography-text>
-            <a-button
-              type="link"
-              size="small"
-              @click="ask('m-interim')"
+            <a-statistic
+              :value="fmtV(s.value)"
+              :value-style="{ fontSize: '20px', lineHeight: '28px', fontWeight: 600 }"
             >
-              {{ t('Anmod kunden om periodetal') }}
-            </a-button>
+              <template #title>
+                <span class="fin-chart-cap">
+                  <span
+                    :class="['fin-sw', s.k]"
+                    aria-hidden="true"
+                  />{{ t(s.name) }}
+                  <a-tooltip
+                    v-if="s.tip"
+                    :title="t(s.tip)"
+                    :trigger="['hover', 'focus']"
+                  >
+                    <a-typography-text
+                      type="secondary"
+                      class="fin-chart-info"
+                      tabindex="0"
+                      role="img"
+                      :aria-label="t(s.tip)"
+                    >
+                      <InfoCircleOutlined aria-hidden="true" />
+                    </a-typography-text>
+                  </a-tooltip>
+                </span>
+              </template>
+              <template #formatter>
+                {{ fmtV(s.value) }}
+              </template>
+              <template #suffix>
+                {{ unitShort }}
+              </template>
+            </a-statistic>
+            <a-typography-text
+              v-if="panel.prevLabel"
+              type="secondary"
+              class="fin-chart-prev"
+            >
+              {{ finFill(t('Sidste år {tal}'), { tal: fmtV(s.prev) }) }}
+            </a-typography-text>
+          </div>
+          <a-descriptions
+            size="small"
+            :column="1"
+            :colon="false"
+            :content-style="{ justifyContent: 'flex-end' }"
+            class="fin-chart-facts"
+          >
+            <a-descriptions-item>
+              <template #label>
+                <a-typography-text type="secondary">
+                  {{ t('Kilde') }}
+                </a-typography-text>
+              </template>
+              <a-typography-text strong>
+                {{ t(panel.source) }}
+              </a-typography-text>
+            </a-descriptions-item>
+            <a-descriptions-item
+              v-for="[k, v] in panel.kpis"
+              :key="k"
+            >
+              <template #label>
+                <a-typography-text type="secondary">
+                  {{ t(k) }}
+                </a-typography-text>
+              </template>
+              <a-typography-text strong>
+                {{ finPct1(v) }}
+              </a-typography-text>
+            </a-descriptions-item>
+          </a-descriptions>
+        </div>
+
+        <!-- Søjlerne: en kolonne pr. kolonne i tabellen -->
+        <div
+          v-for="(c, ci) in cols"
+          :key="c.key"
+          :style="{ gridColumn: ci + 2, gridRow: 1 }"
+          :class="['fin-chart-col', { on: c.key === selKey, bud: c.budget, month: c.month, 'sep-grp': c.sep === 'grp', 'sep-sub': c.sep === 'sub', covered: askBox && askBox.inner.includes(c.key) }]"
+          tabindex="0"
+          role="img"
+          :aria-label="colLabel(c)"
+          @mouseenter="hover = c.key"
+          @focus="hover = c.key"
+          @blur="hover = null"
+        >
+          <div
+            v-for="b in c.bars"
+            :key="b.k"
+            :class="['fin-chart-bar', b.k, { neg: b.neg }]"
+          >
+            <span class="fin-chart-bl">{{ b.label }}</span>
+            <div
+              class="fin-chart-box"
+              :style="{ width: b.w + 'px', height: b.box + 'px' }"
+            >
+              <div
+                v-if="b.gh"
+                class="fin-chart-ghost"
+                :style="{ height: b.gh + 'px' }"
+              />
+              <div
+                v-if="b.h"
+                class="fin-chart-fill"
+                :style="{ height: b.h + 'px' }"
+              />
+            </div>
           </div>
         </div>
 
-        <div class="fin-chart-main">
-          <!-- Søjlerne -->
-          <div
-            class="fin-chart-plot"
-            :style="{ height: FIN_PLOT_H + 'px' }"
+        <!-- Intet budget (og evt. ingen periodetal): boks over de tomme kolonner -->
+        <div
+          v-if="askBox"
+          class="fin-chart-ask"
+          :style="askBox.style"
+          role="group"
+          :aria-label="askBox.title"
+        >
+          <a-typography-text strong>
+            {{ askBox.title }}
+          </a-typography-text>
+          <a-typography-paragraph
+            type="secondary"
+            class="fin-chart-ask-text"
           >
-            <div
-              v-if="hasForecast"
-              class="fin-chart-zone"
-              :style="{ left: fcLeft }"
-            />
-            <div
-              v-if="hasForecast"
-              class="fin-chart-zlbl"
-              :style="{ left: 'calc(' + fcLeft + ' + 12px)' }"
+            {{ askBox.text }}
+          </a-typography-paragraph>
+          <!-- Jesper 9. oktober: to primære knapper (Anmod om budget, Anmod om periodetal) og til højre
+               de blå tekstlinks (Upload budget, Upload periodetal). Er punktet bedt om, står det i stedet -->
+          <div class="fin-chart-ask-acts">
+            <a-button
+              v-if="!askBox.budAsked"
+              type="primary"
+              size="small"
+              class="fin-chart-cta"
+              :disabled="askBox.demo"
+              :title="askBox.demo ? t('Anmod virker ikke i demovisningen') : undefined"
+              @click="emit('ask', 'm-budget')"
             >
-              {{ t('Prognose') }}
-            </div>
-            <div class="fin-chart-slbl">
-              {{ t('Årsrapporter') }}
-            </div>
-            <div
-              v-for="b in [292, 236, 180, 124, 68]"
-              :key="b"
-              class="fin-chart-gl"
-              :style="{ bottom: b + 'px' }"
-            />
-            <div class="fin-chart-gl base" />
-            <div
-              class="fin-chart-cols"
-              :style="{ gridTemplateColumns: colTpl }"
+              {{ t('Anmod om budget') }}
+            </a-button>
+            <a-typography-text
+              v-else
+              type="secondary"
+              :title="t('Kunden er bedt om budgettet. Status står på Overblik.')"
             >
-              <div
-                v-for="(qq, i) in P"
-                :key="qq.year"
-                :class="['fin-chart-col', { on: i === sel }]"
-                tabindex="0"
-                :aria-label="colLabel(qq)"
-                @mouseenter="hover = i"
-                @focus="hover = i"
-                @blur="hover = null"
+              {{ t('Budget er anmodet') }}
+            </a-typography-text>
+            <template v-if="askBox.period">
+              <a-button
+                v-if="!askBox.perAsked"
+                type="primary"
+                size="small"
+                class="fin-chart-cta"
+                :disabled="askBox.demo"
+                :title="askBox.demo ? t('Anmod virker ikke i demovisningen') : undefined"
+                @click="emit('ask', 'm-interim')"
               >
-                <div
-                  v-if="qq.empty"
-                  class="fin-chart-empty"
-                >
-                  <a-typography-text>{{ t('Intet budget') }}</a-typography-text>
-                  <a-button
-                    type="primary"
-                    size="small"
-                    class="fin-chart-cta"
-                    @click="ask('m-budget')"
-                  >
-                    {{ t('Anmod kunden om budget') }}
-                  </a-button>
-                </div>
-                <div
-                  class="fin-chart-bars"
-                  :style="{ gap: bw.gap + 'px' }"
-                >
-                  <template
-                    v-for="(k, j) in visKeys"
-                    :key="k"
-                  >
-                    <div
-                      v-if="!bars[i][j]"
-                      class="fin-chart-bar"
-                      :style="{ width: bw.ws[j] + 'px' }"
-                    />
-                    <div
-                      v-else
-                      :class="['fin-chart-bar', k]"
-                      :style="{ width: bw.ws[j] + 'px' }"
-                    >
-                      <span :class="['fin-chart-bl', { lg: bw.ws[j] >= 40 }]">{{ bars[i][j].label }}</span>
-                      <div class="fin-chart-stack">
-                        <div
-                          v-if="bars[i][j].gh > 0"
-                          class="ghost"
-                          :style="{ height: bars[i][j].gh + 'px' }"
-                        />
-                        <div
-                          v-if="bars[i][j].bh > 0"
-                          :class="['bud', { flat: bars[i][j].gh }]"
-                          :style="{ height: bars[i][j].bh + 'px' }"
-                        />
-                        <div
-                          v-if="bars[i][j].rh > 0"
-                          :class="['act', { flat: bars[i][j].bh || bars[i][j].gh }]"
-                          :style="{ height: bars[i][j].rh + 'px' }"
-                        />
-                      </div>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </div>
-            <div
-              v-if="hasForecast"
-              class="fin-chart-div"
-              :style="{ left: fcLeft }"
-            />
-            <div
-              v-if="!hasForecast"
-              class="fin-chart-nofc"
-              :style="{ left: 'calc(' + fcLeft + ' + 12px)' }"
-            >
-              <a-typography-text strong>
-                {{ t('Ingen prognose for 2026 og 2027') }}
-              </a-typography-text>
-              <a-typography-paragraph
+                {{ t('Anmod om periodetal') }}
+              </a-button>
+              <a-typography-text
+                v-else
                 type="secondary"
-                class="fin-chart-note"
+                :title="t('Kunden er bedt om periodetallene.')"
               >
-                {{ t('Der er hverken bogføring eller budget for 2026. Bed kunden om et budget, så I kan følge, hvor virksomheden er på vej hen.') }}
-              </a-typography-paragraph>
-              <a-space wrap>
-                <a-button
-                  type="primary"
-                  size="small"
-                  class="fin-chart-cta"
-                  @click="ask('m-budget')"
-                >
-                  {{ t('Anmod kunden om budget') }}
-                </a-button>
-                <a-button
-                  v-if="!locked"
-                  size="small"
-                  class="fin-chart-cta"
-                  @click="emit('import')"
-                >
-                  {{ t('Importér budget') }}
-                </a-button>
-              </a-space>
+                {{ t('Periodetal er anmodet') }}
+              </a-typography-text>
+            </template>
+            <template v-if="!locked">
               <a-button
                 type="link"
                 size="small"
-                class="fin-chart-cta"
-                @click="ask('m-interim')"
+                class="fin-chart-cta fin-chart-ask-link cw-link"
+                :disabled="askBox.demo"
+                :title="askBox.demo ? t('Upload virker ikke i demovisningen') : t('Rådgiverens budget: en version af punktet Budget, som kunden ikke ser, før du deler den')"
+                @click="emit('import')"
               >
-                {{ t('Anmod kunden om periodetal') }}
+                {{ t('Upload budget') }}
               </a-button>
-            </div>
+              <a-button
+                v-if="askBox.period"
+                type="link"
+                size="small"
+                class="fin-chart-cta fin-chart-ask-link cw-link"
+                :disabled="askBox.demo"
+                :title="askBox.demo ? t('Upload virker ikke i demovisningen') : t('En saldobalance eller periodetal, rådgiveren har fået: lægges på punktet Periodetal')"
+                @click="emit('upload-period')"
+              >
+                {{ t('Upload periodetal') }}
+              </a-button>
+            </template>
           </div>
+        </div>
+      </div>
 
-          <!-- Årstallene -->
-          <div
-            class="fin-chart-years"
-            :style="{ gridTemplateColumns: colTpl }"
-          >
-            <div
-              v-if="hasForecast"
-              class="fin-chart-zone"
-              :style="{ left: fcLeft }"
-            />
-            <div
-              v-if="hasForecast"
-              class="fin-chart-div"
-              :style="{ left: fcLeft }"
-            />
-            <div
-              v-for="(qq, i) in P"
-              :key="qq.year"
-              :class="['fin-chart-year', { on: i === sel }]"
-              @mouseenter="hover = i"
-            >
-              <span>{{ qq.year }}</span>
-              <small v-if="qq.yearSub">{{ qq.yearSub }}</small>
-            </div>
-          </div>
+      <!-- Kolonnernes navne under søjlerne -->
+      <div
+        class="fin-chart-grid fin-chart-labels"
+        :style="{ ...template, '--fin-chart-pad': pad + 'px' }"
+      >
+        <div class="fin-chart-side-foot" />
+        <div
+          v-for="c in cols"
+          :key="'l' + c.key"
+          :class="['fin-chart-lab', { on: c.key === selKey, bud: c.budget, month: c.month, 'sep-grp': c.sep === 'grp', 'sep-sub': c.sep === 'sub', covered: askBox && askBox.inner.includes(c.key) }]"
+          aria-hidden="true"
+          @mouseenter="hover = c.key"
+        >
+          {{ c.label }}
         </div>
       </div>
     </div>
@@ -541,25 +447,19 @@ const isDis = (k) => k === 'rev' && noRevAll.value
 <style scoped lang="less">
 @import (reference) 'ant-design-vue/lib/style/themes/default.less';
 
-/* Domænetegning (antdv har ingen diagrammer): grafens gitter, søjler, zoner og detaljefelt.
-   Farverne er temaets: omsætning i primærfarven, bruttofortjeneste i primærfarvens lyse trin og
-   EBITDA i neutral grå. Budget er skraveret og fremskrevet stiplet i seriens egen farve; prognosen
-   (2026-2027) står på en lys grå flade bag en stiplet streg. */
-
-// EBITDA: antd's grå 7 til søjlen og grå 8 til tallene (7:1 mod hvid). ant-design-vue 3.x har ingen
-// variabler for den grå skala, så de blandes af temaets sort og hvid.
+/* Domænetegning (antdv har ingen diagrammer). Designets lilla er appens blå: Omsætning i
+   primærfarven og Bruttofortjeneste i dens lyse trin. EBITDA er blågrøn og budgettet orange;
+   tallene over EBITDA-søjlerne er i det mørke blågrønne trin, så de kan læses (kontrast over 4,5:1). */
 @fin-rev: @primary-color;
 @fin-bf: @primary-3;
-@fin-eb: mix(@black, @white, 45%);
-@fin-eb-text: mix(@black, @white, 65%);
+@fin-eb: #17a398;
+@fin-eb-text: #0b7a70;
+@fin-eb-bud: #a8e6df;
+@fin-bud: #fb8f67;
+@fin-bud-bg: #fdfaf7;
+@fin-ease: 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
 
-.fin-chart-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px 16px;
-}
+.fin-chart-show { align-self: flex-start; padding: 0; }
 
 .fin-chart-series {
   display: flex;
@@ -569,7 +469,6 @@ const isDis = (k) => k === 'rev' && noRevAll.value
 }
 
 .fin-chart-series-item,
-.fin-chart-legend,
 .fin-chart-cap {
   display: inline-flex;
   align-items: center;
@@ -577,324 +476,225 @@ const isDis = (k) => k === 'rev' && noRevAll.value
   white-space: nowrap;
 }
 
-/* Farveprøver (serier og forklaring) */
+/* Farveprøver (serier og detaljefelt) */
 .fin-sw {
   display: inline-block;
   flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  box-sizing: border-box;
-}
-
-.fin-chart-cap .fin-sw {
   width: 8px;
   height: 8px;
+  border-radius: 2px;
 }
 
 .fin-sw.rev { background: @fin-rev; }
 .fin-sw.bf { background: @fin-bf; }
 .fin-sw.eb { background: @fin-eb; }
 
-.fin-sw.off {
-  background: transparent;
-  border: 1px solid rgba(0, 0, 0, 0.25);
+.fin-chart-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
-.fin-sw.off.dis { border-style: dashed; }
-
-.fin-sw.bud {
-  border: 1px solid @fin-rev;
-  background: repeating-linear-gradient(135deg, @fin-rev 0 1.5px, @component-background 1.5px 4px);
-}
-
-.fin-sw.ghost { border: 1.5px dashed @fin-rev; }
-
-.fin-chart-scroll { overflow-x: auto; }
-
-/* Detaljefeltet har fast, rummelig bredde; plottet tager resten (før målingen af tabellen) */
 .fin-chart-grid {
   display: grid;
-  min-width: 760px;
-  grid-template-columns: 300px minmax(0, 1fr);
+  min-width: 100%;
+}
+
+/* Detaljefeltet: første kolonne, lige så bred som tabellens rækkenavne. Står fast til venstre, når
+   grafen ruller vandret, så søjlerne glider ind under det (som under tabellens rækkenavne) */
+.fin-chart-side,
+.fin-chart-side-foot {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: @component-background;
 }
 
 .fin-chart-side {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   min-width: 0;
-  padding: 20px;
+  padding: 16px 20px;
   border-right: 1px solid @border-color-split;
 }
 
-.fin-chart-lbl {
-  display: block;
-  font-size: 12px;
-}
-
-.fin-chart-note { margin: 0; }
-
+/* Intet budget: boks over de tomme kolonner (som "Ingen prognose" i grafen før v5). Glider ind
+   under detaljefeltet, når grafen ruller vandret */
 .fin-chart-ask {
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid @border-color-split;
-}
-
-.fin-chart-main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.fin-chart-plot { position: relative; }
-
-.fin-chart-zone {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  background: @background-color-light;
-  pointer-events: none;
-}
-
-.fin-chart-div {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 2;
-  border-left: 1px dashed @border-color-base;
-  pointer-events: none;
-}
-
-/* "Årsrapporter" og "Prognose" over plottet */
-.fin-chart-zlbl,
-.fin-chart-slbl {
-  position: absolute;
-  top: 12px;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-  color: @text-color-secondary;
-}
-
-.fin-chart-slbl { left: 12px; }
-
-.fin-chart-gl {
-  position: absolute;
-  left: 0;
-  right: 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
-}
-
-.fin-chart-gl.base {
-  bottom: 12px;
-  border-top-color: rgba(0, 0, 0, 0.15);
-}
-
-.fin-chart-cols {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 12px;
-  left: 0;
-  display: grid;
-}
-
-.fin-chart-col {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-end;
-  gap: 6px;
-  padding-right: var(--fin-chart-pad, 16px);
-  outline: none;
-  transition: background 0.25s ease;
-}
-
-.fin-chart-col.on { background: fade(@primary-color, 4%); }
-.fin-chart-col:focus-visible { box-shadow: inset 0 0 0 2px @primary-color; }
-
-.fin-chart-bars {
-  display: flex;
-  align-items: flex-end;
-  opacity: 0.55;
-  transition: opacity 0.25s ease;
-}
-
-.fin-chart-col.on .fin-chart-bars { opacity: 1; }
-
-.fin-chart-bar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-}
-
-/* Tallet over søjlen */
-.fin-chart-bl {
-  align-self: flex-end;
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(0, 0, 0, 0.55);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.fin-chart-bl.lg { font-size: 13px; }
-.fin-chart-col.on .fin-chart-bar.rev .fin-chart-bl,
-.fin-chart-col.on .fin-chart-bar.bf .fin-chart-bl { color: @text-color; }
-.fin-chart-bar.eb .fin-chart-bl { color: @fin-eb-text; }
-
-/* Søjlens lag nedefra: realiseret (fyldt), budget (skraveret), fremskrevet (stiplet) */
-.fin-chart-stack {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-}
-
-.fin-chart-stack .act { border-radius: 4px 4px 0 0; }
-
-.fin-chart-stack .bud {
-  border: 1px solid;
-  border-bottom: 0;
-  border-radius: 4px 4px 0 0;
-}
-
-.fin-chart-stack .ghost {
-  border: 1.5px dashed;
-  border-bottom: 0;
-  border-radius: 4px 4px 0 0;
-}
-
-.fin-chart-stack .flat { border-radius: 0; }
-
-.fin-chart-bar.rev .act { background: @fin-rev; }
-.fin-chart-bar.bf .act { background: @fin-bf; }
-.fin-chart-bar.eb .act { background: @fin-eb; }
-
-.fin-chart-bar.rev .bud {
-  border-color: @fin-rev;
-  background: repeating-linear-gradient(135deg, @fin-rev 0 2px, @component-background 2px 6px);
-}
-
-.fin-chart-bar.bf .bud {
-  border-color: @fin-bf;
-  background: repeating-linear-gradient(135deg, @fin-bf 0 2px, @component-background 2px 6px);
-}
-
-/* EBITDA-budgettet er lys grå med kant i seriens grå */
-.fin-chart-bar.eb .bud {
-  border-color: @fin-eb;
-  background: @border-color-split;
-}
-
-.fin-chart-bar.rev .ghost { border-color: @fin-rev; }
-.fin-chart-bar.bf .ghost { border-color: @fin-bf; }
-.fin-chart-bar.eb .ghost { border-color: @fin-eb; }
-
-/* 2027 uden budget: boks med opfordring */
-.fin-chart-empty {
-  position: absolute;
-  right: 6px;
-  bottom: 40px;
-  left: 6px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 8px;
+  align-self: start;
+  gap: 10px;
+  margin: 32px 12px 12px;
+  padding: 20px;
   border: 1px dashed rgba(0, 0, 0, 0.15);
-  border-radius: 6px;
-  background: @component-background;
-  text-align: center;
+  border-radius: 8px;
+  background: @background-color-light;
 }
 
-/* Knapper i de smalle felter må bryde teksten */
+.fin-chart-ask-text { margin-bottom: 0; }
+
+.fin-chart-ask-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.fin-chart-ask-link { padding: 0; }
+
+/* Knapper i smalle felter må bryde teksten */
 .fin-chart-cta {
   height: auto;
   max-width: 100%;
   white-space: normal;
 }
 
-/* Ingen prognose: boks over 2026 og 2027 */
-.fin-chart-nofc {
-  position: absolute;
-  top: 40px;
-  right: 12px;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
-  max-height: calc(100% - 52px);
-  padding: 20px;
-  overflow: auto;
-  border: 1px dashed rgba(0, 0, 0, 0.15);
-  border-radius: 8px;
-  background: @background-color-light;
-}
-
-/* Årstallene under plottet */
-.fin-chart-years {
-  position: relative;
-  display: grid;
-  padding-bottom: 10px;
-}
-
-.fin-chart-year {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  padding: 4px var(--fin-chart-pad, 16px) 0 0;
-  line-height: 18px;
-  color: @text-color-secondary;
-  transition: background 0.25s ease;
-}
-
-.fin-chart-year span {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.fin-chart-year small {
+.fin-chart-info {
+  cursor: help;
   font-size: 12px;
+}
+
+.fin-chart-prev {
+  display: block;
+  font-size: 12px;
+}
+
+.fin-chart-facts { padding-top: 4px; border-top: 1px solid @border-color-split; }
+
+.fin-chart-side-foot { border-right: 1px solid @border-color-split; }
+
+/* En kolonne med søjler: højrestillet, så den største serie står lige over tabellens tal */
+.fin-chart-col {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 3px;
+  min-height: 300px;
+  padding: 0 var(--fin-chart-pad, 8px) 0 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  outline: none;
+  transition: background @fin-ease;
+}
+
+.fin-chart-col.month { padding-right: 6px; }
+.fin-chart-col.bud,
+.fin-chart-lab.bud { background: @fin-bud-bg; }
+.fin-chart-col.on,
+.fin-chart-lab.on { background: fade(@primary-color, 5%); }
+.fin-chart-col:focus-visible { box-shadow: inset 0 0 0 2px @primary-color; }
+
+/* Ingen lodrette streger mellem årsrapporter, periodetal og budget: kolonnerne skilles af mellemrum og af budgettets baggrund */
+
+.fin-chart-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* De andre kolonner træder tilbage: kun søjlerne dæmpes (som i designet), tallene over dem
+   beholder deres fulde farve, så de kan læses (kontrast over 4,5:1) */
+.fin-chart-box {
+  opacity: 0.6;
+  transition: opacity @fin-ease;
+}
+
+.fin-chart-col.on .fin-chart-box { opacity: 1; }
+
+/* Tallet over søjlen */
+.fin-chart-bl {
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 600;
+  color: @heading-color;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.fin-chart-year.on { background: fade(@primary-color, 4%); }
+.fin-chart-bar.eb .fin-chart-bl { font-size: 10px; color: @fin-eb-text; }
+.fin-chart-col.month .fin-chart-bl { font-size: 10px; }
+.fin-chart-col.month .fin-chart-bar.eb .fin-chart-bl { font-size: 9px; }
 
-.fin-chart-year.on span {
-  font-weight: 700;
-  color: @text-color;
+.fin-chart-box { position: relative; }
+
+.fin-chart-fill,
+.fin-chart-ghost {
+  position: absolute;
+  bottom: 0;
+  border-radius: 3px 3px 0 0;
 }
 
-@media (max-width: 1180px) {
-  .fin-chart-grid {
-    min-width: 680px;
-    grid-template-columns: 260px minmax(0, 1fr);
-  }
+.fin-chart-fill {
+  left: 0;
+  right: 0;
+}
 
-  .fin-chart-side { padding: 18px 16px 16px; }
-  .fin-chart-bl { font-size: 10px; }
-  .fin-chart-bl.lg { font-size: 11px; }
+/* Sidste år (sammenligningen) bag månedens søjle */
+.fin-chart-ghost {
+  left: -2px;
+  right: -2px;
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  border-bottom: 0;
+  background: rgba(0, 0, 0, 0.03);
+}
 
-  .fin-chart-nofc {
-    top: 16px;
-    gap: 8px;
-    padding: 14px;
-  }
+.fin-chart-bar.rev .fin-chart-fill { background: @fin-rev; }
+.fin-chart-bar.bf .fin-chart-fill { background: @fin-bf; }
+.fin-chart-bar.eb .fin-chart-fill { background: @fin-eb; }
+
+/* Budget: skraveret orange; EBITDA-budgettet lys blågrøn med kant */
+.fin-chart-col.bud .fin-chart-bar.rev .fin-chart-fill,
+.fin-chart-col.bud .fin-chart-bar.bf .fin-chart-fill {
+  border: 1px solid @fin-bud;
+  border-bottom: 0;
+  background: repeating-linear-gradient(135deg, @fin-bud 0 2px, @component-background 2px 6px);
+}
+
+.fin-chart-col.bud .fin-chart-bar.eb .fin-chart-fill {
+  border: 1px solid @fin-eb;
+  border-bottom: 0;
+  background: @fin-eb-bud;
+}
+
+/* Negativt tal (f.eks. et underskud): stiplet omrids i seriens farve, også i budgettet */
+.fin-chart-col .fin-chart-bar.neg .fin-chart-fill,
+.fin-chart-col.bud .fin-chart-bar.neg .fin-chart-fill {
+  border: 1px dashed;
+  border-bottom: 0;
+  background: @component-background;
+}
+
+.fin-chart-col .fin-chart-bar.neg.rev .fin-chart-fill { border-color: @fin-rev; }
+.fin-chart-col .fin-chart-bar.neg.bf .fin-chart-fill { border-color: @fin-bf; }
+.fin-chart-col .fin-chart-bar.neg.eb .fin-chart-fill { border-color: @fin-eb; }
+
+/* Kolonnernes navne */
+.fin-chart-lab {
+  padding: 8px var(--fin-chart-pad, 8px) 10px 4px;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+  color: @text-color-secondary;
+  transition: background @fin-ease;
+}
+
+.fin-chart-lab.month {
+  padding-right: 6px;
+  font-size: 12px;
+}
+
+.fin-chart-lab.on {
+  font-weight: 700;
+  color: @heading-color;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .fin-chart-col,
-  .fin-chart-bars,
-  .fin-chart-year { transition: none; }
+  .fin-chart-box,
+  .fin-chart-lab { transition: none; }
 }
 </style>

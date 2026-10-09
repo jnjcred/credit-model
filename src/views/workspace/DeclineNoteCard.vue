@@ -36,7 +36,7 @@ const model = computed(() => {
           id="ws-decline-note-edit"
           v-model:value="note"
           :rows="4"
-          :placeholder="t('Begrund afslaget, fx \'For høj gældsgrad i forhold til EBITDA og uafklarede ejerforhold.\'')"
+          :placeholder="t('Begrund afslaget, f.eks. \'For høj gældsgrad i forhold til EBITDA og uafklarede ejerforhold.\'')"
         />
       </a-form-item>
       <a-button

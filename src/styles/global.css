@@ -31,3 +31,9 @@
 .skip-link:focus {
   transform: none;
 }
+
+/* Et tekstlink, der står først på sin linje, starter på linje med teksten omkring det
+   (knappens egen sidepolstring gav et indhak) */
+.cw-link:first-child {
+  padding-inline-start: 0;
+}

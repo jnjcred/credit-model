@@ -59,7 +59,9 @@ const checked = computed(() => props.kind === 'select' && props.selected && !up.
 const checkId = computed(() => 'ws-req-' + props.item.id)
 const marker = computed(() => {
   if (up.value) return up.value.status === 'approved' ? { kind: 'approved', label: t('Godkendt') } : { kind: 'received', label: t('Modtaget') }
-  return { kind: 'approved', label: props.kind === 'fetched' ? t('Hentet automatisk') : t('Ligger på sagen') }
+  // Ligger på sagen: flueben, når godkendt; ellers står den til rådgiverens gennemgang (ur)
+  if (props.kind === 'case' && !CW.isApproved(props.item.id)) return { kind: 'received', label: t('Til din gennemgang') }
+  return { kind: 'approved', label: props.kind === 'fetched' ? t('Hentet automatisk') : t('Godkendt') }
 })
 const rowTitle = computed(() => ((props.kind === 'select' || props.kind === 'extra') && props.item.why ? t(props.item.why) : undefined))
 // Spørgsmålet i citationstegn, afkortet til én linje (hele teksten står i title på linjen)
@@ -69,10 +71,11 @@ const uploadedText = computed(() => {
   if (!u) return ''
   return u.files.length === 1 ? wsFill(t('Uploadet af dig {date}'), { date: wsDay(u.at) }) : wsFill(t('{n} filer uploadet af dig {date}'), { n: u.files.length, date: wsDay(u.at) })
 })
-const fetchedText = computed(() => {
+// Dokument, der ligger på sagen fra start (f.eks. bankens ansøgning): hvem og hvornår
+const caseText = computed(() => {
   const f = onFile.value
   if (!f) return ''
-  return wsFill(t('Hentet automatisk fra {src}'), { src: f.isPublic ? t(f.name) : t('CVR-registret') }) + (f.date ? ' · ' + f.date : '')
+  return t('Uploadet af dig') + (f.date ? ' - ' + f.date : '')
 })
 // Emnet: rådgiverens egne punkter kan skifte emne (samme liste som Dokumenter og kundens portal)
 const catOptions = WS_MATERIAL_CATS.map(c => c.label).concat(['Øvrigt']).map(c => ({ value: c, label: t(c) }))
@@ -201,6 +204,7 @@ useUploadButton(uploadRoot)
               />
               <a-button
                 v-if="removable"
+                class="cw-link"
                 type="link"
                 size="small"
                 :aria-label="wsFill(t('Fjern {file}'), { file: f.name })"
@@ -230,8 +234,9 @@ useUploadButton(uploadRoot)
                 </a-button>
               </a-upload>
               <template v-if="up.files.length > 1">
-                <span aria-hidden="true">·</span>
+                <span aria-hidden="true">-</span>
                 <a-button
+                  class="cw-link"
                   type="link"
                   size="small"
                   @click="wsRemoveAdvisorFiles(item, up)"
@@ -257,12 +262,6 @@ useUploadButton(uploadRoot)
           </a-typography-text>
         </div>
 
-        <div v-else-if="kind === 'fetched'">
-          <a-typography-text type="secondary">
-            {{ fetchedText }}
-          </a-typography-text>
-        </div>
-
         <div
           v-else-if="kind === 'case' && onFile"
           class="ws-req-file"
@@ -277,7 +276,7 @@ useUploadButton(uploadRoot)
           />
           <a-button
             v-else
-            class="ws-req-filelink"
+            class="ws-req-filelink cw-link"
             type="link"
             size="small"
             :title="t('Hent dokumentet')"
@@ -301,6 +300,11 @@ useUploadButton(uploadRoot)
               </template>
             </a-button>
           </a-upload>
+        </div>
+        <div v-if="kind === 'case' && onFile && !onFile.isPublic">
+          <a-typography-text type="secondary">
+            {{ caseText }}
+          </a-typography-text>
         </div>
       </a-col>
 
@@ -398,7 +402,7 @@ useUploadButton(uploadRoot)
 
 .ws-req-row {
   padding: 8px 0;
-  /* Afsnittet kan rulles frem (fx efter "Tilføj spørgsmålet") uden at skjule sig under kanten */
+  /* Afsnittet kan rulles frem (f.eks. efter "Tilføj spørgsmålet") uden at skjule sig under kanten */
   scroll-margin-top: 16px;
 }
 

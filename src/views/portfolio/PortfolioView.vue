@@ -107,7 +107,7 @@ function deleteView (v) {
 
 /* ── "/" fokuserer søgningen ─────────────────────────────────────────────── */
 
-// En åben dialog (fx Afslut sag, Hjælp eller en bekræftelse) tager tastaturet; '/' skal ikke flytte fokus væk fra den
+// En åben dialog (f.eks. Afslut sag, Hjælp eller en bekræftelse) tager tastaturet; '/' skal ikke flytte fokus væk fra den
 const dialogOpen = () => Array.prototype.some.call(document.querySelectorAll('[role="dialog"]'), el => el.getClientRects().length > 0)
 useWindowEvent('keydown', (e) => {
   if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return
@@ -184,7 +184,7 @@ onBeforeUnmount(flushRemind)
 /* ── Rækkens handlinger ─────────────────────────────────────────────────── */
 
 function remindedText (r) {
-  return (r.reminders <= 1 ? t('Påmindet') : taskFill(t('{n} påmindelser · senest'), { n: r.reminders })) + ' ' +
+  return (r.reminders <= 1 ? t('Påmindet') : taskFill(t('{n} påmindelser - senest'), { n: r.reminders })) + ' ' +
     (r.lastRemind === 0 ? t('i dag') : r.lastRemind === 1 ? t('i går') : taskFill(t('for {n} dage siden'), { n: r.lastRemind }))
 }
 const open = (r) => openCaseFromList(r.id, go)
@@ -424,6 +424,7 @@ function onFilterFocusOut (e) {
             </a-form>
             <div class="tk-filter-foot">
               <a-button
+                class="cw-link"
                 type="link"
                 @click="clearFilter"
               >
@@ -496,6 +497,7 @@ function onFilterFocusOut (e) {
       </a-button>
       <a-button
         v-if="!activeView"
+        class="cw-link"
         type="link"
         size="small"
         @click="saveView"
@@ -504,6 +506,7 @@ function onFilterFocusOut (e) {
       </a-button>
       <a-button
         v-if="activeSaved"
+        class="cw-link"
         type="link"
         size="small"
         @click="deleteView(activeSaved)"
@@ -520,7 +523,7 @@ function onFilterFocusOut (e) {
       {{ t('Søger i alle dine sager, også afsluttede. Filtre gælder ikke under søgning.') }}
     </a-typography-text>
 
-    <!-- scroll.x: på smalle skærme (fx 200 % zoom) ruller tabellen vandret i sin egen ramme i stedet
+    <!-- scroll.x: på smalle skærme (f.eks. 200 % zoom) ruller tabellen vandret i sin egen ramme i stedet
          for at gøre hele siden bredere; bredere skærme fylder den som før (min. bredde 100 %) -->
     <a-table
       :columns="columns"
@@ -621,7 +624,7 @@ function onFilterFocusOut (e) {
           <div class="tk-links">
             <a-button
               v-if="r.remind"
-              class="tk-remind"
+              class="tk-remind tk-link cw-link"
               type="link"
               size="small"
               :aria-label="(r.reminders ? t('Send ny påmindelse') : t('Send påmindelse')) + ': ' + r.name"
@@ -631,6 +634,7 @@ function onFilterFocusOut (e) {
             </a-button>
             <a-button
               v-if="r.freshF > 0"
+              class="tk-link"
               type="link"
               size="small"
               :aria-label="taskPlural(r.freshF, '{n} ny fil', '{n} nye filer') + ': ' + r.name"
@@ -640,6 +644,7 @@ function onFilterFocusOut (e) {
             </a-button>
             <a-button
               v-if="r.freshQ > 0"
+              class="tk-link"
               type="link"
               size="small"
               :aria-label="taskPlural(r.freshQ, '{n} nyt spørgsmål', '{n} nye spørgsmål') + ': ' + r.name"
@@ -821,5 +826,10 @@ function onFilterFocusOut (e) {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+/* Linkene starter på samme linje som teksten over dem (knappens egen sidepolstring fjernes) */
+.tk-link {
+  padding-inline: 0;
 }
 </style>

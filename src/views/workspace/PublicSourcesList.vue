@@ -1,5 +1,6 @@
 <script setup>
-// De tre offentlige kilder i Materiale på sagen (workspace.jsx: WSPublicSources, L1463–1515):
+// De tre offentlige kilder i Materiale på sagen (workspace.jsx: WSPublicSources, L1463–1515), som kort
+// i et gitter (designet "Anmodet materiale v5"):
 // CVR-registret med årsrapporterne, brancheopslag og bløde signaler, hver med hvad og hvornår de
 // blev hentet. Et dokument kan hentes (link eller CW.downloadDoc); et dokument, der er slettet
 // under Dokumenter, står overstreget med "slettet". "Spørg kunden" åbner anmodningen med et
@@ -24,40 +25,49 @@ const ps = computed(() => {
 </script>
 
 <template>
-  <a-list
-    :data-source="ps.sources"
-    :row-key="(s) => s.key"
-  >
-    <template #renderItem="{ item: s }">
-      <a-list-item>
-        <div class="ws-src">
-          <a-typography-text strong>
-            {{ t(s.x.src) }}
-          </a-typography-text>
-          <a-typography-text type="secondary">
-            {{ t(s.x.what) }} · {{ ps.fetched }}
-          </a-typography-text>
-          <ul
-            v-if="s.items.length"
-            class="ws-docs"
-          >
+  <!-- Ét kort pr. kilde i et gitter (designet "Anmodet materiale v5") -->
+  <ul class="ws-src-grid">
+    <li
+      v-for="s in ps.sources"
+      :key="s.key"
+    >
+      <a-card
+        size="small"
+        class="ws-src"
+      >
+        <a-typography-text strong>
+          {{ t(s.x.src) }}
+        </a-typography-text>
+        <a-typography-paragraph
+          type="secondary"
+          class="ws-src-what"
+          :ellipsis="{ rows: 2, tooltip: t(s.x.what) + ' - ' + ps.fetched }"
+          :content="t(s.x.what) + ' - ' + ps.fetched"
+        />
+        <template v-if="s.items.length">
+          <a-divider class="ws-src-div" />
+          <ul class="ws-docs">
             <li
               v-for="it in s.items"
               :key="it.key"
             >
-              <a-space :size="4">
+              <a-space
+                :size="8"
+                class="ws-doc-name"
+              >
                 <a-typography-text type="secondary">
                   <FileTextOutlined aria-hidden="true" />
                 </a-typography-text>
-                <!-- Slettet under Dokumenter (fx forkert årsrapport): navnet står, men uden link -->
+                <!-- Slettet under Dokumenter (f.eks. forkert årsrapport): navnet står, men uden link -->
                 <a-typography-text
                   v-if="it.removed"
                   type="secondary"
                 >
-                  <s>{{ it.label }}</s> · {{ t('slettet') }}
+                  <s>{{ it.label }}</s> - {{ t('slettet') }}
                 </a-typography-text>
                 <a-button
                   v-else-if="it.url"
+                  class="cw-link"
                   type="link"
                   size="small"
                   :href="it.url"
@@ -68,6 +78,7 @@ const ps = computed(() => {
                 </a-button>
                 <a-button
                   v-else-if="it.doc"
+                  class="cw-link"
                   type="link"
                   size="small"
                   :title="t('Download')"
@@ -89,23 +100,41 @@ const ps = computed(() => {
               </a-button>
             </li>
           </ul>
-        </div>
-      </a-list-item>
-    </template>
-  </a-list>
+        </template>
+      </a-card>
+    </li>
+  </ul>
 </template>
 
 <style scoped>
+/* Kortene står side om side og brydes til færre kolonner på smalle skærme */
+.ws-src-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .ws-src {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
+  height: 100%;
+}
+
+/* Hvad kilden indeholder: højst to linjer, så kortene er lige høje */
+.ws-src-what {
+  min-height: 44px;
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.ws-src-div {
+  margin: 8px 0 4px;
 }
 
 /* Dokumenterne: navnet til venstre, "Spørg kunden" til højre */
 .ws-docs {
-  margin: 4px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -114,6 +143,11 @@ const ps = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.ws-doc-name {
+  min-width: 0;
 }
 </style>

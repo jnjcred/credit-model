@@ -11,7 +11,7 @@
 // Domænet giver { kind, label, title }: wsOutstandingItem(...).icon i src/domain/workspace/items.js.
 //
 // Props: kind (se ovenfor), label, title.
-import { CheckCircleTwoTone, ClockCircleOutlined, ExclamationCircleTwoTone, MinusCircleOutlined } from '@ant-design/icons-vue'
+import { CheckCircleFilled, CheckCircleTwoTone, ClockCircleOutlined, ExclamationCircleFilled, MinusCircleOutlined } from '@ant-design/icons-vue'
 
 defineProps({
   kind: {
@@ -26,19 +26,33 @@ defineProps({
 // Tofarve-ikonerne skal have farven som tal: antd's standardfarver (Less @success-color og
 // @primary-color, som temaet ikke ændrer)
 const SUCCESS = '#52c41a'
-const PRIMARY = '#1890ff'
 </script>
+
+<style scoped>
+/* Den fyldte blå cirkel får sin farve direkte, så den ikke afhænger af tofarve-ikonets farvetal */
+.item-status-received {
+  color: #1890ff;
+}
+</style>
 
 <template>
   <CheckCircleTwoTone
-    v-if="kind === 'approved' || kind === 'received'"
-    :two-tone-color="kind === 'approved' ? SUCCESS : PRIMARY"
+    v-if="kind === 'approved'"
+    :two-tone-color="SUCCESS"
     :aria-label="title || label"
     :title="title"
   />
-  <ExclamationCircleTwoTone
+  <!-- Modtaget: fyldt blå cirkel med flueben, samme ikon som hos kunden -->
+  <CheckCircleFilled
+    v-else-if="kind === 'received'"
+    class="item-status-received"
+    :aria-label="title || label"
+    :title="title"
+  />
+  <!-- Spørgsmål: samme fyldte blå cirkel som "modtaget", med udråbstegn -->
+  <ExclamationCircleFilled
     v-else-if="kind === 'question'"
-    :two-tone-color="PRIMARY"
+    class="item-status-received"
     aria-hidden="true"
   />
   <a-typography-text

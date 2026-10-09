@@ -21,7 +21,7 @@ const status = computed(() => {
   const search = ready && A.canSearch && A.canSearch()
   return {
     ready,
-    text: ready ? (prov ? prov.label : 'AI') + (engine ? ' (' + engine + ')' : '') + ' · ' + (search ? t('kan søge på nettet') : t('søger ikke på nettet')) : t('Ingen AI forbundet'),
+    text: ready ? (prov ? prov.label : 'AI') + (engine ? ' (' + engine + ')' : '') + ' - ' + (search ? t('kan søge på nettet') : t('søger ikke på nettet')) : t('Ingen AI forbundet'),
   }
 })
 

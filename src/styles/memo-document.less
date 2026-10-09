@@ -20,11 +20,11 @@
 @memo-origin-reviewed: @success-color;
 @memo-origin-edited: @normal-color;
 
-// AI-mærket i teksten har samme ikon som AiBadge.vue: RobotOutlined (@ant-design/icons-svg 4.6.0)
-@memo-ai-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='64 64 896 896'%3E%3Cpath d='M300 328a60 60 0 10120 0 60 60 0 10-120 0zM852 64H172c-17.7 0-32 14.3-32 32v660c0 17.7 14.3 32 32 32h680c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-32 660H204V128h616v596zM604 328a60 60 0 10120 0 60 60 0 10-120 0zm250.2 556H169.8c-16.5 0-29.8 14.3-29.8 32v36c0 4.4 3.3 8 7.4 8h729.1c4.1 0 7.4-3.6 7.4-8v-36c.1-17.7-13.2-32-29.7-32zM664 508H360c-4.4 0-8 3.6-8 8v60c0 4.4 3.6 8 8 8h304c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z'/%3E%3C/svg%3E");
+// AI-mærket i teksten har samme ikon som AiBadge.vue: AiIcon.vue (AI-stjernen)
+@memo-ai-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M10 4C10.5 9.2 11.8 10.5 17 11C11.8 11.5 10.5 12.8 10 18C9.5 12.8 8.2 11.5 3 11C8.2 10.5 9.5 9.2 10 4Z'/%3E%3Cpath d='M18.5 1C18.7 3.3 19.4 4 21.5 4.2C19.4 4.4 18.7 5.1 18.5 7.4C18.3 5.1 17.6 4.4 15.5 4.2C17.6 4 18.3 3.3 18.5 1Z'/%3E%3Cpath d='M18.5 14C18.65 15.6 19.1 16.1 20.7 16.25C19.1 16.4 18.65 16.9 18.5 18.5C18.35 16.9 17.9 16.4 16.3 16.25C17.9 16.1 18.35 15.6 18.5 14Z'/%3E%3C/svg%3E");
 
 // Gemt HTML (skabelonen, gemte afsnit, indstillede versioner) bruger fire af prototypens CSS-variabler
-// inline, fx style="color:var(--c-text-2)" og diagrammet i Bilag 3 med font-family: var(--mono). De
+// inline, f.eks. style="color:var(--c-text-2)" og diagrammet i Bilag 3 med font-family: var(--mono). De
 // defineres her med temaets værdier; --mono er en fast bredde, så diagrammets kolonner står lige.
 .memo-doc,
 .memo-body {
@@ -197,7 +197,7 @@
     margin: @margin-xs 0;
   }
 
-  // AI-mærket over hver tekst, AI har skrevet, som AiBadge (a-tag med RobotOutlined). Spannets egen tekst
+  // AI-mærket over hver tekst, AI har skrevet, som AiBadge (a-tag med AiIcon). Spannets egen tekst
   // ("Udkast"/"AI-udkast") er skjult; mærket viser AI-genereret, eller AI-genereret + rådgiverens rettelser,
   // når rådgiveren har rettet i blokken. Mærket fjernes, når afsnittet er gennemgået, og kommer ikke med i
   // eksporten.
@@ -220,7 +220,7 @@
   .tpl-draft-label::before {
     width: @tag-font-size;
     height: @tag-font-size;
-    background: currentColor;
+    background: linear-gradient(135deg, #4285f4 0%, #9b72cb 55%, #d96570 100%); // AI-farverne, som AiIcon.vue
     content: '';
     -webkit-mask: @memo-ai-icon center / contain no-repeat;
     mask: @memo-ai-icon center / contain no-repeat;

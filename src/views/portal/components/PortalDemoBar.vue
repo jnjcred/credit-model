@@ -8,7 +8,8 @@
 //        skipLabel (teksten på demo-knappen før login), requested (punkterne til demopanelet).
 // Emits: back (tilbage til rådgiverens visning), skip (spring opstarten over / log ind), fill-all.
 // Klassen cwp-demo-fill står på demo-knapperne som før (de gamle tests finder dem med den).
-import { ArrowLeftOutlined } from '@ant-design/icons-vue'
+import { ref } from 'vue'
+import { ArrowLeftOutlined, CloseOutlined, ToolOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import PortalDemoUploads from './PortalDemoUploads.vue'
 
@@ -21,10 +22,39 @@ defineProps({
   requested: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['back', 'skip', 'fill-all'])
+
+// Hele demomenuen er en knap, der kan foldes ud og ind, så den ikke forstyrrer kundens skærme.
+// Lukket som udgangspunkt; valget huskes i browseren.
+const OPEN_KEY = 'cw_demo_bar_open'
+const shown = ref(false)
+try { shown.value = localStorage.getItem(OPEN_KEY) === '1' } catch (e) { /* uden lager: lukket */ }
+function setShown (on) {
+  shown.value = on
+  try { localStorage.setItem(OPEN_KEY, on ? '1' : '0') } catch (e) { /* ignoreres */ }
+}
 </script>
 
 <template>
-  <div class="cwp-demo">
+  <div
+    v-if="!shown"
+    class="cwp-demo-toggle"
+  >
+    <a-button
+      shape="round"
+      aria-expanded="false"
+      :title="t('Vis demomenuen')"
+      @click="setShown(true)"
+    >
+      <template #icon>
+        <ToolOutlined aria-hidden="true" />
+      </template>
+      {{ t('Demo') }}
+    </a-button>
+  </div>
+  <div
+    v-else
+    class="cwp-demo"
+  >
     <a-button
       type="primary"
       shape="round"
@@ -56,6 +86,18 @@ const emit = defineEmits(['back', 'skip', 'fill-all'])
         {{ t('Udfyld alt (demo)') }}
       </a-button>
     </span>
+    <a-button
+      type="text"
+      shape="circle"
+      aria-expanded="true"
+      :title="t('Skjul demomenuen')"
+      :aria-label="t('Skjul demomenuen')"
+      @click="setShown(false)"
+    >
+      <template #icon>
+        <CloseOutlined aria-hidden="true" />
+      </template>
+    </a-button>
   </div>
 </template>
 
@@ -78,6 +120,14 @@ const emit = defineEmits(['back', 'skip', 'fill-all'])
   pointer-events: auto;
 }
 
+/* Lukket: kun én lille knap nederst til højre */
+.cwp-demo-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+}
+
 .cwp-demo-right {
   display: flex;
   gap: 4px;
@@ -86,6 +136,11 @@ const emit = defineEmits(['back', 'skip', 'fill-all'])
 
 /* På telefoner står bjælken nederst på siden i stedet (den må ikke dække indholdet) */
 @media (max-width: 575px) {
+  .cwp-demo-toggle {
+    position: static;
+    padding: 8px 16px 24px;
+  }
+
   .cwp-demo {
     position: static;
     flex-wrap: wrap;

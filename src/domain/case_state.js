@@ -42,7 +42,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
     customItems: 'kabul:custom-items:nordhavn',     // [{ id, label, cat }] materiale rådgiveren selv har tilføjet til anmodningen
     ownersLog: 'kabul:owners-log',                  // [{ at, caseId, name, by }] flytning af andre sager end sag 1
     internalNotes: 'kabul:internal-notes:nordhavn', // { [itemId]: { text, by, at } } rådgiverens interne noter til et punkt (kunden ser dem aldrig)
-    removedDocs: 'kabul:removed-docs:nordhavn',     // { [filnavn]: { at, by } } hentede dokumenter, rådgiveren har slettet (fx forkert årsrapport fra CVR)
+    removedDocs: 'kabul:removed-docs:nordhavn',     // { [filnavn]: { at, by } } hentede dokumenter, rådgiveren har slettet (f.eks. forkert årsrapport fra CVR)
   };
   var EVENT = 'cw-case-changed';
   var LIVE_CASE_ID = 1; // kun sag 1 (Nordhavn, 2026-0184) har levende data
@@ -114,7 +114,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
   // label: kort navn. desc: hvad kunden skal sende. why: hvorfor vi spørger.
   // docType: typen i Dokumenter. Findes der allerede et dokument af den type,
   // er punktet ikke forvalgt, medmindre det er ældre end staleDays dage.
-  // docLatest: vis kun det nyeste dokument af typen (fx årsrapporten for 2025).
+  // docLatest: vis kun det nyeste dokument af typen (f.eks. årsrapporten for 2025).
   // form: 'upload' (standard) eller 'countries' (spørgeskema, fil er valgfri).
   //
   // tag og why gælder sag 1 (Nordhavn, eksportkaution). Andre sagstyper (Ny sag):
@@ -134,42 +134,39 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
       label: 'Dokumenter',
       items: [
         // Kernen
-        { id: 'm-annual', label: 'Årsregnskaber, seneste 2 år', tag: 'Anbefalet', tier: 'core', docType: 'Årsrapport', docLatest: true, staleDays: 480,
-          desc: 'De to seneste årsregnskaber i den interne version med alle noter og specifikationer.',
+        { id: 'm-annual', label: 'Årsregnskaber', tag: 'Anbefalet', tier: 'core', docType: 'Årsrapport', docLatest: true, staleDays: 480,
+          desc: 'Jeres årsregnskaber.',
           why: 'Noterne viser lån, sikkerheder og eventualforpligtelser, og to år viser udviklingen.' },
         { id: 'm-interim', label: 'Periodetal', tag: 'Anbefalet', tier: 'core', docType: 'Periodetal', staleDays: 30,
-          desc: 'Resultat og balance for i år til og med seneste måned, fx en saldobalance fra regnskabssystemet.',
+          desc: 'Periodetal for det igangværende år, så vi kan se udviklingen siden seneste årsregnskab.',
           why: 'Vi skal se udviklingen siden seneste årsregnskab.' },
         { id: 'm-budget', label: 'Budget for i år og næste år', tag: 'Anbefalet', tier: 'core', docType: 'Budget', staleDays: 180,
-          desc: 'Budget for drift og likviditet, gerne med månedstal for i år.',
-          why: 'Budgettet er det vigtigste grundlag for at vurdere, om lånet kan betales tilbage.' },
-        { id: 'm-assumptions', label: 'Budgetforudsætninger', tag: 'Anbefalet', tier: 'core',
-          desc: 'Et kort notat om de vigtigste forudsætninger bag budgettet, fx vækst, priser, nye kunder og ansættelser.',
-          why: 'Forudsætningerne viser, om budgettet er realistisk i forhold til historikken.' },
+          desc: 'Jeres budget for det igangværende og det næste regnskabsår, gerne med forudsætningerne bag.',
+          why: 'Budgettet er det vigtigste grundlag for at vurdere, om lånet kan betales tilbage. Forudsætningerne viser, om det er realistisk.' },
         { id: 'm-loans', label: 'Eksisterende lån og kreditter', tag: 'Anbefalet', tier: 'core', docType: 'Låneaftale',
-          desc: 'Aftaler om lån og kreditter, I har i dag, også lån fra ejerne.',
+          desc: 'Oplysninger om jeres eksisterende lån og kreditter.',
           why: 'Vi skal se renter, afdrag og eventuelle lånebetingelser (covenants).' },
         { id: 'm-ejerbog', label: 'Ejerstruktur og koncerndiagram', tag: 'Anbefalet', tier: 'core', docType: 'Selskab', docMatch: 'ejerbog',
-          desc: 'Ejere og ejerandele, og et koncerndiagram, hvis der er flere selskaber.',
+          desc: 'Oplysninger om ejere og koncernstruktur.',
           why: 'Vi skal kende ejerne og koncernen for at vurdere, hvem der hæfter, og hvem der kan tilføre kapital.' },
 
         // Mere materiale, som rådgiveren kan vælge
         { id: 'm-orderbook', label: 'Kontrakter, ordrer eller rammeaftaler', tag: 'Valgfri', tier: 'extra', flag: 'concentration',
           docType: 'Periodetal', docRef: 'ark Ordrebog', staleDays: 30,
           hint: 'Når finansieringen knytter sig til en ordre, eller omsætningen skal dokumenteres',
-          desc: 'Kontrakter, ordrebog eller rammeaftaler, der viser den kommende omsætning.',
+          desc: 'Dokumentation for jeres kommende omsætning.',
           why: 'De dokumenterer den omsætning, finansieringen skal understøtte.' },
         { id: 'm-group', label: 'Koncernregnskab eller intern sammenstilling', tag: 'Valgfri', tier: 'extra',
           hint: 'Når virksomheden er en del af en koncern',
-          desc: 'Koncernregnskab, eller en intern sammenstilling, hvis der ikke er et revideret koncernregnskab.',
+          desc: 'Regnskab eller oversigt for koncernen.',
           why: 'Vi skal kunne vurdere koncernens samlede økonomi.' },
         { id: 'm-tech', label: 'ARR/MRR, churn, NRR og runway', tag: 'Valgfri', tier: 'extra',
           hint: 'Tech- og SaaS-virksomheder',
-          desc: 'Tilbagevendende omsætning, kundetab, udvikling hos eksisterende kunder og likviditet i måneder.',
+          desc: 'Nøgletal for jeres tilbagevendende omsætning og likviditet.',
           why: 'Metrikkerne viser kvaliteten af den tilbagevendende omsætning.' },
         { id: 'm-lowcase', label: 'Følsomhedsanalyse eller low-case-budget', tag: 'Valgfri', tier: 'extra',
           hint: 'Vækstvirksomheder, især med negativ EBITDA',
-          desc: 'Et budget med lavere vækst eller margin end hovedbudgettet.',
+          desc: 'Et alternativt budget med mere forsigtige forudsætninger.',
           why: 'Den viser, om lånet kan betales, hvis planen ikke holder.' },
         { id: 'm-protocol', label: 'Revisionsprotokollat', tag: 'Valgfri', tier: 'extra',
           hint: 'Store igangværende arbejder eller AB18-garantier',
@@ -177,48 +174,48 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
           why: 'Den uddyber særlige forhold i regnskabet.' },
         { id: 'm-capital', label: 'Kapitalrejsning og støtteerklæring', tag: 'Valgfri', tier: 'extra',
           hint: 'Iværksættere og vækstvirksomheder, eller ved høj risiko',
-          desc: 'Tidligere kapitalrunder, planen for ny kapital og evt. en støtteerklæring fra ejere eller investorer.',
+          desc: 'Oplysninger om kapital fra ejere eller investorer.',
           why: 'Den viser, om ejerne kan og vil tilføre kapital.' },
         { id: 'm-bizplan', label: 'Forretningsplan med synergier', tag: 'Valgfri', tier: 'extra',
           hint: 'Ved opkøb',
-          desc: 'Plan for opkøbet med budgetforudsætninger, forventede synergier og tidsplan.',
+          desc: 'Planen for opkøbet.',
           why: 'Den viser, om opkøbet kan bære finansieringen.' },
         { id: 'm-agri', label: 'Effektivitetsnøgletal', tag: 'Valgfri', tier: 'extra',
           hint: 'Landbrug',
-          desc: 'Effektivitetsnøgletal og evt. konsoliderings- og likviditetsnulpunkt.',
+          desc: 'Nøgletal for effektiviteten i driften.',
           why: 'Nøgletallene sammenligner bedriften med branchen.' },
         { id: 'm-trade', label: 'Salg fordelt på lande', tag: 'Valgfri', tier: 'extra', form: 'countries',
           hint: 'Eksport',
-          desc: 'Hvor stor en del af omsætningen, der går til hvert land.',
+          desc: 'Fordelingen af jeres salg på lande.',
           why: 'Fordelingen viser, hvor afhængige I er af enkelte markeder.' },
         { id: 'm-fx', label: 'Valutapolitik og terminsforretninger', tag: 'Valgfri', tier: 'extra', flag: 'fx',
           hint: 'Salg eller køb i fremmed valuta',
-          desc: 'Jeres valutapolitik, hvis I har en, og en oversigt over terminsforretninger. Har I ingen, så skriv det.',
+          desc: 'Oplysninger om, hvordan I håndterer valutarisiko. Har I ingen, så skriv det.',
           why: 'Periodetallene viser, at 41 % af omsætningen faktureres i USD eller EUR uden kurssikring. Vi skal vide, hvordan I styrer kursrisikoen.',
           whyAny: 'Salg i udenlandsk valuta giver en kursrisiko. Vi skal vide, hvordan I styrer den.' },
         { id: 'm-security', label: 'Sikkerheder og pantsætninger', tag: 'Valgfri', tier: 'extra', docType: 'Sikkerhed',
           hint: 'Når banken ikke leverer sikkerhedspakken',
-          desc: 'Pantebreve, kautioner og andre aftaler, der stiller sikkerhed for lån. Har I ingen, så skriv det.',
+          desc: 'Dokumenter om sikkerhed for jeres lån. Har I ingen, så skriv det.',
           why: 'Vi skal kende rækkefølgen af de eksisterende sikkerheder.' },
         { id: 'm-ownership', label: 'Ejeraftale', tag: 'Valgfri', tier: 'extra',
           hint: 'Når der er flere ejere',
-          desc: 'Aftalen mellem ejerne, hvis der er en.',
+          desc: 'Ejeraftalen, hvis der er en.',
           why: 'Den kan indeholde regler om ejerskifte, der påvirker lånet.' },
         { id: 'm-pitch', label: 'Virksomhedspræsentation', tag: 'Valgfri', tier: 'extra',
           hint: 'Hvis virksomheden har en',
-          desc: 'En kort præsentation af forretningen, kunderne og strategien.',
+          desc: 'En præsentation af virksomheden.',
           why: 'Den giver et hurtigt billede af virksomheden.' },
 
         // Hentet offentligt, når sagen oprettes. Står under "Ligger allerede på sagen",
         // og rådgiveren kan bede kunden om en nyere version.
         { id: 'm-pub-cvr', label: 'Stamdata og vedtægter', tag: 'Valgfri', tier: 'public', publicSource: 'CVR-registret',
-          desc: 'Gældende vedtægter og ændringer i ledelse eller bestyrelse, som endnu ikke står i CVR.',
+          desc: 'Opdaterede oplysninger om selskabet.',
           why: 'Vi skal have de gældende oplysninger om selskabet.' },
         { id: 'm-pub-market', label: 'Branche og marked', tag: 'Valgfri', tier: 'public', publicSource: 'Brancheopslag',
-          desc: 'En kort beskrivelse af jeres marked og konkurrenter.',
+          desc: 'En beskrivelse af jeres marked.',
           why: 'Vi har brancheoplysninger, men vil gerne høre jeres egen vurdering af markedet.' },
         { id: 'm-pub-product', label: 'Produktbeskrivelse', tag: 'Valgfri', tier: 'public', publicSource: 'Hjemmeside og presse',
-          desc: 'En opdateret beskrivelse af jeres produkter og kunder.',
+          desc: 'En beskrivelse af jeres produkter.',
           why: 'Beskrivelsen på jeres hjemmeside er måske ikke opdateret.' },
       ],
     },
@@ -232,7 +229,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
   /**
    * Findes punktet allerede under Dokumenter? { name, date, stale, count } eller null.
    * Slår op i DATA.DOCS (dokumentregistret) efter docType, så det følger registret.
-   * docLatest: navnet er det nyeste dokument. docRef: hvor i dokumentet (fx et ark).
+   * docLatest: navnet er det nyeste dokument. docRef: hvor i dokumentet (f.eks. et ark).
    */
   function onFile(item) {
     if (item && item.publicSource) {
@@ -275,11 +272,11 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
   function allItems() {
     var out = [];
     MATERIAL_GROUPS.forEach(function (g) { g.items.forEach(function (it) { out.push(Object.assign({}, it, { group: g.label })); }); });
-    // Én linje pr. årsrapport, sagen har (fx 2025, 2024 og 2023), så rådgiveren kan
+    // Én linje pr. årsrapport, sagen har (f.eks. 2025, 2024 og 2023), så rådgiveren kan
     // bede om en ny version af et bestemt år
     annualYears().forEach(function (y) {
       out.push({ id: 'm-annual-' + y, label: t('Årsrapport {y}').replace('{y}', y), tag: 'Valgfri', tier: 'year', year: y, docType: 'Årsrapport', docMatch: y, group: 'Dokumenter',
-        desc: t('Årsrapporten for {y} i den interne version med alle noter og specifikationer.').replace('{y}', y),
+        desc: t('Årsrapporten for {y}.').replace('{y}', y),
         why: (isDocRemoved(annualDocName(y)) ? t('Den årsrapport for {y}, der blev hentet automatisk, var forkert og er slettet.') : t('Vi har årsrapporten for {y}, men har brug for en opdateret version.')).replace('{y}', y) });
     });
     // Materiale, rådgiveren selv har skrevet ind ("Tilføj andet materiale")
@@ -379,7 +376,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
      filer står under samme emne overalt. Dokumenter uden punkt får emne efter
      dokumenttypen (types). */
   var MATERIAL_CATS = [
-    { key: 'fin', label: 'Regnskab og budget', ids: ['m-annual', 'm-interim', 'm-budget', 'm-assumptions', 'm-lowcase', 'm-group', 'm-protocol'],
+    { key: 'fin', label: 'Regnskab og budget', ids: ['m-annual', 'm-interim', 'm-budget', 'm-lowcase', 'm-group', 'm-protocol'],
       types: ['Årsrapport', 'Periodetal', 'Budget'] },
     { key: 'debt', label: 'Gæld og sikkerheder', ids: ['m-loans', 'm-security'], types: ['Låneaftale', 'Sikkerhed'] },
     { key: 'market', label: 'Marked og drift', ids: ['m-orderbook', 'm-trade', 'm-fx', 'm-tech', 'm-agri', 'm-pub-market', 'm-pub-product'],
@@ -694,7 +691,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
   }
   function fileUrl(id) { return urls[id] || null; }
 
-  /** Filer der er uploadet uden at høre til et bestemt punkt (fx fra Dokumenter-fanen). */
+  /** Filer der er uploadet uden at høre til et bestemt punkt (f.eks. fra Dokumenter-fanen). */
   function addLooseUploads(metas) {
     if (metas && metas.length && (metas[0].by || 'kunde') === 'kunde' && previewBlocked('upload')) return;
     write('uploads', read('uploads', []).concat(metas));
@@ -770,7 +767,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
     });
     return r;
   }
-  /** Fortryder en sendt anmodning (fx "Fortryd" i kvitteringen). */
+  /** Fortryder en sendt anmodning (f.eks. "Fortryd" i kvitteringen). */
   function clearRequest() { write('request', null); }
   /** Fortryd en tilbagetrækning: punktet er med i anmodningen igen. */
   function restoreItem(id) {
@@ -783,6 +780,21 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
       history: (r.history || []).concat([{ at: now(), added: [id], removed: [] }]),
     }));
     log('item-restored', t('Tilbage i anmodningen') + ': ' + label(id), { who: 'rådgiver', itemId: id });
+    return true;
+  }
+  /** Tager ét punkt ud af den sendte anmodning uden mail (f.eks. rådgiveren har selv budgettet). Kladden
+   *  følger med. Punktets leverede filer bliver. Fortrydes med restoreItem. */
+  function withdrawItem(id, reason) {
+    var r = request();
+    if (!r || !Array.isArray(r.items) || r.items.indexOf(id) < 0) return false;
+    var sel = selection(); sel[id] = false; setSelection(sel);
+    var wd = Object.assign({}, r.withdrawn || {});
+    wd[id] = { at: now(), reason: reason || '', notified: false, by: advisorName() };
+    write('request', Object.assign({}, r, {
+      items: r.items.filter(function (x) { return x !== id; }), withdrawn: wd,
+      history: (r.history || []).concat([{ at: now(), added: [], removed: [id], noMail: true }]),
+    }));
+    log('item-withdrawn', t('Taget ud af anmodningen') + ': ' + label(id) + (reason ? ' (' + reason + ')' : ''), { who: 'rådgiver', itemId: id });
     return true;
   }
   function draft() { return read('draft', null); }
@@ -874,7 +886,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
    */
   function requestMail(opts) {
     opts = opts || {};
-    // company/caseNr/link kan overstyres (fx for en ny sag fra Ny sag-guiden)
+    // company/caseNr/link kan overstyres (f.eks. for en ny sag fra Ny sag-guiden)
     var co = Object.assign({}, (window.DATA && DATA.COMPANY) || {}, opts.company ? { name: opts.company } : {}, opts.caseNr ? { caseNr: opts.caseNr } : {});
     var adv = (window.DATA && DATA.ADVISOR) || { name: 'Mette Larsen', title: 'Kreditrådgiver', org: 'EIFO' };
     var to = opts.to || {};
@@ -899,7 +911,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
   // Question = { id, from: 'kunde'|'rådgiver', text, at, itemId?, preview?, replies: [{from,text,at,preview?}], readBy: { kunde?:ISO, rådgiver?:ISO } }
   // preview: skrevet af rådgiveren i forhåndsvisningen af kundesiden (from er stadig 'kunde', kundens plads)
   function questions() { return read('questions', []); }
-  // about: emnet, når beskeden ikke handler om et punkt, fx "Årsrapport 2024" fra de offentlige data
+  // about: emnet, når beskeden ikke handler om et punkt, f.eks. "Årsrapport 2024" fra de offentlige data
   function ask(from, text, itemId, about) {
     if (from === 'kunde' && previewBlocked('message')) return null;
     var q = { id: uid('q'), from: from, text: text, at: now(), itemId: itemId || null, about: about || null, replies: [], readBy: {} };
@@ -1392,7 +1404,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
     push(title); push('');
     (pages || []).forEach(function (p, i) {
       if (i > 0) { while (lines.length % PER) lines.push(''); }
-      push((p.ref ? p.ref + '  ·  ' : '') + (p.title || '')); push(''); push(p.body || '');
+      push((p.ref ? p.ref + '  -  ' : '') + (p.title || '')); push(''); push(p.body || '');
     });
     var chunks = [];
     for (var i = 0; i < lines.length; i += PER) chunks.push(lines.slice(i, i + PER));
@@ -1475,14 +1487,24 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
   // Kundens dokumenter ligger som indhold i CASE_DOCS, men står først på sagen,
   // når kunden uploader dem (DATA.customerDocs). Punkt → fil bygget af indholdet.
   // doc: kildedokumentet. name: et andet filnavn. refs: kun disse sider.
-  // cut: kun teksten fra..til på en side (fx note 10 i årsrapportens balance).
+  // cut: kun teksten fra..til på en side (f.eks. note 10 i årsrapportens balance).
   var DEMO_UPLOADS = {
     'm-interim': { doc: 'Periodetal_jan-aug_2026.xlsx' },
     'm-budget': { doc: 'Budget_2026-28_v3.xlsx' },
-    'm-assumptions': { doc: 'Budget_2026-28_v3.xlsx', name: 'Budgetforudsaetninger_2026-28.pdf', title: 'Budgetforudsætninger 2026-2028', refs: ['ark Forudsætninger'] },
     'm-loans': { doc: 'Aarsrapport_2025.pdf', name: 'Laaneoversigt_2026.pdf', title: 'Lån og kreditter pr. 31. december 2025 (årsrapport 2025, note 10 og 14)', refs: ['s. 8', 'note 14'], cut: { ref: 's. 8', from: 'NOTE 10', to: 'NOTE 11' } },
     'm-ejerbog': { doc: 'Ejerbog_2026.pdf' },
     'm-orderbook': { doc: 'GE_Vernova_rammekontrakt.pdf' },
+    // Kundesidens demoknapper til Regnskabs kilder (portalDemoPeriod og portalDemoDocument i new_case_portal.js).
+    // Saldobalancen uploadet som PDF (ikke et punkt: Periodetal får denne fil i stedet for regnearket).
+    // gen: siderne bygges af saldobalancen fra e-conomic (window.CW_DEMO_PAGES i new_case_portal.js), så
+    // filen har de samme konti og tal som ERP-kilden; ellers periodetallenes ark som før.
+    'm-interim-pdf': { doc: 'Periodetal_jan-aug_2026.xlsx', gen: 'trialBalance', name: 'Saldobalance_jan-aug_2026.pdf', title: 'Saldobalance januar-august 2026', refs: ['ark Resultat', 'ark Balance'] },
+    // Den interne årsrapport (case_documents_public.js): hele rapporten med noter og specifikationer.
+    // Aldrig CVR-versionens filnavn (Aarsrapport_<år>.pdf): CW.downloadDoc henter en upload med samme navn først.
+    'm-annual': { doc: 'Intern_aarsrapport_2025.pdf' },
+    'm-annual-2025': { doc: 'Intern_aarsrapport_2025.pdf' },
+    'm-annual-2024': { doc: 'Intern_aarsrapport_2024.pdf' },
+    'm-annual-2023': { doc: 'Intern_aarsrapport_2023.pdf' },
   };
   /** Filnavnet på punktets demofil (uden at bygge filen), eller null. */
   function demoUploadName(itemId) {
@@ -1495,7 +1517,9 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
     var doc = m && (window.CASE_DOCS || []).filter(function (d) { return d.name === m.doc; })[0];
     if (!doc) return null;
     var name = m.name || doc.name;
-    var pages = (doc.pages || []).filter(function (p) { return !m.refs || m.refs.indexOf(p.ref) >= 0; }).map(function (p) {
+    // Regnskab v5: sider bygget af sagens data (saldobalancen), når de findes
+    var gen = m.gen && window.CW_DEMO_PAGES && window.CW_DEMO_PAGES[m.gen] ? window.CW_DEMO_PAGES[m.gen]() : null;
+    var pages = gen || (doc.pages || []).filter(function (p) { return !m.refs || m.refs.indexOf(p.ref) >= 0; }).map(function (p) {
       if (!m.cut || p.ref !== m.cut.ref) return p;
       var b = String(p.body || ''), i = b.indexOf(m.cut.from), j = b.indexOf(m.cut.to);
       return Object.assign({}, p, { title: '', body: b.slice(i < 0 ? 0 : i, j > i ? j : undefined).trim() });
@@ -1547,7 +1571,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
     progress: progress,
     putFiles: putFiles, fileUrl: fileUrl, fmtSize: fmtSize,
     addLooseUploads: addLooseUploads, removeLooseUpload: removeLooseUpload, allUploads: allUploads,
-    request: request, sendRequest: sendRequest, clearRequest: clearRequest, restoreItem: restoreItem, draft: draft, setDraft: setDraft, requestMail: requestMail,
+    request: request, sendRequest: sendRequest, clearRequest: clearRequest, restoreItem: restoreItem, withdrawItem: withdrawItem, draft: draft, setDraft: setDraft, requestMail: requestMail,
     customerSubmit: customerSubmit, consent: consent, setConsent: setConsent,
     onboarding: onboarding, setOnboarding: setOnboarding, onboardingStep: onboardingStep, ONBOARDING_STEPS: ONBOARDING_STEPS, previewBlocked: previewBlocked,
     remind: remind, lastReminder: lastReminder,
@@ -1562,7 +1586,7 @@ import { confirm as feedbackConfirm, hideToast as feedbackHideToast, toast as fe
     liveType: liveType, tagFor: tagFor, flagFor: flagFor, whyFor: whyFor, itemFor: itemFor, itemsFor: itemsFor,
     owners: owners, setOwner: setOwner, isLiveCase: isLiveCase,
     resetDemo: resetDemo,
-    // Gentegn alle, der følger sagstilstanden (fx efter lokal tilstand uden for CW)
+    // Gentegn alle, der følger sagstilstanden (f.eks. efter lokal tilstand uden for CW)
     bump: emit,
     fmtWhen: fmtWhen, fmtDate: fmtDate, workdaysFromNow: workdaysFromNow, workdaysBetween: workdaysBetween, isPast: isPast,
     toast: toast, hideToast: hideToast, notInDemo: notInDemo, confirm: confirmDialog,

@@ -190,5 +190,5 @@ Object.assign(window.I18N.en, {
 // Blind runde (data)
 Object.assign(window.I18N.en, {
   "Regnskab 2025": "Accounts 2025",
-  "Nordhavn Composite: regnskabstal for 2025 fra årsrapporten. Sagen har nyere tal for januar-august 2026, fx GE Vernova med 38 % af omsætningen.": "Nordhavn Composite: 2025 figures from the annual report. The case has more recent figures for January-August 2026, e.g. GE Vernova with 38% of revenue.",
+  "Nordhavn Composite: regnskabstal for 2025 fra årsrapporten. Sagen har nyere tal for januar-august 2026, f.eks. GE Vernova med 38 % af omsætningen.": "Nordhavn Composite: 2025 figures from the annual report. The case has more recent figures for January-August 2026, e.g. GE Vernova with 38% of revenue.",
 });

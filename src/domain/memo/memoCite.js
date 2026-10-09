@@ -220,7 +220,7 @@ function _citeNumEq(c, p) {
     if (s !== 1 && p.kind === 'n' && p.dec === 0 && (Math.abs(p.v) < 100 || _citeIsYear(p))) continue;
     const pv = Math.abs(p.v) * p.scale * s;
     if (Math.abs(pv - cv) <= tol * c.scale + 1e-9) {
-      // Et helt tal uden decimaler (fx "3") må ikke findes inde i en afrunding ("3,4")
+      // Et helt tal uden decimaler (f.eks. "3") må ikke findes inde i en afrunding ("3,4")
       if (c.dec === 0 && p.dec > 0 && c.kind !== 'amt' && Math.abs(pv - cv) > 1e-9) continue;
       return true;
     }
@@ -780,7 +780,7 @@ function _citeCheckNames(body, text, units) {
   const strong = found.filter(x => !x.opt);
   if (!strong.length && !missing.length) return _citeCheckWords(body, text, units);
   if (missing.length) return { state: 'missing', hits: [], found: found.map(x => x.n), missing, basis: 'names', units: [] };
-  // Den mindste stump (højst tre sætninger eller linjer i træk, fx en
+  // Den mindste stump (højst tre sætninger eller linjer i træk, f.eks. en
   // underskrift), der rummer alle navnene
   let best = null, bestN = -1;
   _citeWindows(units, 3).forEach(u => {
@@ -977,7 +977,7 @@ function _checkCiteOne(cite) {
       if (n.secondary || cite.en) return true;
       if (!titleToks.some(tk => claimWords.some(a => _citeWordEq(a.w, tk.s)))) return true;
       const kind = (x) => x.date ? 'date' : x.kind === 'amt' ? 'n' : x.kind;
-      // (for en dato: dokumentets første dato, fx tillæggets dato)
+      // (for en dato: dokumentets første dato, f.eks. tillæggets dato)
       const first = pageNums.filter(q => q.start > titleEnd && (n.date ? !!q.date : !q.date && q.kind === n.kind && (q.kind !== 'n' || Math.abs(q.v) >= 1000)))
         .sort((a, b) => a.start - b.start)[0];
       const fu = first && units.find(x => first.start >= x.start && first.end <= x.end);

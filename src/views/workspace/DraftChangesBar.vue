@@ -35,6 +35,7 @@ const bar = computed(() => {
     </a-col>
     <a-col flex="none">
       <a-button
+        class="cw-link"
         type="link"
         size="small"
         @click="bar.open"

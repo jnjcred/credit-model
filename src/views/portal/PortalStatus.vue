@@ -8,7 +8,7 @@ import { computed } from 'vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { csAddWorkdays } from '@/domain/customer'
-import { PORTAL_CONTACT, ncFill, portalRecipient } from '@/domain/new_case_portal'
+import { ncFill, portalRecipient } from '@/domain/new_case_portal'
 import { useCaseVersion } from '@/composables/useCaseVersion'
 import PortalBackNav from './components/PortalBackNav.vue'
 import CustomerTimeline from '@/views/customer/CustomerTimeline.vue'
@@ -19,7 +19,7 @@ const props = defineProps({
 const emit = defineEmits(['back'])
 
 const version = useCaseVersion()
-const adv = PORTAL_CONTACT.first
+const adv = 'EIFO'   // kunden skriver til og hører fra EIFO; rådgiverens navn står kun på kontaktkortet
 const text = computed(() => {
   version.value
   const rcp = portalRecipient()
@@ -34,7 +34,7 @@ const text = computed(() => {
     : t('Status for jeres ansøgning')
   const lead = lock ? ncFill(t('{adv} har sendt jeres ansøgning videre. I hører fra EIFO, når der er en afgørelse.'), { adv })
     : at ? (props.justSubmitted
-      ? ncFill(t('Hun vender tilbage senest {date}.'), { date: back }) + (rcp.email ? ' ' + ncFill(t('I får en kvittering på {email}.'), { email: rcp.email }) : '')
+      ? ncFill(t('EIFO vender tilbage senest {date}.'), { date: back }) + (rcp.email ? ' ' + ncFill(t('I får en kvittering på {email}.'), { email: rcp.email }) : '')
       : ncFill(t('I sagde {date}, at I var færdige. {adv} gennemgår materialet og vender tilbage senest {date2}.'), { date: CW.fmtDate(at), adv, date2: back }))
     : req && prog.requiredMissing > 0 ? ncFill(t('I mangler {n} af {m} påkrævede punkter. Se dem på oversigten.'), { n: prog.requiredMissing, m: prog.required })
     : ncFill(t('{navn} gennemgår det, I har sendt.'), { navn: adv })

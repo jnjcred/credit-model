@@ -6,7 +6,8 @@
    - Esc fortryder; når feltet mister fokus, gemmes tallet (et ugyldigt tal kasseres så stille)
    - et ugyldigt tal (Enter/Tab) holder feltet åbent og markeret (bad)
    Er sagen indstillet (locked), åbnes intet felt. Cellerne har data-fin-cell="<post>|<kolonne>".
-   model, unit og locked er refs/computeds fra komponenten. */
+   model, unit og locked er refs/computeds fra komponenten; mask (Regnskab v5, valgfri) er årene
+   med kun offentlig årsrapport (finMaskedPost), så en indtastet omsætning står alene. */
 import { nextTick, ref } from 'vue'
 import { CW } from '@/domain/case_state'
 import { FIN_EDIT_COL, finLogChanges, finOrigOf, finPostValue, finRemoveEdits, finSaveEdits } from '@/domain/financials/finEdits'
@@ -29,7 +30,8 @@ function focusCellSoon (key) {
   })
 }
 
-export function useFinCellEditing ({ model, unit, locked }) {
+export function useFinCellEditing ({ model, unit, locked, mask }) {
+  const maskNow = () => (mask ? mask.value : undefined)
   const editing = ref(null) // { ref, col, text, initial, bad, typed }
   // Spejl af editing, så tastatur- og blur-handlerne ser den seneste tekst (editingRef i originalen).
   // Sættes til null, før feltet forsvinder, så blur ved fjernelsen ikke gemmer en gang til.
@@ -68,7 +70,7 @@ export function useFinCellEditing ({ model, unit, locked }) {
     const next = how === 'next' ? siblingCell(s.ref, s.col, 1) : how === 'prev' ? siblingCell(s.ref, s.col, -1) : null
     const scale = unit.value === 'mio' ? 1 : 1000
     if (val != null && s.text.trim() !== s.initial) {
-      const done = finSaveEdits([{ rowRef: s.ref, colKey: s.col, value: val / scale }])
+      const done = finSaveEdits([{ rowRef: s.ref, colKey: s.col, value: val / scale }], undefined, maskNow())
       finLogChanges(done)
     }
     // Begrundelsen er frivillig og gives bagefter med ikonet ved cellen, så man ikke afbrydes ved hvert tal
@@ -87,7 +89,7 @@ export function useFinCellEditing ({ model, unit, locked }) {
   const resetCell = (x) => {
     const from = x.value
     finRemoveEdits([x])
-    finLogChanges([{ rowRef: x.rowRef, colKey: x.colKey, from, to: finOrigOf(x), removed: true }])
+    finLogChanges([{ rowRef: x.rowRef, colKey: x.colKey, from, to: finOrigOf(x, maskNow()), removed: true }])
     focusCellSoon(x.rowRef + '|' + x.colKey)
   }
 

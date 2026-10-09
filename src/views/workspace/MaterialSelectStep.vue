@@ -8,7 +8,7 @@
 //
 // Props: model (wsMaterialModel(caseData, request) fra src/domain/workspace/request.js)
 // Emits: ingen
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
@@ -19,7 +19,7 @@ import { collapseExpandIcon, useCollapseKeyboard } from '@/composables/useCollap
 import MaterialSelectRow from './MaterialSelectRow.vue'
 import AskCustomerForm from './AskCustomerForm.vue'
 
-defineProps({
+const props = defineProps({
   model: { type: Object, required: true },
 })
 
@@ -40,7 +40,8 @@ const openAsk = (it) => wsOpenAsk(it, asking.value, askUi)
 const addAsk = (it) => wsAddAsk(it, askText.value, askCat.value, askUi)
 
 // Foldene: "Hentet automatisk" står åben, når vinduet er åbnet fra "Spørg kunden"
-const openFolds = ref(asking.value ? ['fetched'] : [])
+const onCaseCount = computed(() => props.model.fetched.length + props.model.godkendt.length + props.model.gennemgang.length)
+const openFolds = ref(asking.value ? ['onCase'] : [])
 // Mellemrum folder også (a-collapse 3.2.13 reagerer kun på Enter)
 const onFoldKeydown = useCollapseKeyboard()
 
@@ -113,7 +114,7 @@ const addItem = (e) => {
     </a-row>
 
     <div
-      v-if="model.extras.length || model.fetched.length || model.inCase.length"
+      v-if="model.extras.length || model.fetched.length || model.godkendt.length || model.gennemgang.length"
       @keydown="onFoldKeydown"
     >
       <a-collapse
@@ -134,44 +135,70 @@ const addItem = (e) => {
             kind="extra"
           />
         </a-collapse-panel>
+        <!-- Ét samlet afsnit: det, der allerede ligger på sagen, delt op i hentet, godkendt og til gennemgang -->
         <a-collapse-panel
-          v-if="model.fetched.length"
-          key="fetched"
-          :header="wsFill(t('Hentet automatisk ({n})'), { n: model.fetched.length })"
+          v-if="onCaseCount"
+          key="onCase"
+          :header="wsFill(t('Ligger allerede på sagen ({n})'), { n: onCaseCount })"
         >
-          <MaterialSelectRow
-            v-for="it in model.fetched"
-            :key="it.id"
-            :item="it"
-            kind="fetched"
-            :asking="asking === it.id"
-            @ask="openAsk(it)"
+          <div
+            v-if="model.fetched.length"
+            class="ws-sub"
           >
-            <AskCustomerForm
-              v-if="asking === it.id"
-              v-model:text="askText"
-              v-model:category="askCat"
-              :item-id="it.id"
-              :categories="model.catOptions"
-              :tried="askTried"
-              @cancel="asking = null"
-              @add="addAsk(it)"
+            <a-typography-text type="secondary">
+              {{ wsFill(t('Hentet automatisk ({n})'), { n: model.fetched.length }) }}
+            </a-typography-text>
+            <MaterialSelectRow
+              v-for="it in model.fetched"
+              :key="it.id"
+              :item="it"
+              kind="fetched"
+              :asking="asking === it.id"
+              @ask="openAsk(it)"
+            >
+              <AskCustomerForm
+                v-if="asking === it.id"
+                v-model:text="askText"
+                v-model:category="askCat"
+                :item-id="it.id"
+                :categories="model.catOptions"
+                :tried="askTried"
+                @cancel="asking = null"
+                @add="addAsk(it)"
+              />
+            </MaterialSelectRow>
+          </div>
+          <div
+            v-if="model.godkendt.length"
+            class="ws-sub"
+          >
+            <a-typography-text type="secondary">
+              {{ wsFill(t('Godkendt ({n})'), { n: model.godkendt.length }) }}
+            </a-typography-text>
+            <!-- Selv uploadet: samme række som ovenfor (filer, Fjern, Tilføj fil) -->
+            <MaterialSelectRow
+              v-for="it in model.godkendt"
+              :key="it.id"
+              :item="it"
+              :kind="wsUploadedByAdvisor(it.id) ? 'select' : 'case'"
+              :selected="!!model.sel[it.id]"
             />
-          </MaterialSelectRow>
-        </a-collapse-panel>
-        <a-collapse-panel
-          v-if="model.inCase.length"
-          key="inCase"
-          :header="wsFill(t('Ligger allerede på sagen ({n})'), { n: model.inCase.length })"
-        >
-          <!-- Selv uploadet: samme række som ovenfor (filer, Fjern, Tilføj fil) -->
-          <MaterialSelectRow
-            v-for="it in model.inCase"
-            :key="it.id"
-            :item="it"
-            :kind="wsUploadedByAdvisor(it.id) ? 'select' : 'case'"
-            :selected="!!model.sel[it.id]"
-          />
+          </div>
+          <div
+            v-if="model.gennemgang.length"
+            class="ws-sub"
+          >
+            <a-typography-text type="secondary">
+              {{ wsFill(t('Til din gennemgang ({n})'), { n: model.gennemgang.length }) }}
+            </a-typography-text>
+            <MaterialSelectRow
+              v-for="it in model.gennemgang"
+              :key="it.id"
+              :item="it"
+              :kind="wsUploadedByAdvisor(it.id) ? 'select' : 'case'"
+              :selected="!!model.sel[it.id]"
+            />
+          </div>
         </a-collapse-panel>
       </a-collapse>
     </div>

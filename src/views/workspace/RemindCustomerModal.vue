@@ -7,19 +7,34 @@
 // v-if); lukkes den, får elementet, der havde fokus før, fokus igen, hvis det stadig findes
 // (som CW.useDialog før).
 //
-// Props: ingen (React-proppen firstId blev ikke brugt). Emits: close.
-import { computed, onUnmounted, ref } from 'vue'
+// Hvilke punkter påmindelsen handler om, vælger rådgiveren øverst i vinduet (afkrydsning, når kunden mangler mere
+// end ét). Standard: de punkter, der er givet (Påmind på ét punkt), ellers alt, kunden mangler. Mailen følger
+// valget, indtil rådgiveren selv har rettet i den.
+//
+// Props: ids (kun disse punkter er valgt til at starte med, f.eks. Påmind på ét punkt; uden ids alt, kunden mangler).
+// Emits: close.
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { t } from '@/i18n'
 import { wsRemindMail, wsSendReminder } from '@/domain/workspace/request'
 import { useCaseVersion } from '@/composables/useCaseVersion'
 import MailComposer from './shared/MailComposer.vue'
 
+const props = defineProps({
+  ids: { type: Array, default: null },
+})
 const emit = defineEmits(['close'])
 
 const caseVersion = useCaseVersion()
+// Alt, kunden mangler: det, rådgiveren kan vælge imellem
+const all = computed(() => {
+  caseVersion.value
+  return wsRemindMail(null).missingItems
+})
+const chosen = ref(props.ids ? props.ids.slice() : all.value.map(it => it.id))
+const options = computed(() => all.value.map(it => ({ value: it.id, label: t(it.label) })))
 const m = computed(() => {
   caseVersion.value
-  return wsRemindMail()
+  return wsRemindMail(chosen.value)
 })
 // Mailen starter som standardteksten (som før: når dialogen åbner)
 const subject = ref(m.value.defSubject)
@@ -28,6 +43,8 @@ const touched = ref(false)
 
 const canSend = computed(() => m.value.ids.length > 0 && !!body.value.trim())
 
+// Ændres valget, skrives mailen om, medmindre rådgiveren selv har rettet i den
+watch(chosen, () => { if (!touched.value) { subject.value = m.value.defSubject; body.value = m.value.defBody } })
 function setSubject (v) { subject.value = v; touched.value = true }
 function setBody (v) { body.value = v; touched.value = true }
 function reset () {
@@ -58,9 +75,18 @@ onUnmounted(() => {
     <template #title>
       <span id="ws-remind-title">{{ t('Påmind kunden') }}</span>
     </template>
-    <a-typography-paragraph type="secondary">
-      {{ t('Tjek mailen, før du sender. Den handler som standard om alt, kunden mangler.') }}
-    </a-typography-paragraph>
+    <a-form-item
+      v-if="options.length > 1"
+      :label="t('Hvad skal påmindelsen handle om?')"
+      :label-col="{ span: 24 }"
+      :colon="false"
+    >
+      <a-checkbox-group
+        v-model:value="chosen"
+        :options="options"
+        class="ws-remind-opts"
+      />
+    </a-form-item>
     <a-typography-paragraph>
       <a-typography-text type="secondary">
         {{ t('Til') }}
@@ -68,7 +94,7 @@ onUnmounted(() => {
       {{ ' ' }}
       <a-typography-text strong>
         {{ m.to.name || t('kunden') }}
-      </a-typography-text>{{ m.to.role ? ', ' + t(m.to.role) : '' }}{{ m.to.email ? ' · ' + m.to.email : '' }}
+      </a-typography-text>{{ m.to.role ? ', ' + t(m.to.role) : '' }}{{ m.to.email ? ' - ' + m.to.email : '' }}
     </a-typography-paragraph>
     <MailComposer
       :subject="subject"
@@ -92,7 +118,7 @@ onUnmounted(() => {
             v-if="m.ids.length === 0"
             type="secondary"
           >
-            {{ t('Kunden mangler ikke noget.') }}
+            {{ options.length ? t('Vælg mindst ét punkt.') : t('Kunden mangler ikke noget.') }}
           </a-typography-text>
         </a-col>
         <a-col>
@@ -113,3 +139,11 @@ onUnmounted(() => {
     </template>
   </a-modal>
 </template>
+
+<style scoped>
+.ws-remind-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+</style>

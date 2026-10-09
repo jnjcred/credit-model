@@ -4,12 +4,13 @@
 // forklaring og "Luk". I Kundeflow står rækken med kundens skærme under (aria-current på den viste).
 //
 // Props: flow (Kundeflow), flowRole ('rådgiver' | 'kunde'), hasRequest (anmodningen er sendt),
-//        jump (vis rækken med kundens skærme), current (den viste skærm i rækken).
+//        jump (vis rækken med kundens skærme), current (den viste skærm i rækken), demo (demoknapperne
+//        til Regnskabs kilder står på siden; de gemmes, som om kunden selv havde gjort det).
 // Emits: role(r), close, jump(k).
 // Bjælken er rådgiverens værktøj (role="note"), ikke en del af kundens side. Valget af rolle er ikke en
 // kundehandling: listen lægges uden for portalen (antdv's standard), så forhåndsvisningens spærre ikke
 // ser den.
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { CloseOutlined, EyeOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { PV_SCREENS, pvScreenLabel } from '@/domain/onboarding'
@@ -20,22 +21,65 @@ const props = defineProps({
   hasRequest: { type: Boolean, default: false },
   jump: { type: Boolean, default: false },
   current: { type: String, default: null },
+  demo: { type: Boolean, default: false },
 })
 const emit = defineEmits(['role', 'close', 'jump'])
 const ROLES = [{ value: 'rådgiver', label: t('Rådgiver') }, { value: 'kunde', label: t('Kunde') }]
+// Bjælken er skjult bag en Demo-knap; rådgiveren ser siden som Rådgiver, indtil bjælken åbnes og rollen skiftes
+const shown = ref(false)
 const explain = computed(() => (props.flowRole === 'kunde' ? t('Du bruger siden som kunden. Svar, filer og beskeder gemmes, som om kunden havde sendt dem.')
   : props.flow ? t('De skærme, kunden kommer igennem. Du kan klikke rundt, men intet gemmes.')
+  : props.hasRequest && props.demo ? t('Du kan se og klikke rundt. Filer, du uploader i punkterne, sendes på kundens vegne, og demoknapperne virker, som om kunden selv havde gjort det. Alt andet gemmes ikke.')
   : props.hasRequest ? t('Du kan se og klikke rundt. Filer, du uploader i punkterne, sendes på kundens vegne. Alt andet gemmes ikke.') : t('Anmodningen er ikke sendt endnu. Sådan ser siden ud, når den er sendt.')))
 </script>
 
 <template>
-  <a-alert
-    class="portal-pv-bar"
-    type="info"
-    banner
-    show-icon
-    role="note"
-  >
+  <div class="portal-pv">
+    <!-- Én lyseblå bjælke: kundens skærme til venstre, Demo-knappen yderst til højre -->
+    <div class="portal-pv-top">
+      <div
+        v-if="jump"
+        class="cwp-pv-jump"
+        role="group"
+        :aria-label="t('Kundens skærme')"
+      >
+        <span>{{ t('Kundens skærme:') }}</span>
+        <a-space
+          wrap
+          align="center"
+          :size="4"
+        >
+          <a-button
+            v-for="k in PV_SCREENS"
+            :key="k"
+            :type="current === k ? 'primary' : 'default'"
+            :aria-current="current === k ? 'true' : undefined"
+            @click="emit('jump', k)"
+          >
+            {{ pvScreenLabel(k) }}
+          </a-button>
+        </a-space>
+      </div>
+      <a-button
+        id="cw-pv-demo-btn"
+        class="portal-pv-demo"
+        :aria-expanded="shown ? 'true' : 'false'"
+        @click="shown = !shown"
+      >
+        <template #icon>
+          <EyeOutlined aria-hidden="true" />
+        </template>
+        {{ t('Demo') }}
+      </a-button>
+    </div>
+    <a-alert
+      v-if="shown"
+      class="portal-pv-bar"
+      type="info"
+      banner
+      show-icon
+      role="note"
+    >
     <template #icon>
       <EyeOutlined aria-hidden="true" />
     </template>
@@ -69,33 +113,8 @@ const explain = computed(() => (props.flowRole === 'kunde' ? t('Du bruger siden 
         </a-button>
       </div>
     </template>
-    <template
-      v-if="jump"
-      #description
-    >
-      <div
-        class="cwp-pv-jump"
-        role="group"
-        :aria-label="t('Kundens skærme')"
-      >
-        <span>{{ t('Kundens skærme:') }}</span>
-        <a-space
-          wrap
-          :size="4"
-        >
-          <a-button
-            v-for="k in PV_SCREENS"
-            :key="k"
-            :type="current === k ? 'primary' : 'default'"
-            :aria-current="current === k ? 'true' : undefined"
-            @click="emit('jump', k)"
-          >
-            {{ pvScreenLabel(k) }}
-          </a-button>
-        </a-space>
-      </div>
-    </template>
-  </a-alert>
+    </a-alert>
+  </div>
 </template>
 
 <style scoped>
@@ -116,6 +135,34 @@ const explain = computed(() => (props.flowRole === 'kunde' ? t('Du bruger siden 
   min-width: 110px;
 }
 
+/* Lyseblå bjælke over siden: skærmene og Demo-knappen på samme række */
+.portal-pv-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #e6f4ff;
+  border-bottom: 1px solid #bae0ff;
+}
+
+/* Rollebjælken sidder helt op mod den lyseblå linje og helt ned mod siden. Ingen luft imellem,
+   så indholdet under ikke kan skinne igennem */
+.portal-pv-bar {
+  margin: 0;
+  border-radius: 0;
+}
+
+.portal-pv {
+  background: #e6f4ff;
+}
+
+/* Demo-knappen står yderst til højre, også når der ikke er nogen skærme-række */
+.portal-pv-demo {
+  margin-left: auto;
+}
+
 /* "Luk" står yderst til højre */
 .portal-pv-close {
   margin-left: auto;
@@ -126,6 +173,5 @@ const explain = computed(() => (props.flowRole === 'kunde' ? t('Du bruger siden 
   flex-wrap: wrap;
   gap: 4px 8px;
   align-items: center;
-  margin-top: 8px;
 }
 </style>

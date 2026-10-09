@@ -99,22 +99,10 @@ const pwErr = computed(() => (!exists.value && tried.value && probs.value.length
 const rules = computed(() => [['len', t('Mindst 8 tegn')], ['num', t('Et tal')], ['lower', t('Et lille bogstav')], ['upper', t('Et stort bogstav')]]
   .map(([k, txt]) => ({ k, txt, ok: !probs.value.includes(k) })))
 const label = computed(() => (busy.value ? (exists.value ? t('Logger ind…') : t('Opretter bruger…')) : (exists.value ? t('Log ind') : t('Opret bruger'))))
-const context = computed(() => (exists.value
-  ? ncFill(t('Du har allerede en bruger hos Crediwire. Log ind, så sender vi dig tilbage til {what} for {company}.'), { what: t('Materiale til EIFO'), company: co.value.name })
-  : ncFill(t('Du er på vej til {what} for {company}.'), { what: t('Materiale til EIFO'), company: co.value.name }) + ' ' + t('Når brugeren er oprettet, sender vi dig tilbage.')))
+const context = computed(() => ncFill(t('Du er i gang med at sende materiale til EIFO om {company}. Når du er logget ind eller brugeren er oprettet, sender vi dig tilbage.'), { company: co.value.name }))
 const pwDescribedBy = computed(() => [!exists.value ? 'cwp-auth-rules' : '', pwErr.value ? 'cwp-auth-pw-err' : '', err.value ? 'cwp-auth-err' : ''].filter(Boolean).join(' ') || undefined)
 const forgotText = computed(() => ncFill(t('Vi har sendt et link til {email}, så I kan vælge en ny adgangskode. Linket virker i 1 time.'), { email: portalMaskEmail(email.value.trim() || rcp.value.email) }))
 
-function onDemoExists (e) {
-  demoExists.value = e.target.checked
-  if (!e.target.checked) demoHasCo.value = false
-  err.value = ''; tried.value = false
-}
-function onDemoHasCo (e) {
-  demoHasCo.value = e.target.checked
-  if (e.target.checked) demoExists.value = true
-  err.value = ''; tried.value = false
-}
 function onEmail (v) { email.value = v; err.value = '' }
 function onPw (v) { pw.value = v; err.value = '' }
 function onForgot () { forgot.value = true; err.value = '' }
@@ -155,35 +143,6 @@ const langScreens = Grid.useBreakpoint()
         novalidate
         @submit="submit"
       >
-        <a-card
-          size="small"
-          class="cw-auth-block"
-        >
-          <a-typography-text type="secondary">
-            {{ t('Demo: Crediwires egen side. Crediwire ser selv, om mailen har en bruger, og sender kunden tilbage bagefter.') }}
-          </a-typography-text>
-          <div
-            v-if="!pv && !ob.account"
-            class="cw-auth-demo-opts"
-          >
-            <div>
-              <a-checkbox
-                :checked="demoExists"
-                @change="onDemoExists"
-              >
-                {{ t('Mailen har allerede en bruger') }}
-              </a-checkbox>
-            </div>
-            <div>
-              <a-checkbox
-                :checked="demoHasCo"
-                @change="onDemoHasCo"
-              >
-                {{ t('Brugeren har allerede virksomheden') }}
-              </a-checkbox>
-            </div>
-          </div>
-        </a-card>
         <a-alert
           class="cw-auth-block"
           type="info"
@@ -234,7 +193,7 @@ const langScreens = Grid.useBreakpoint()
             v-if="exists"
             type="link"
             size="small"
-            class="cwp-linkbtn cw-auth-forgot"
+            class="cwp-linkbtn cw-auth-forgot cw-link"
             data-cust-act="reset"
             @click="onForgot"
           >
@@ -268,7 +227,7 @@ const langScreens = Grid.useBreakpoint()
                 <a-button
                   type="link"
                   size="small"
-                  class="cwp-linkbtn"
+                  class="cwp-linkbtn cw-link"
                   :aria-pressed="show"
                   @click="show = !show"
                 >
@@ -309,7 +268,7 @@ const langScreens = Grid.useBreakpoint()
                     <span
                       v-else
                       aria-hidden="true"
-                    >·</span>
+                    >-</span>
                     {{ ' ' }}{{ r.txt }}
                   </a-typography-text>
                   <span class="sr-only">{{ pw ? (r.ok ? ': ' + t('opfyldt') : ': ' + t('mangler')) : '' }}</span>
@@ -342,7 +301,7 @@ const langScreens = Grid.useBreakpoint()
         </a-button>
         <a-button
           type="link"
-          class="cwp-linkbtn cw-auth-back"
+          class="cwp-linkbtn cw-auth-back cw-link"
           @click="emit('back')"
         >
           {{ t('Tilbage til Materiale til EIFO') }}
@@ -394,12 +353,6 @@ const langScreens = Grid.useBreakpoint()
   margin-bottom: 16px;
 }
 
-.cw-auth-demo-opts {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
-}
 
 /* "Glemt adgangskode?" til højre på etikettens linje (den står før feltet i koden). z-index: feltets
    etiketkolonne kommer senere og er også placeret, så den lå ellers over knappen og tog klikket */

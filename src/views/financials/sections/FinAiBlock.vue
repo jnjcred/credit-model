@@ -7,10 +7,14 @@
 // ellers viser demoen det andet forberedte AI-udkast efter ca. 1,1 s (finAiRun).
 // Gem, Gendan og Kør AI igen er flyttet ordret fra financials.jsx.
 //
-// Props: id (nøgle i FIN_AI_DEFS), title, small (kompakt række, fx PEST).
+// Kommentar (commentable): rådgiveren kan skrive en kommentar til teksten. Den står under teksten, gemmes sammen
+// med AI-tilstanden (note, noteAt, noteBy) og følger med teksten, når den hentes til Credit memo (finExportDocs).
+// "Kør AI igen" og "Gendan" rører ikke kommentaren.
+//
+// Props: id (nøgle i FIN_AI_DEFS), title, small (kompakt række, f.eks. PEST), commentable.
 // Slots: headExtra (før ikonerne), after (føjes til teksten). Emits: ingen.
 import { computed, ref } from 'vue'
-import { EditOutlined, SyncOutlined, UndoOutlined } from '@ant-design/icons-vue'
+import { CommentOutlined, EditOutlined, SyncOutlined, UndoOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { DATA } from '@/domain/data'
@@ -18,13 +22,13 @@ import { AI } from '@/domain/ai'
 import { finAiAiText, finAiPatch, finAiRun, finAiState, finAiText } from '@/domain/financials/finAiTexts'
 import { finFill } from '@/domain/financials/finFormat'
 import { useWindowEvent } from '@/composables/useWindowEvent'
-import AiBadge from '@/components/common/AiBadge.vue'
 import FinIconBtn from './FinIconBtn.vue'
 
 const props = defineProps({
   id: { type: String, required: true },
   title: { type: String, required: true },
   small: { type: Boolean, default: false },
+  commentable: { type: Boolean, default: false },
 })
 
 // Teksten ligger i localStorage: tegn igen, når den ændres, og når AI-forbindelsen skifter
@@ -62,7 +66,28 @@ const save = () => {
   else finAiPatch(props.id, { edited: v, editedAt: new Date().toISOString(), editedBy: (DATA.ADVISOR && DATA.ADVISOR.name) || 'Mette Larsen' })
   editing.value = false
 }
-const restore = () => { finAiPatch(props.id, { edited: null, editedAt: null, editedBy: null }); CW.toast(t('AI-teksten er gendannet')) }
+// Rådgiverens kommentar til teksten
+const note = computed(() => (s.value.note ? { text: s.value.note, at: s.value.noteAt, by: s.value.noteBy } : null))
+const noteEditing = ref(false)
+const noteDraft = ref('')
+const noteLabel = computed(() => finFill(t('Kommentar til {navn}'), { navn: props.title }))
+const startNote = () => {
+  noteDraft.value = note.value ? note.value.text : ''
+  noteEditing.value = true
+  setTimeout(() => { const ta = document.getElementById('fin-note-' + props.id); if (ta) ta.focus() }, 30)
+}
+const saveNote = () => {
+  const v = noteDraft.value.trim()
+  if (!v) { finAiPatch(props.id, { note: null, noteAt: null, noteBy: null }) } else { finAiPatch(props.id, { note: v, noteAt: new Date().toISOString(), noteBy: (DATA.ADVISOR && DATA.ADVISOR.name) || 'Mette Larsen' }) }
+  noteEditing.value = false
+}
+const removeNote = () => { finAiPatch(props.id, { note: null, noteAt: null, noteBy: null }); CW.toast(t('Kommentaren er slettet')) }
+const onNoteKey = (e) => {
+  if (e.key === 'Escape') { e.stopPropagation(); noteEditing.value = false }
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); saveNote() }
+}
+// Mærkets hover: hvad det er, og hvornår det er hentet (står ikke længere som tekst under overskriften)
+const restore = () => { finAiPatch(props.id, { edited: null, editedAt: null, editedBy: null, noAi: null }); CW.toast(t('AI-teksten er gendannet')) }
 const run = () => {
   const go = () => {
     busy.value = true
@@ -76,8 +101,8 @@ const run = () => {
 const meta = computed(() => {
   const st = s.value
   return busy.value ? (aiReady.value && typeof AI.canSearch === 'function' && AI.canSearch() ? t('AI søger på nettet og skriver … (kan tage et par minutter)') : t('AI skriver …'))
-    : edited.value ? finFill(t('Rettet af {who} · {date}'), { who: st.editedBy || '', date: CW.fmtDate(st.editedAt) })
-    : st.aiAt ? finFill(t('Nyt AI-udkast · {date}'), { date: CW.fmtDate(st.aiAt) }) : ''
+    : edited.value ? finFill(t('Rettet af {who} - {date}'), { who: st.editedBy || '', date: CW.fmtDate(st.editedAt) })
+    : st.aiAt ? finFill(t('Nyt AI-udkast - {date}'), { date: CW.fmtDate(st.aiAt) }) : ''
 })
 
 // Esc fortryder (uden at lukke noget udenom), Ctrl/Cmd+Enter gemmer
@@ -111,10 +136,6 @@ function onKey (e) {
         >
           {{ title }}
         </a-typography-text>
-        <AiBadge
-          :edited="edited"
-          :compact="small"
-        />
       </a-space>
       <a-space
         class="fin-ai-tools"
@@ -123,6 +144,16 @@ function onKey (e) {
       >
         <slot name="headExtra" />
         <template v-if="!editing">
+          <FinIconBtn
+            v-if="commentable && !note && !noteEditing"
+            :label="noteLabel"
+            :disabled="busy"
+            @click="startNote"
+          >
+            <template #icon>
+              <CommentOutlined aria-hidden="true" />
+            </template>
+          </FinIconBtn>
           <FinIconBtn
             :label="editLabel"
             :disabled="busy"
@@ -186,6 +217,66 @@ function onKey (e) {
     >
       <div>{{ text }}<slot name="after" /></div>
     </a-spin>
+    <!-- Rådgiverens kommentar: under teksten, med hvem og hvornår -->
+    <div
+      v-if="commentable && !editing && (note || noteEditing)"
+      class="fin-ai-note"
+    >
+      <template v-if="noteEditing">
+        <a-textarea
+          :id="'fin-note-' + id"
+          v-model:value="noteDraft"
+          :rows="3"
+          :aria-label="noteLabel"
+          :placeholder="t('Skriv en kommentar, der følger med, når teksten hentes til Credit memo')"
+          @keydown="onNoteKey"
+        />
+        <a-space :size="8">
+          <a-button
+            type="primary"
+            :disabled="!noteDraft.trim() && !note"
+            @click="saveNote"
+          >
+            {{ t('Gem') }}
+          </a-button>
+          <a-button @click="noteEditing = false">
+            {{ t('Annullér') }}
+          </a-button>
+        </a-space>
+      </template>
+      <template v-else>
+        <a-typography-text strong>
+          {{ t('Rådgiverens kommentar') }}
+        </a-typography-text>
+        <div class="fin-ai-note-text">
+          {{ note.text }}
+        </div>
+        <a-space
+          :size="4"
+          wrap
+        >
+          <a-typography-text type="secondary">
+            {{ note.by }} - {{ CW.fmtDate(note.at) }}
+          </a-typography-text>
+          <a-button
+            type="link"
+            size="small"
+            :aria-label="t('Ret') + ' ' + noteLabel"
+            @click="startNote"
+          >
+            {{ t('Ret') }}
+          </a-button>
+          <a-button
+            type="link"
+            size="small"
+            :aria-label="t('Slet') + ' ' + noteLabel"
+            @click="removeNote"
+          >
+            {{ t('Slet') }}
+          </a-button>
+        </a-space>
+      </template>
+    </div>
     <div
       v-if="!editing"
       aria-live="polite"
@@ -217,6 +308,18 @@ function onKey (e) {
 
 .fin-ai-tools {
   margin-left: auto;
+}
+
+.fin-ai-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.fin-ai-note-text {
+  white-space: pre-wrap;
 }
 
 .fin-ai-edit {

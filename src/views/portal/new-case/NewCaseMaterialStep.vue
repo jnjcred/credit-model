@@ -126,7 +126,7 @@ const onFoldKeydown = useCollapseKeyboard()
       <a-input
         id="nc-amount"
         :value="amount"
-        :placeholder="t('fx 4.500.000 eller 4,5 mio.')"
+        :placeholder="t('f.eks. 4.500.000 eller 4,5 mio.')"
         inputmode="decimal"
         aria-required="true"
         :aria-invalid="invalid('amount') ? 'true' : undefined"
@@ -140,7 +140,7 @@ const onFoldKeydown = useCollapseKeyboard()
         <span
           v-if="invalid('amount')"
           id="nc-amount-err"
-        >{{ amount.trim() ? t('Skriv beløbet som et tal, fx 4.500.000 eller 4,5 mio.') : t('Beløbet skal udfyldes.') }}</span>
+        >{{ amount.trim() ? t('Skriv beløbet som et tal, f.eks. 4.500.000 eller 4,5 mio.') : t('Beløbet skal udfyldes.') }}</span>
         <!-- Advarslen står i normal tekstfarve med et gult ikon foran (advarselsfarven er for lys til tekst) -->
         <a-typography-text
           v-if="amountWarn"

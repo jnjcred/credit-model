@@ -18,7 +18,7 @@ import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { DATA } from '@/domain/data'
 import {
-  DOC_CATS, DOC_PREVIEW, docCanGet, docCatKey, docFill, docFromUpload, docGet, docKey, docPages, docWhen, findCaseDoc,
+  DOC_PREVIEW, docCanGet, docFill, docHeadingKey, docHeadings, docFromUpload, docGet, docKey, docPages, docWhen, findCaseDoc,
 } from '@/domain/documents'
 import { useCaseVersion } from '@/composables/useCaseVersion'
 import { collapseExpandIcon, useCollapseKeyboard } from '@/composables/useCollapseKeyboard'
@@ -26,6 +26,7 @@ import { useWindowEvent } from '@/composables/useWindowEvent'
 import { go } from '@/composables/useNavigation'
 import DocMetaLine from './DocMetaLine.vue'
 import DocumentRow from './DocumentRow.vue'
+import DocHeadingUpload from './DocHeadingUpload.vue'
 import CaseDocReader from './viewer/CaseDocReader.vue'
 import SupersededDoc from './viewer/SupersededDoc.vue'
 import UploadedFileViewer from './viewer/UploadedFileViewer.vue'
@@ -47,7 +48,7 @@ const allDocs = computed(() => [...uploadDocs.value, ...sourceDocs.value])
 const selKey = ref(docKey(sourceDocs.value[0]))
 const selected = computed(() => allDocs.value.find(d => docKey(d) === selKey.value) || null)
 const focus = ref(null) // { ref, n } til CaseDocReader
-// Kom man fra en kilde et andet sted (fx beslutningsgrundlaget), kan man gå tilbage: { route, anchor, label }
+// Kom man fra en kilde et andet sted (f.eks. beslutningsgrundlaget), kan man gå tilbage: { route, anchor, label }
 const back = ref(null)
 const q = ref('')
 const sortMode = ref('newest')
@@ -59,7 +60,7 @@ const page = ref(null)
 function select (d) { selKey.value = docKey(d); focus.value = null }
 // Hop til en side i et af sagens kildedokumenter (navn eller id fra CASE_DOCS)
 function openSource (name, ref) {
-  // Kundens dokumenter står kun som upload (fx periodetallene): så åbnes den nyeste upload med navnet
+  // Kundens dokumenter står kun som upload (f.eks. periodetallene): så åbnes den nyeste upload med navnet
   const up = sourceDocs.value.some(x => x.name === name || x.id === name) ? null : CW.allUploads().find(f => f.id === name || f.name === name)
   const d = up ? docFromUpload(up) : sourceDocs.value.find(x => x.name === name || x.id === name) || { name }
   selKey.value = docKey(d)
@@ -114,19 +115,33 @@ watch([hiKey, () => focus.value && focus.value.n], ([k], _prev, onCleanup) => {
   onCleanup(() => clearTimeout(id))
 }, { flush: 'post' })
 
-const handleFiles = (fileList) => {
+// heading: overskriften. Er den et punkt, rådgiveren kan bede kunden om, knyttes filen til punktet (som Upload for kunden:
+// punktet står som modtaget, og filen følger punktet); ellers (Ansøgning og rating, Eksport, Øvrigt) lægges den løst
+// under overskriften. Uden overskrift kommer filen under Øvrigt.
+const handleFiles = (fileList, heading) => {
   const files = Array.from(fileList || [])
   if (!files.length) return
-  const metas = CW.putFiles(files, { by: 'rådgiver' })
-  CW.addLooseUploads(metas)
-  CW.toast(docFill(files.length === 1 ? t('1 fil uploadet under Dokumenter') : t('{n} filer uploadet under Dokumenter'), { n: files.length }))
+  const h = heading && heading !== 'other' ? heading : null
+  const itemId = h && (headings.value.find(x => x.key === h) || {}).itemId
+  let metas
+  if (itemId) {
+    metas = CW.putFiles(files, { by: 'rådgiver', itemId })
+    CW.markReceived(itemId, { by: 'rådgiver', files: metas })
+  } else {
+    metas = CW.putFiles(files, { by: 'rådgiver' }).map(m => (h ? { ...m, heading: h } : m))
+    CW.addLooseUploads(metas)
+  }
+  const label = h ? t((headings.value.find(x => x.key === h) || {}).label || '') : ''
+  CW.toast(label
+    ? docFill(files.length === 1 ? t('1 fil uploadet under {navn}') : t('{n} filer uploadet under {navn}'), { n: files.length, navn: label })
+    : docFill(files.length === 1 ? t('1 fil uploadet under Dokumenter') : t('{n} filer uploadet under Dokumenter'), { n: files.length }))
   if (metas[0]) { selKey.value = 'u:' + metas[0].id; focus.value = null }
 }
 // "Upload fil" (a-upload): beforeUpload kaldes for hver valgt fil med hele valget; valget håndteres
 // ved den første fil, så der kommer ét kald og én besked pr. valg. LIST_IGNORE: a-upload gemmer
 // ikke selv filerne (de står i listen som uploads).
-const pickFiles = (file, fileList) => {
-  if (file === fileList[0]) handleFiles(fileList)
+const pickFiles = (file, fileList, heading) => {
+  if (file === fileList[0]) handleFiles(fileList, heading)
   return Upload.LIST_IGNORE
 }
 
@@ -145,7 +160,7 @@ async function fetchAll () {
   fetching.value = false
 }
 
-// Erstattede versioner (fx budget v1 og v2) foldes ind under den version,
+// Erstattede versioner (f.eks. budget v1 og v2) foldes ind under den version,
 // der afløste dem (supersededBy). Forskellige års årsrapporter er ikke
 // versioner af hinanden og står hver for sig.
 const current = (name) => allDocs.value.some(x => x.name === name && !x.superseded)
@@ -174,12 +189,16 @@ const sortOptions = computed(() => [
   { value: 'name', label: t('Navn') },
 ])
 
-// Samme emner som i anmodningen og kundens portal. Om et dokument er hentet
+// Overskrifterne er de punkter, kunden kan bede om (src/domain/documents.js: docHeadings), så en fil står under
+// det, kunden præcist kan sende, efterfulgt af Ansøgning og rating, Eksport og Øvrigt. Om et dokument er hentet
 // offentligt eller uploadet, står i rækkens grå linje (kilden).
-const groups = computed(() => DOC_CATS.map(c => ({ key: c.key, label: c.label, items: docs.value.filter(d => docCatKey(d) === c.key) }))
-  .concat([{ key: 'other', label: 'Øvrigt', items: docs.value.filter(d => docCatKey(d) === 'other') }]))
-// Emner uden dokumenter vises ikke
+const headings = computed(() => { caseVersion.value; return docHeadings() })
+const groups = computed(() => headings.value.map(h => ({ key: h.key, label: h.label, items: docs.value.filter(d => docHeadingKey(d) === h.key) })))
 const shownGroups = computed(() => groups.value.filter(g => g.items.length !== 0))
+// Overskrifter uden dokumenter står i en fold nederst; rådgiveren kan uploade til dem alle. Under en søgning
+// skjules folden (der er intet at finde dér)
+const unusedGroups = computed(() => (ql.value ? [] : groups.value.filter(g => g.items.length === 0)))
+const unusedOpen = ref([])
 
 // Alle filer kan slettes og gendannes (CW.removeDoc / CW.restoreDoc). Slettede
 // filer står i folden Slettet nederst: sagens egne dokumenter og uploads.
@@ -220,9 +239,9 @@ const selUrl = computed(() => {
 const selSub = computed(() => {
   const s = selected.value
   if (!s) return ''
-  if (s.fileId) return t(s.type) + ' · ' + t(s.sourceLabel || 'Kundeupload') + ' · ' + t('uploadet') + ' ' + docWhen(s)
-  return t(s.type) + ' · ' + t(s.sourceLabel || 'Kundeupload') + ' · ' + t('dateret') + ' ' + docWhen(s) +
-    (s.pageCount ? ' · ' + docPages(s) : '') + (selCase.value && s.excerpt ? ' · ' + docFill(t('uddrag, {n} afsnit i viseren'), { n: s.excerpt }) : '') + ' · ' + s.size
+  if (s.fileId) return t(s.type) + ' - ' + t(s.sourceLabel || 'Kundeupload') + ' - ' + t('uploadet') + ' ' + docWhen(s)
+  return t(s.type) + ' - ' + t(s.sourceLabel || 'Kundeupload') + ' - ' + t('dateret') + ' ' + docWhen(s) +
+    (s.pageCount ? ' - ' + docPages(s) : '') + (selCase.value && s.excerpt ? ' - ' + docFill(t('uddrag, {n} afsnit i viseren'), { n: s.excerpt }) : '') + ' - ' + s.size
 })
 
 // Hele listen er drop-mål for filer. Filer, der slippes på "Upload fil", har a-upload allerede taget
@@ -266,12 +285,10 @@ useUploadButton(page)
         {{ back.label || t('Tilbage') }}
       </a-button>
     </div>
-    <div class="doc-head">
-      <a-typography-title>{{ t('Dokumenter') }}</a-typography-title>
-      <a-typography-text type="secondary">
-        {{ t('Alt materiale på sagen.') }}
-      </a-typography-text>
-    </div>
+    <!-- Fanen og sagens navn viser allerede, hvor man er; overskriften er kun til skærmlæsere -->
+    <h2 class="sr-only">
+      {{ t('Dokumenter') }}
+    </h2>
     <a-row :gutter="[16, 16]">
       <a-col
         :xs="24"
@@ -353,13 +370,25 @@ useUploadButton(page)
               :key="g.key"
             >
               <template #header>
-                <a-typography-text
-                  type="secondary"
-                  role="heading"
-                  aria-level="2"
-                >
-                  {{ t(g.label) + ' (' + groupCount(g.items) + ')' }}
-                </a-typography-text>
+                <div class="doc-group-row">
+                  <div
+                    class="doc-group-head"
+                    role="heading"
+                    aria-level="2"
+                  >
+                    <a-typography-text strong>
+                      {{ t(g.label) }}
+                    </a-typography-text>
+                    <a-typography-text type="secondary">
+                      {{ groupCount(g.items) }}
+                    </a-typography-text>
+                  </div>
+                  <DocHeadingUpload
+                    :heading="g.key"
+                    :label="g.label"
+                    @pick="handleFiles"
+                  />
+                </div>
               </template>
               <!-- Rækkerne har dokumentets nøgle, så fokus og en åben fold følger dokumentet, når
                    listen ændrer sig (a-list 3.2.13 giver ikke rækkerne fra data-source en nøgle) -->
@@ -378,6 +407,38 @@ useUploadButton(page)
                 />
               </ul>
             </a-list>
+            <!-- Overskrifter uden dokumenter (alle punkter, kunden kan bede om): foldet sammen, og rådgiveren kan uploade til dem -->
+            <div
+              v-if="unusedGroups.length > 0"
+              id="doc-unused"
+              key="unused"
+              @keydown="onCollapseKeydown"
+            >
+              <a-collapse
+                v-model:active-key="unusedOpen"
+                class="doc-older"
+                ghost
+                :expand-icon="collapseExpandIcon"
+              >
+                <a-collapse-panel
+                  key="unused"
+                  :header="t('Ikke brugt endnu') + ' (' + unusedGroups.length + ')'"
+                >
+                  <div
+                    v-for="g in unusedGroups"
+                    :key="g.key"
+                    class="doc-group-row doc-unused-row"
+                  >
+                    <a-typography-text>{{ t(g.label) }}</a-typography-text>
+                    <DocHeadingUpload
+                      :heading="g.key"
+                      :label="g.label"
+                      @pick="handleFiles"
+                    />
+                  </div>
+                </a-collapse-panel>
+              </a-collapse>
+            </div>
             <!-- Slettede, hentede dokumenter kan gendannes. Mellemrum folder også (a-collapse 3.2.13
                  reagerer kun på Enter) -->
             <div
@@ -569,7 +630,7 @@ useUploadButton(page)
             <a-result
               v-else
               :title="selected.name"
-              :sub-title="t(selected.type) + ' · ' + selected.size"
+              :sub-title="t(selected.type) + ' - ' + selected.size"
             >
               <template #icon>
                 <FileOutlined aria-hidden="true" />
@@ -609,8 +670,23 @@ useUploadButton(page)
   margin-bottom: 12px;
 }
 
-.doc-head {
-  margin-bottom: 16px;
+/* Gruppens overskrift: navnet i tekstfarve og halvfed, antallet gråt ved siden af */
+.doc-group-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+/* Overskriften til venstre og Upload til højre */
+.doc-group-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doc-unused-row {
+  padding: 4px 0;
 }
 
 /* Værktøjslinjen: søgefeltet fylder, handlingerne står til højre og brydes på smalle skærme */

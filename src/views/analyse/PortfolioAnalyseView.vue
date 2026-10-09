@@ -249,6 +249,7 @@ const nameLabel = (r) => r.name + (r.caseId ? ', ' + t('åbn sag') + ' ' + r.cas
       </a-form-item>
       <a-button
         v-if="anyFilter"
+        class="cw-link"
         type="link"
         @click="reset"
       >
@@ -401,6 +402,7 @@ const nameLabel = (r) => r.name + (r.caseId ? ', ' + t('åbn sag') + ' ' + r.cas
                 </a-form-item>
                 <a-form-item>
                   <a-button
+                    class="cw-link"
                     type="link"
                     :aria-label="t('Fjern kriterium') + ': ' + t(metaFor(c.metric).l)"
                     @click="remove(c.id)"
@@ -492,14 +494,14 @@ const nameLabel = (r) => r.name + (r.caseId ? ', ' + t('åbn sag') + ' ' + r.cas
               <a-button
                 type="link"
                 size="small"
-                class="an-name"
+                class="an-name cw-link"
                 :aria-label="nameLabel(r)"
                 @click.stop="openAnalyseRow(r, go)"
               >
                 {{ r.name }}
               </a-button>
               <a-typography-text type="secondary">
-                {{ 'CVR ' + r.cvr + (r.period ? ' · ' + t(r.period) : '') }}
+                {{ 'CVR ' + r.cvr + (r.period ? ' - ' + t(r.period) : '') }}
               </a-typography-text>
             </div>
             <div

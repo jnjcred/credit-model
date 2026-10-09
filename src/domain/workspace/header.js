@@ -2,7 +2,7 @@
 // React. Logikken lå inde i komponenterne i workspace.jsx; her er den løftet ud i navngivne
 // funktioner med de samme linjer (kilden står over hver). Bare globaler (t, DATA, CW) læses via
 // window. Funktioner med parameteren ui får skærmens tilstand som funktioner med de gamle navne
-// (fx ui.setDeclining), så linjerne er de samme som før. JSX er erstattet af data: knapper er
+// (f.eks. ui.setDeclining), så linjerne er de samme som før. JSX er erstattet af data: knapper er
 // { label, onClick, ... }, og ikoner er navnet på ikonet i den gamle ikonfil (I.Layout → 'Layout').
 // Skærmene læser dem i en computed, der følger både sagen og memoet (useMemoStatus.js).
 import { wsDay, wsDot, wsFill, wsMoney, wsPlural, wsSentText } from './format.js';
@@ -17,7 +17,7 @@ import { wsMemoTabNext } from './readiness.js';
 import { wsFirstToReviewSel } from './items.js';
 import { wsPublicDataDate } from './publicSources.js';
 
-// Kom man fra en anden skærm end Mine opgaver (fx Porteføljeanalyse), fører
+// Kom man fra en anden skærm end Mine opgaver (f.eks. Porteføljeanalyse), fører
 // brødkrummen tilbage dertil: sessionStorage 'cw_back' = { route, label }
 // (WorkspaceShell, workspace.jsx L562–563.) wsGoBack fjerner 'cw_back' og går tilbage.
 function wsBackCrumb() {
@@ -191,7 +191,7 @@ function wsStageHero(stage, go, caseId, ui) {
   };
   // Seneste hændelse af en type (til datoen på et færdigt trin)
   const lastAt = (pred) => { const e = CW.activity().filter(pred).slice(-1)[0]; return e ? e.at : null; };
-  const withDay = (text, iso) => (iso ? text + ' · ' + wsDay(iso) : text);
+  const withDay = (text, iso) => (iso ? text + ' - ' + wsDay(iso) : text);
   // Underlinje kun på færdige trin (resultat og dato) og på det aktive trin
   const subOf = (k, state) => {
     if (state === 'declined') return t('Afslået her');
@@ -248,10 +248,10 @@ function wsStageHero(stage, go, caseId, ui) {
       : t("Du har valgt at give afslag på det offentlige grundlag. Du kan genoptage sagen, hvis du har skiftet vurdering.");
     primary = { label: t('Genoptag sag'), onClick: wsReopen };
   } else if (stage === 'review-public') {
-    title = t("Offentlige data er hentet");
+    title = t("Offentligt materiale er hentet");
     body = t("Se tallene under Virksomheden, og vælg om sagen skal fortsætte.");
     primary = { label: t('Anmod om materiale'), arrow: true, onClick: toMaterial };
-    ghost = { id: "ws-hero-skip", label: t('Gå direkte til memo'), onClick: () => setSkipping(true) };
+    ghost = { label: t('Se offentligt materiale'), onClick: () => go && go("workspace:" + caseId + ":financials") };
     ghost2 = { id: "ws-hero-decline", label: t('Giv afslag'), onClick: () => setDeclining(true) };
   } else if (stage === 'ready-skip') {
     title = t("Kundeinput er sprunget over");

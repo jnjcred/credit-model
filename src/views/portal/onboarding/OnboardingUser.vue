@@ -24,6 +24,7 @@ import { CW } from '@/domain/case_state'
 import { DATA } from '@/domain/data'
 import { PORTAL_CONTACT, ncFill, portalRecipient } from '@/domain/new_case_portal'
 import { useCaseVersion } from '@/composables/useCaseVersion'
+import { collapseExpandIcon } from '@/composables/useCollapseKeyboard'
 import PortalContactLine from '@/views/portal/components/PortalContactLine.vue'
 
 const props = defineProps({
@@ -54,6 +55,9 @@ const person = ref((ob0.company && ob0.company.person) || (acc.value && acc.valu
 const coName = ref((ob0.company && ob0.company.name) || co.value.name || '')
 const cvr = ref((ob0.company && ob0.company.cvr) || known.value)
 const accepted = ref(!!ob0.terms)
+// Aftalen med EIFO om at dele regnskabsdata: gives her i registreringen, så virksomheden er forbundet til EIFO tidligt
+const agreed = ref(!!(ob0.agreement && !ob0.agreement.declined))
+const agreeOpen = ref([])
 const marketing = ref(false)
 const tried = ref(false)
 const phase = props.arrive && ob0.company ? 'checking' : null
@@ -88,9 +92,11 @@ function submit (e) {
   if (coErr.value) { CW.focusSoon('#cwp-ob-coname'); return }
   if (cvrErr.value) { CW.focusSoon('#cwp-ob-cvr'); return }
   if (isNew.value && !accepted.value) { CW.focusSoon('#cwp-auth-terms'); return }
+  if (showAgree.value && !agreed.value) { CW.focusSoon('#cwp-ob-agree'); return }
   const now = new Date().toISOString()
   const who = isNew.value ? person.value.trim() : ((acc1 && acc1.name) || rcp.value.name || '')
   const patch = { company: { cvr: digits.value, name: coName.value.trim(), person: who, advisor: false, at: now } }
+  if (showAgree.value) patch.agreement = { at: now }
   if (isNew.value) {
     patch.terms = { at: now, marketing: marketing.value }
     patch.account = Object.assign({}, acc1, { name: who })
@@ -98,7 +104,7 @@ function submit (e) {
   const text = isNew.value
     ? ncFill(t('Kunden accepterede brugsvilkårene og bekræftede virksomheden {company} ({name})'), { company: coName.value.trim(), name: who }) + (marketing.value ? '. ' + t('Ja tak til nyheder fra Crediwire') : '')
     : ncFill(t('Kunden tilføjede virksomheden {company} (CVR {cvr}) til sin Crediwire-bruger'), { company: coName.value.trim(), cvr: digits.value })
-  if (CW.setOnboarding(patch, text) === false) return
+  if (CW.setOnboarding(patch, text + (showAgree.value ? '. ' + t('Kunden accepterede aftalen med EIFO om at dele regnskabsdata') : '')) === false) return
   emit('done')
 }
 
@@ -117,21 +123,23 @@ const who = computed(() => {
   const a = acc.value
   if (branch.value === 'checking') return { title: ncFill(t('Logget ind som {name}'), { name: (a && a.name) || mail.value }), sub: mail.value, canSwitch: false }
   if (branch.value === 'new') return { title: t('Bruger oprettet.'), sub: mail.value, canSwitch: !pv.value }
-  if (branch.value === 'known') return { title: ncFill(t('Logget ind som {name}'), { name: (a && a.name) || mail.value }), sub: [a && a.name, mail.value].filter(Boolean).join(' · '), canSwitch: !pv.value }
+  if (branch.value === 'known') return { title: ncFill(t('Logget ind som {name}'), { name: (a && a.name) || mail.value }), sub: [a && a.name, mail.value].filter(Boolean).join(' - '), canSwitch: !pv.value }
   return null
 })
-// Initialer fra navnet, ellers de to første bogstaver i mailen (fx "SP" for sp@…)
+// Initialer fra navnet, ellers de to første bogstaver i mailen (f.eks. "SP" for sp@…)
 const initials = computed(() => {
   const o = ob.value
   const name = (o.account && o.account.name) || ''
   const mailLocal = ((o.account && o.account.email) || '?').split('@')[0]
   return name ? name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') : mailLocal.slice(0, 2).toUpperCase()
 })
-const coMeta = computed(() => [known.value ? 'CVR ' + known.value : '', co.value.address].filter(Boolean).join(' · '))
+const coMeta = computed(() => [known.value ? 'CVR ' + known.value : '', co.value.address].filter(Boolean).join(' - '))
 const showCoBox = computed(() => branch.value === 'pre' || (branch.value === 'known' && !needCo.value))
 const showCoFields = computed(() => branch.value === 'new' || (branch.value === 'known' && needCo.value))
 const showSubmit = computed(() => !!acc.value && !props.pre && !phase)
-const blocked = computed(() => isNew.value && !accepted.value)
+// Aftalen med EIFO: ny bruger, eller kendt bruger, der tilføjer virksomheden, og som ikke har givet den før
+const showAgree = computed(() => (branch.value === 'new' || (branch.value === 'known' && needCo.value)) && !(ob.value.agreement && !ob.value.agreement.declined))
+const blocked = computed(() => (isNew.value && !accepted.value) || (showAgree.value && !agreed.value))
 </script>
 
 <template>
@@ -171,7 +179,7 @@ const blocked = computed(() => isNew.value && !accepted.value)
               <a-button
                 v-if="who.canSwitch"
                 type="link"
-                class="cwp-linkbtn"
+                class="cwp-linkbtn cw-link"
                 @click="emit('logout')"
               >
                 {{ t('Skift bruger') }}
@@ -307,9 +315,10 @@ const blocked = computed(() => isNew.value && !accepted.value)
           </a-form-item>
         </template>
 
+        <!-- Vilkårene og aftalen med EIFO står lige under hinanden; markedsføring (valgfrit) er sidst -->
         <div
           v-if="branch === 'new'"
-          class="ob-block"
+          :class="['ob-block', { 'ob-block-tight': showAgree }]"
         >
           <div
             data-cust-act="terms"
@@ -320,20 +329,88 @@ const blocked = computed(() => isNew.value && !accepted.value)
               v-model:checked="accepted"
               aria-required="true"
             >
+              <span
+                class="ob-req"
+                aria-hidden="true"
+              >*</span>
               {{ t('Jeg accepterer Crediwires') }}
               <a-button
                 type="link"
                 size="small"
-                class="cwp-linkbtn"
+                class="cwp-linkbtn cw-link"
                 @click="openTerms"
               >
                 {{ t('brugsvilkår') }}
               </a-button>.
             </a-checkbox>
           </div>
+        </div>
+
+        <div
+          v-if="showAgree"
+          :class="['ob-block', { 'ob-block-tight': branch === 'new' }]"
+        >
           <div
             data-cust-act="terms"
-            class="cwp-ob-check ob-check-next"
+            class="cwp-ob-check"
+          >
+            <a-checkbox
+              id="cwp-ob-agree"
+              v-model:checked="agreed"
+              aria-required="true"
+            >
+              <span
+                class="ob-req"
+                aria-hidden="true"
+              >*</span>
+              {{ t('Jeg accepterer aftalen med EIFO om at dele regnskabsdata.') }}
+            </a-checkbox>
+          </div>
+          <a-collapse
+            v-model:active-key="agreeOpen"
+            ghost
+            :expand-icon="collapseExpandIcon"
+          >
+            <a-collapse-panel
+              key="eifo"
+              :header="t('Læs aftalen med EIFO')"
+            >
+              <a-typography>
+                <a-typography-paragraph>
+                  {{ t('Ved at forbinde din virksomhed accepterer du at dele perioderegnskabstal og debitordata med EIFO.') }}
+                </a-typography-paragraph>
+                <a-typography-paragraph>
+                  {{ t('Dataene må opbevares og bruges til at styrke dialogen med jer, afdække finansielle behov og lave løbende kreditvurdering.') }}
+                </a-typography-paragraph>
+                <a-typography-text strong>
+                  {{ t('EIFO får') }}
+                </a-typography-text>
+                <ul>
+                  <li>{{ t('Kontoplan, saldobalance og periodetal') }}</li>
+                  <li>{{ t('Debitordata: hvem der skylder jer penge, og hvor længe') }}</li>
+                </ul>
+                <a-typography-text strong>
+                  {{ t('EIFO får ikke') }}
+                </a-typography-text>
+                <ul>
+                  <li>{{ t('Posteringer og bilag') }}</li>
+                  <li>{{ t('Adgang til jeres netbank og banktransaktioner') }}</li>
+                </ul>
+                <a-typography-paragraph type="secondary">
+                  {{ t('Hvor meget EIFO må se, vælger I selv, når I forbinder jeres regnskabsprogram.') }}
+                </a-typography-paragraph>
+              </a-typography>
+            </a-collapse-panel>
+          </a-collapse>
+        </div>
+
+        <div
+          v-if="branch === 'new'"
+          class="ob-block"
+        >
+          <div
+            data-cust-act="terms"
+            class="cwp-ob-check"
           >
             <a-checkbox v-model:checked="marketing">
               {{ t('Crediwire må sende mig nyheder og tilbud på mail (valgfrit).') }}
@@ -352,13 +429,13 @@ const blocked = computed(() => isNew.value && !accepted.value)
             :disabled="blocked"
             :aria-describedby="blocked ? 'cwp-ob-user-hint' : undefined"
           >
-            {{ t('Fortsæt til datadeling') }}
+            {{ t('Fortsæt') }}
           </a-button>
           <span
             v-if="blocked"
             id="cwp-ob-user-hint"
             class="sr-only"
-          >{{ t('Acceptér brugsvilkårene for at fortsætte.') }}</span>
+          >{{ t('Acceptér brugsvilkårene og aftalen med EIFO for at fortsætte.') }}</span>
         </template>
       </a-form>
     </a-card>
@@ -402,8 +479,14 @@ const blocked = computed(() => isNew.value && !accepted.value)
   text-align: center;
 }
 
-.ob-check-next {
-  margin-top: 8px;
+/* Rød stjerne ved det, der skal accepteres for at fortsætte (ikke markedsføring) */
+.ob-req {
+  margin-right: 2px;
+  color: #ff4d4f;
+}
+
+.ob-block-tight {
+  margin-bottom: 0;
 }
 
 .ob-contact {

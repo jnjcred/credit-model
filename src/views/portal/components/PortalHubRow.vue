@@ -8,10 +8,13 @@
 // og der er ingen handlinger ud over detaljerne.
 //
 // Props: it (punktet), status (punktets status set fra kunden), readOnly, narrow (smal skærm: mærkaten
-//        står under titlen i stedet for til højre).
+//        står under titlen i stedet for til højre), demo (demoknapperne til Regnskabs kilder må vises).
 // Emits: open(id) (åbn punktets side).
 // Krogene fra før er bevaret: data-row på rækken, data-act="answer" og "add-file", cwp-rowbtn,
 // cwp-row-side, cwp-receipt og cwp-row-draft. Kundehandlinger bærer data-cust-act (forhåndsvisningens spærre).
+// Demoknapperne (PortalSourceDemo) står under rækken og detaljerne, aldrig inde i rækkens knap: ved
+// Periodetal (forbind e-conomic eller upload saldobalancen som PDF), budgettet og årsrapporterne. Ikke på
+// en låst sag.
 // Ikke porteret: menuen "⋯" (død: intet åbnede den).
 // Filerne i detaljerne: navnet står som tekst (brydes på smalle skærme) med en "Åbn"-knap ved siden af
 // (før var navnet selv knappen); samme handling.
@@ -19,8 +22,8 @@ import { computed, ref } from 'vue'
 import { RightOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
-import { csAnswersText, csCanUndo, csConfirmUndo, csDraft, csOpenFile, csShortDate, csSourceText } from '@/domain/customer'
-import { PORTAL_CONTACT, downloadFiles, ncFill, portalConsentUntil, portalKind, portalRevoke } from '@/domain/new_case_portal'
+import { csAnswersText, csConfirmUndo, csDraft, csSourceText } from '@/domain/customer'
+import { ncFill, portalKind } from '@/domain/new_case_portal'
 import { useCaseVersion } from '@/composables/useCaseVersion'
 import PortalStatusIcon from './PortalStatusIcon.vue'
 
@@ -29,12 +32,12 @@ const props = defineProps({
   status: { type: String, required: true },
   readOnly: { type: Boolean, default: false },
   narrow: { type: Boolean, default: false },
+  demo: { type: Boolean, default: false },
 })
 const emit = defineEmits(['open'])
 
 const version = useCaseVersion()
-const adv = PORTAL_CONTACT.first
-const receipt = ref(false)
+const adv = 'EIFO'   // kunden skriver til og hører fra EIFO; rådgiverens navn står kun på kontaktkortet
 const kind = computed(() => portalKind(props.it.id))
 // Skrivebeskyttet: det, der ikke er sendt, står som "Ikke sendt"
 const status = computed(() => (props.readOnly && ['pending', 'rejected', 'delegated'].includes(props.status) ? 'closed' : props.status))
@@ -80,7 +83,6 @@ const badge = computed(() => (status.value === 'approved' ? { status: 'success',
   : status.value === 'received' || status.value === 'noted' ? { status: 'warning', text: t('Afventer godkendelse af EIFO') }
   : null))
 const optional = computed(() => props.it.tag === 'Valgfri' && (status.value === 'pending' || status.value === 'closed'))
-const editLabel = computed(() => (status.value === 'noted' ? t('Send en fil i stedet') : kind.value === 'trade' ? t('Ret svaret') : kind.value === 'connect' ? t('Se forbindelsen eller upload') : t('Tilføj eller fjern filer')))
 const side = computed(() => !clickable.value && (status.value === 'rejected' || status.value === 'delegated' || delivered.value))
 const label = computed(() => t(props.it.label))
 </script>
@@ -117,7 +119,10 @@ const label = computed(() => t(props.it.label))
           >
             {{ t('Valgfri') }}
           </a-typography-text>
-          <a-typography-text type="secondary">
+          <a-typography-text
+            type="secondary"
+            class="hub-chevron"
+          >
             <RightOutlined aria-hidden="true" />
           </a-typography-text>
         </a-button>
@@ -188,118 +193,21 @@ const label = computed(() => t(props.it.label))
             :text="badge.text"
             aria-hidden="true"
           />
+          <!-- Efter afsendelse går ">" ind på punktets side, med den grønne bekræftelse -->
           <a-button
             v-if="delivered"
+            class="hub-open"
             type="text"
-            :aria-expanded="receipt"
-            :title="receipt ? t('Skjul detaljerne') : t('Vis detaljerne')"
-            :aria-label="ncFill(receipt ? t('Skjul detaljerne for {item}') : t('Vis detaljerne for {item}'), { item: label })"
-            @click="receipt = !receipt"
+            size="small"
+            :title="t('Åbn')"
+            :aria-label="t('Åbn') + ' ' + label"
+            @click="emit('open', it.id)"
           >
             <template #icon>
-              <RightOutlined
-                :rotate="receipt ? 90 : 0"
-                aria-hidden="true"
-              />
+              <RightOutlined aria-hidden="true" />
             </template>
           </a-button>
         </div>
-      </div>
-      <div
-        v-if="receipt && s"
-        class="cwp-receipt"
-        role="region"
-        tabindex="-1"
-        :aria-label="ncFill(t('Detaljer for {item}'), { item: label })"
-      >
-        <div
-          v-for="f in row.files"
-          :key="f.id"
-          class="hub-file"
-        >
-          <span class="hub-file-name">{{ f.name }}</span>
-          <a-button
-            type="link"
-            class="cwp-linkbtn"
-            :aria-label="t('Åbn') + ' ' + f.name"
-            @click="csOpenFile(f)"
-          >
-            {{ t('Åbn') }}
-          </a-button>
-          <div>
-            <a-typography-text type="secondary">
-              {{ (f.by || s.by) === 'rådgiver' ? ncFill(t('Tilføjet af {adv}'), { adv }) : t('Uploadet af jer') }} {{ csShortDate(f.at) }}
-            </a-typography-text>
-          </div>
-        </div>
-        <div v-if="row.answers">
-          <a-typography-text type="secondary">
-            {{ t('Jeres svar:') }}
-          </a-typography-text> {{ row.answers }}
-        </div>
-        <a-typography-text
-          v-if="!row.files.length && !row.answers && status !== 'noted'"
-          type="secondary"
-        >
-          {{ t('Ingen filer') }}
-        </a-typography-text>
-        <div v-if="s.note && !row.sourceText">
-          <a-typography-text type="secondary">
-            {{ t('Jeres bemærkning:') }}
-          </a-typography-text> {{ s.note }}
-        </div>
-        <div v-if="answered && s.question">
-          <a-typography-text type="secondary">
-            {{ ncFill(t('{adv} spurgte:'), { adv }) }}
-          </a-typography-text> {{ s.question }}
-        </div>
-        <div v-if="answered">
-          <a-typography-text type="secondary">
-            {{ ncFill(t('Jeres svar til {adv}:'), { adv }) }}
-          </a-typography-text> {{ s.answer }}
-        </div>
-        <div v-if="row.sourceText && row.consent">
-          <a-typography-text type="secondary">
-            {{ row.sourceText }} · {{ portalConsentUntil(row.consent) }}
-          </a-typography-text>
-        </div>
-        <a-space
-          wrap
-          :size="4"
-          class="hub-receipt-acts"
-        >
-          <a-button
-            v-if="status !== 'approved' && !readOnly"
-            type="text"
-            :data-act="status === 'received' && kind !== 'trade' ? 'add-file' : undefined"
-            @click="emit('open', it.id)"
-          >
-            {{ editLabel }}
-          </a-button>
-          <a-button
-            v-if="row.files.length > 0"
-            type="text"
-            @click="downloadFiles(row.files)"
-          >
-            {{ t('Download') }}
-          </a-button>
-          <a-button
-            v-if="readOnly && kind === 'connect' && row.consent"
-            type="text"
-            data-cust-act="consent"
-            @click="portalRevoke(row.consent)"
-          >
-            {{ t('Træk adgangen tilbage') }}
-          </a-button>
-          <a-button
-            v-if="csCanUndo(s) && !readOnly"
-            type="text"
-            data-cust-act="undo"
-            @click="csConfirmUndo(it.id)"
-          >
-            {{ status === 'noted' ? t('Fortryd bemærkning') : t('Fortryd') }}
-          </a-button>
-        </a-space>
       </div>
     </div>
   </a-list-item>
@@ -333,6 +241,21 @@ const label = computed(() => t(props.it.label))
   padding: 0;
   white-space: normal;
   text-align: left;
+}
+
+/* Pilen står midt for rækken, ikke ud for titlen */
+.hub-chevron {
+  align-self: center;
+}
+
+/* Pilen på en afleveret række er lige så lille og dæmpet som den på de andre rækker */
+.hub-open {
+  padding: 0 4px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.hub-open .anticon {
+  font-size: 12px;
 }
 
 .hub-body {

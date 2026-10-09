@@ -1,7 +1,7 @@
 <script setup>
 // Ny sag-guiden. Åbnes fra knappen Ny sag (useAppShell.newCaseOpen) eller fra andre skærme med
 // window.dispatchEvent(new CustomEvent('cw-new-case', { detail: { name, cvr, type?, amount? } })),
-// fx en række uden sag i Porteføljeanalyse. detail sendes til guiden som prefill.
+// f.eks. en række uden sag i Porteføljeanalyse. detail sendes til guiden som prefill.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'

@@ -10,12 +10,12 @@
 //    Navnet kopieres til fanelisten, så skærmlæsere hører det som i prototypen.
 //  - Panelerne er ikke selv Tab-stop, som i prototypen: antdv giver det aktive panel tabindex="0",
 //    så det blev et ekstra Tab-stop uden synligt fokus (og et tomt et, hvor fanernes indhold står
-//    uden for a-tabs, fx filtre og visninger). Tab går fra fanen videre til panelets indhold.
+//    uden for a-tabs, f.eks. filtre og visninger). Tab går fra fanen videre til panelets indhold.
 //  - Kun den valgte fane er et Tab-stop (roving tabindex, som prototypens faner); piletasterne
 //    flytter mellem fanerne. antdv gør ellers hver fane til et Tab-stop. Er ingen fane valgt (fx
 //    under en søgning i Mine opgaver), er den første fane Tab-stoppet, som før.
 // Rettelserne køres, når komponenten tegnes, og igen, når antdv selv ændrer fanerne (et skift af fane,
-// nye paneler): fanerne kan ligge i en slot, som en anden komponent tegner (fx memoets fejlgrænse), og
+// nye paneler): fanerne kan ligge i en slot, som en anden komponent tegner (f.eks. memoets fejlgrænse), og
 // så opdateres komponenten, der bruger hjælperen, ikke selv.
 import { onBeforeUnmount, onMounted, onUpdated } from 'vue'
 

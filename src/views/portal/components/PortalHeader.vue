@@ -1,7 +1,7 @@
 <script setup>
 // Kundeportalens sidehoved (new_case_portal.jsx: CustomerPortal L1245–1258): Crediwires mærke,
 // "Materiale til EIFO" og virksomheden. Når kunden er logget ind (eller i rådgiverens forhåndsvisning),
-// står sagsnummer, produkt og beløb (beløbsnoten i tooltip) og den ansvarlige rådgiver. Kunden har
+// står sagsnummer, produkt og beløb (beløbsnoten i tooltip). Kunden har
 // "Log ud" (når logget ind) og sprogvælgeren; forhåndsvisningen har ingen af dem.
 // Kun afsender og firmanavn; ingen "sikker"-mærker (K9).
 //
@@ -61,7 +61,7 @@ const langScreens = Grid.useBreakpoint()
               <span
                 v-if="i > 0"
                 aria-hidden="true"
-              >{{ ' · ' }}</span>
+              >{{ ' - ' }}</span>
               <a-tooltip
                 v-if="x.title"
                 :title="x.title"

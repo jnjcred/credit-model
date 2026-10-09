@@ -20,7 +20,7 @@ const steps = computed(() => {
   const mat = by.materiale, afg = by.afgorelse
   const vurdState = mat.state !== 'done' ? 'upcoming' : afg.state === 'done' ? 'done' : 'active'
   return [
-    { k: 'mat', label: t('Materiale'), state: mat.state, sub: mat.state === 'done' ? t('Afsluttet') : mat.state === 'active' ? mat.sub : '' },
+    { k: 'mat', label: t('Materialeindhentning'), state: mat.state, sub: mat.state === 'done' ? t('Afsluttet') : mat.state === 'active' ? mat.sub : '' },
     { k: 'vurd', label: t('EIFO vurderer sagen'), state: vurdState, sub: vurdState === 'active' ? t('I gang') : vurdState === 'done' ? t('Afsluttet') : '' },
     { k: 'afg', label: t('Afgørelse'), state: afg.state, sub: afg.state === 'done' ? afg.sub : '' },
   ]

@@ -8,7 +8,7 @@ import { computed } from 'vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { csOpenFile, csRemoveOwnFile, csShortDate } from '@/domain/customer'
-import { PORTAL_CONTACT, ncFill } from '@/domain/new_case_portal'
+import { ncFill } from '@/domain/new_case_portal'
 import { useCaseVersion } from '@/composables/useCaseVersion'
 
 const props = defineProps({
@@ -16,7 +16,7 @@ const props = defineProps({
   files: { type: Array, required: true },
 })
 
-const adv = PORTAL_CONTACT.first
+const adv = 'EIFO'   // kunden skriver til og hører fra EIFO; rådgiverens navn står kun på kontaktkortet
 const version = useCaseVersion()
 // Hvilke filer kunden selv kan fjerne, følger sagen
 const rows = computed(() => {
@@ -45,10 +45,10 @@ const rows = computed(() => {
             {{ r.f.name }}
           </div>
           <a-typography-text type="secondary">
-            {{ r.f.sizeLabel }} ·
+            {{ r.f.sizeLabel }} -
             <a-tooltip :title="CW.fmtWhen(r.f.at)">
               <span>{{ csShortDate(r.f.at) }}</span>
-            </a-tooltip>{{ !r.mine ? ' · ' + ncFill(t('tilføjet af {adv}'), { adv }) : '' }}
+            </a-tooltip>{{ !r.mine ? ' - ' + ncFill(t('tilføjet af {adv}'), { adv }) : '' }}
           </a-typography-text>
         </div>
         <template #actions>

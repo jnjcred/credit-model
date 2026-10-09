@@ -191,7 +191,7 @@ const wrapProps = computed(() => ({ 'aria-modal': 'true', 'aria-labelledby': ste
             {{ login || '-' }}
           </a-descriptions-item>
           <a-descriptions-item :label="t('Virksomhed')">
-            {{ company.name }}{{ company.cvr ? ' · CVR ' + company.cvr : '' }}
+            {{ company.name }}{{ company.cvr ? ' - CVR ' + company.cvr : '' }}
           </a-descriptions-item>
           <a-descriptions-item
             v-if="src.agreement"

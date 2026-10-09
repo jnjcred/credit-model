@@ -357,7 +357,7 @@ watch([showOrigin, focusedKey, memoVersion], (_n, _o, onCleanup) => {
       const base = o === 'edited' ? t('Udkast, rettet') : o === 'chat' ? t('AI, chat') : o === 'seed' ? t('Udkast') : t('AI-udkast')
       const sec = el.closest('.memo-sec')
       const ok = sec && sec.getAttribute('data-reviewed') === '1' && !el.closest('.tpl-draft')
-      el.setAttribute('data-ai-label', ok ? base + ' · ' + t('gennemgået') : base)
+      el.setAttribute('data-ai-label', ok ? base + ' - ' + t('gennemgået') : base)
     })
   }, 60)
   onCleanup(() => clearTimeout(timer))

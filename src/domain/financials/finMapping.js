@@ -2,7 +2,7 @@
 // src/domain/mapping.js). Flyttet ordret fra src/financials.jsx ved migrationen til Vue; kun
 // import- og export-linjerne er nye. Lytteren på 'cw-mapping-changed' og det første kald af
 // finSyncMapping() står i index.js, i samme rækkefølge som før.
-// FIN_MAPPED er en levende binding (let): læs den, hvor den bruges (fx i en computed), og gem
+// FIN_MAPPED er en levende binding (let): læs den, hvor den bruges (f.eks. i en computed), og gem
 // den ikke i en variabel ved opstart.
 import { FIN_LAYOUT, FIN_ROW_BY_LABEL } from './finData.js';
 
@@ -16,12 +16,13 @@ import { FIN_LAYOUT, FIN_ROW_BY_LABEL } from './finData.js';
    hentes, står periodetallene, som de er i ANNUAL_REPORT.
    ──────────────────────────────────────────────────────────────────────── */
 let FIN_MAPPED = false;
-function finSyncMapping() {
-  const M = window.CW_MAP;
-  if (!M || !M.ready()) return false;
-  const res = M.compute();
-  const r6 = (v) => Math.round(v * 1e6) / 1e6;
-  const set = (label, vals) => { const r = FIN_ROW_BY_LABEL[label]; if (r && r.q) vals.forEach((v, i) => { r.q[i] = r6(v); }); };
+
+/* Regnskab v5: omregningen fra de mappede konti til tabellens rækker, trukket ud af
+   finSyncMapping (linjerne er de samme), så den også kan regne måned for måned.
+   res = CW_MAP.compute(…) med perioderne i tidsorden fra regnskabsårets start (egenkapitalen
+   er saldoen plus årets resultat til og med perioden). Giver én værdi pr. periode:
+   rows[ANNUAL_REPORT-række], entries[visningsrække uden ref] og children['række / detalje']. */
+function finMappedRows(res) {
   const E = (label) => res.periods.map(p => p.entry[label] || 0);
   const add = (...arrs) => arrs[0].map((_, i) => arrs.reduce((s, a) => s + a[i], 0));
   const oms = E('Omsætning i alt'), vare = E('Vareforbrug/Produktionsomkostninger');
@@ -34,20 +35,38 @@ function finSyncMapping() {
   const anl = add(E('Immaterielle anlægsaktiver i alt'), E('Materielle anlægsaktiver i alt'), E('Finansielle anlægsaktiver i alt'));
   const oak = add(E('Varebeholdninger i alt'), E('Tilgodehavender i alt'), E('Værdipapirer'), E('Likvide beholdninger'));
   const lang = E('Langfristet gæld i alt'), kort = E('Kortfristet gæld i alt');
-  set('Nettoomsætning', oms); set('Vareforbrug', vare); set('Bruttofortjeneste', bf);
-  set('Personaleomkostninger', E('Personaleomkostninger')); set('Andre eksterne omkostninger', E('Andre eksterne omkostninger'));
-  set('EBITDA', ebitda); set('Afskrivninger', E('Årets af- og nedskrivninger i alt')); set('Resultat før finansielle poster', ebit);
-  set('Finansielle omkostninger', E('Netto finansielle poster')); set('Årets resultat', result);
-  set('Anlægsaktiver', anl); set('Omsætningsaktiver', oak); set('Likvide beholdninger', E('Likvide beholdninger'));
-  set('Aktiver i alt', add(anl, oak)); set('Egenkapital', add(E('Egenkapital'), ytdResult));
-  set('Langfristet gæld', lang); set('Kortfristet gæld', kort); set('Gæld i alt', add(lang, kort));
+  const rows = {
+    'Nettoomsætning': oms, 'Vareforbrug': vare, 'Bruttofortjeneste': bf,
+    'Personaleomkostninger': E('Personaleomkostninger'), 'Andre eksterne omkostninger': E('Andre eksterne omkostninger'),
+    'EBITDA': ebitda, 'Afskrivninger': E('Årets af- og nedskrivninger i alt'), 'Resultat før finansielle poster': ebit,
+    'Finansielle omkostninger': E('Netto finansielle poster'), 'Årets resultat': result,
+    'Anlægsaktiver': anl, 'Omsætningsaktiver': oak, 'Likvide beholdninger': E('Likvide beholdninger'),
+    'Aktiver i alt': add(anl, oak), 'Egenkapital': add(E('Egenkapital'), ytdResult),
+    'Langfristet gæld': lang, 'Kortfristet gæld': kort, 'Gæld i alt': add(lang, kort),
+  };
+  const entries = {}, children = {};
   FIN_LAYOUT.forEach(g => g.entries.forEach(e => {
-    if (!e.ref && !e.sum && !e.derive) { e.qvals = E(e.label).map(r6); e.qflow = g.label === 'Resultatopgørelse'; }
-    (e.children || []).forEach(c => { c.qvals = res.periods.map(p => r6(p.child[e.label + ' / ' + c.label] || 0)); });
+    if (!e.ref && !e.sum && !e.derive) entries[e.label] = E(e.label);
+    (e.children || []).forEach(c => { const k = e.label + ' / ' + c.label; children[k] = res.periods.map(p => p.child[k] || 0); });
+  }));
+  return { rows, entries, children };
+}
+
+function finSyncMapping() {
+  const M = window.CW_MAP;
+  if (!M || !M.ready()) return false;
+  const res = M.compute();
+  const r6 = (v) => Math.round(v * 1e6) / 1e6;
+  const set = (label, vals) => { const r = FIN_ROW_BY_LABEL[label]; if (r && r.q) vals.forEach((v, i) => { r.q[i] = r6(v); }); };
+  const m = finMappedRows(res);
+  Object.keys(m.rows).forEach(label => set(label, m.rows[label]));
+  FIN_LAYOUT.forEach(g => g.entries.forEach(e => {
+    if (!e.ref && !e.sum && !e.derive) { e.qvals = m.entries[e.label].map(r6); e.qflow = g.label === 'Resultatopgørelse'; }
+    (e.children || []).forEach(c => { c.qvals = m.children[e.label + ' / ' + c.label].map(r6); });
   }));
   FIN_MAPPED = true;
   return true;
 }
 
 // Modul-eksport
-export { FIN_MAPPED, finSyncMapping };
+export { FIN_MAPPED, finMappedRows, finSyncMapping };

@@ -15,9 +15,15 @@ import { useCaseVersion } from '@/composables/useCaseVersion'
 
 const props = defineProps({
   onOpenFlow: { type: Function, default: null },
+  // Kundeflow: boksen står på Oversigt, når kunden endnu ikke er nået dertil
+  flow: { type: Boolean, default: false },
 })
+// request: "Anmod om materiale", når anmodningen ikke er sendt endnu (rådgiveren lukker siden og vælger materiale)
+const emit = defineEmits(['request'])
 
 const version = useCaseVersion()
+// Anmodningen er ikke sendt endnu: siden er kun et eksempel, og rådgiveren opfordres til at anmode om materiale
+const noReq = computed(() => { version.value; return !CW.request() })
 const st = computed(() => {
   version.value
   const ob = CW.onboarding()
@@ -42,7 +48,7 @@ function resend () {
 
 <template>
   <a-alert
-    v-if="st"
+    v-if="noReq"
     class="cwp-pvob"
     type="warning"
     show-icon
@@ -54,7 +60,34 @@ function resend () {
         id="cwp-pvob-h"
         role="heading"
         aria-level="2"
-      >{{ !st.ob.account ? t('Kunden er ikke startet endnu') : t('Kunden er i gang med opstarten') }}</span>
+      >{{ t('Du har ikke anmodet om materiale endnu') }}</span>
+    </template>
+    <template #description>
+      <div>{{ t('Kunden ser først denne siden, når du har anmodet om materiale.') }}</div>
+      <a-space class="cwp-pvob-acts">
+        <a-button
+          type="primary"
+          @click="emit('request')"
+        >
+          {{ t('Anmod om materiale') }}
+        </a-button>
+      </a-space>
+    </template>
+  </a-alert>
+  <a-alert
+    v-else-if="st"
+    class="cwp-pvob"
+    type="warning"
+    show-icon
+    role="region"
+    aria-labelledby="cwp-pvob-h"
+  >
+    <template #message>
+      <span
+        id="cwp-pvob-h"
+        role="heading"
+        aria-level="2"
+      >{{ props.flow ? t('Kunden har ikke set denne side endnu') : !st.ob.account ? t('Kunden er ikke startet endnu') : t('Kunden er i gang med opstarten') }}</span>
     </template>
     <template #description>
       <div>{{ ncFill(t('Står ved {step}'), { step: st.step.charAt(0).toLowerCase() + st.step.slice(1) }) }}</div>
@@ -64,7 +97,8 @@ function resend () {
       >
         <!-- Kundeflow på det trin, kunden står på: det, kunden ser lige nu -->
         <a-button
-          v-if="onOpenFlow"
+          v-if="onOpenFlow && !props.flow"
+          class="cw-link"
           type="link"
           @click="props.onOpenFlow(st.current)"
         >

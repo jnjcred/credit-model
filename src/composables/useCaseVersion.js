@@ -21,7 +21,7 @@ export function useCaseVersion () {
   return readonly(version)
 }
 
-/** En værdi udledt af sagstilstanden, fx useCase(() => CW.progress()). */
+/** En værdi udledt af sagstilstanden, f.eks. useCase(() => CW.progress()). */
 export function useCase (getter) {
   const v = useCaseVersion()
   return computed(() => {

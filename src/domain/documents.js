@@ -45,8 +45,50 @@ function docCatKey(d) {
     if (c) return c.key;
     if (it) return 'other';
   }
+  // En fil uden punkt kan have et emne, kunden valgte ved upload
+  if (d.cat) {
+    const k = DOC_CATS.find(x => x.label === d.cat);
+    return k ? k.key : 'other';
+  }
   const c = DOC_CATS.find(x => x.types.includes(d.type));
   return c ? c.key : 'other';
+}
+
+/* Overskrifterne i Dokumenter: én pr. punkt, rådgiveren kan bede kunden om (kataloget i case_state.js), så en fil
+   står under det, kunden præcist kan sende. Derefter sagens egne grupper. Overskrifter uden dokumenter foldes
+   sammen nederst i fanen ("Ikke brugt endnu"), og rådgiveren kan uploade til dem alle. */
+const DOC_FIXED_HEADINGS = [
+  { key: 'case', label: 'Ansøgning og rating', types: ['Ansøgning', 'Ratingberegning'] },
+  { key: 'export', label: 'Eksport fra Crediwire', types: ['Crediwire-eksport'] },
+  { key: 'other', label: 'Øvrigt', types: [] },
+];
+function docCatalogItems() { return CW.allItems().filter(it => it.tier !== 'year' && !it.custom); }
+function docHeadings() {
+  return docCatalogItems().map(it => ({ key: it.id, label: it.label, itemId: it.id })).concat(DOC_FIXED_HEADINGS.map(h => ({ key: h.key, label: h.label })));
+}
+// Navne, der peger på et bestemt punkt, selvom typen er mere generel
+const DOC_NAME_HINTS = [[/ejeraftale/i, 'm-ownership'], [/vedt(æ|ae)gt/i, 'm-pub-cvr'], [/ejerbog/i, 'm-ejerbog']];
+function docHeadingKey(d) {
+  const items = docCatalogItems();
+  const has = (k) => items.some(it => it.id === k) || DOC_FIXED_HEADINGS.some(h => h.key === k);
+  // 1. Knyttet til et punkt (af kunden eller rådgiveren), eller lagt under en overskrift af rådgiveren
+  if (d.itemId) {
+    const k = /^m-annual-/.test(d.itemId) ? 'm-annual' : d.itemId;
+    if (has(k)) return k;
+    return 'other';
+  }
+  if (d.heading && has(d.heading)) return d.heading;
+  // En fil uden punkt, hvor kunden valgte et emne ved upload, står under Øvrigt
+  if (d.cat) return 'other';
+  // 2. Sagens egne dokumenter: ansøgning, rating og eksporter, derefter navn og type
+  const fixed = DOC_FIXED_HEADINGS.find(h => h.types.includes(d.type));
+  if (fixed) return fixed.key;
+  const hint = DOC_NAME_HINTS.find(([re]) => re.test(d.name || ''));
+  if (hint && has(hint[1])) return hint[1];
+  const byType = items.find(it => it.docType && it.docType === d.type && (!it.docMatch || String(d.name).toLowerCase().indexOf(it.docMatch) >= 0));
+  if (byType) return byType.id;
+  const byItemType = Object.keys(DOC_TYPE_BY_ITEM).find(id => DOC_TYPE_BY_ITEM[id] === d.type && has(id));
+  return byItemType || 'other';
 }
 
 // Dokumenttype ud fra det anmodede punkt, ellers ud fra filnavnet. Typen hører
@@ -55,7 +97,7 @@ const DOC_TYPE_BY_ITEM = {
   'm-annual': 'Årsrapport', 'm-interim': 'Periodetal', 'm-budget': 'Budget', 'm-pitch': 'Præsentation',
   'm-ejerbog': 'Selskab', 'm-loans': 'Låneaftale', 'm-security': 'Sikkerhed', 'm-trade': 'Salg', 'm-ownership': 'Selskab',
   'm-fx': 'Valuta', 'm-orderbook': 'Kontrakt',
-  'm-assumptions': 'Budget', 'm-lowcase': 'Budget', 'm-group': 'Årsrapport', 'm-protocol': 'Årsrapport', 'm-tech': 'Nøgletal',
+  'm-lowcase': 'Budget', 'm-group': 'Årsrapport', 'm-protocol': 'Årsrapport', 'm-tech': 'Nøgletal',
   'm-agri': 'Nøgletal', 'm-capital': 'Selskab', 'm-bizplan': 'Præsentation',
   'm-pub-cvr': 'Selskab', 'm-pub-market': 'Marked', 'm-pub-product': 'Marked',
 };
@@ -93,6 +135,8 @@ function docFromUpload(f) {
     sourceLabel: f.by === 'rådgiver' ? 'Uploadet af rådgiver' : 'Kundeupload',
     by: f.by, mime: f.type || '', at: f.at,
     itemId: f.itemId || null, itemLabel: f.itemLabel || '', itemStatus: f.itemStatus || null,
+    cat: f.cat || null,
+    heading: f.heading || null,
   };
 }
 const docKey = (d) => (d ? (d.fileId ? 'u:' + d.fileId : 'd:' + d.name) : '');
@@ -210,7 +254,7 @@ Object.assign(window, { docFromUpload, docCanGet, docGet, docKey, docDay, docPag
 
 // Modul-eksport til Vue-komponenterne (src/views/documents, memoets Copilot-side)
 export {
-  DOC_PREVIEW, docFill, DOC_CATS, docCatKey, DOC_TYPE_BY_ITEM, docTypeForItem, inferDocType, DOC_ITEM_STATUS,
+  DOC_PREVIEW, docFill, DOC_CATS, docCatKey, docHeadings, docHeadingKey, DOC_TYPE_BY_ITEM, docTypeForItem, inferDocType, DOC_ITEM_STATUS,
   docFromUpload, docKey, docWhen, docPages, DOC_DA_KEEP, DOC_DA_STEMS, docDaWord, docDa, docBlocks,
   docDay, docCanGet, docGet, findCaseDoc, docRefLabel, docMetaParts,
 };

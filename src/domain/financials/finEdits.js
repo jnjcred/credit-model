@@ -1,10 +1,11 @@
-// Fanen Virksomheden: rådgiverens rettelser og kommentarer til tallene i regnskabstabellen, og
-// hvad kunden har leveret til 2026 og 2027 (finDataState). Flyttet ordret fra src/financials.jsx
-// ved migrationen til Vue; kun import- og export-linjerne og kommentaren, der begynder med
-// "Migration:", er nye. Tilstanden ligger i localStorage (kabul:fin-edits:nordhavn og
+// Fanen Virksomheden: rådgiverens rettelser og kommentarer til tallene i regnskabstabellen.
+// Flyttet ordret fra src/financials.jsx ved migrationen til Vue; kun import- og export-linjerne og
+// kommentaren, der begynder med "Migration:", er nye. Regnskab v5 (8. oktober 2026) har tilføjet
+// kolonnen ytd (den uploadede saldobalances periode) og mask (årene med kun offentlig årsrapport,
+// finMaskedPost). Tilstanden ligger i localStorage (kabul:fin-edits:nordhavn og
 // kabul:fin-notes:nordhavn); hver ændring kalder CW.bump() ('cw-case-changed').
-import { FIN_ANNUAL_YEARS, FIN_ACTUAL_Q, FIN_BUDGET_SEP, FIN_BUDGET_Q, ANNUAL_REPORT, FIN_LAYOUT, FIN_ROW_BY_LABEL } from './finData.js';
-import { finCellGet, finCellSet } from './finCalc.js';
+import { FIN_ANNUAL_YEARS, FIN_ACTUAL_Q, FIN_BUDGET_SEP, FIN_BUDGET_Q, ANNUAL_REPORT, FIN_LAYOUT, FIN_ROW_BY_LABEL, FIN_PUBLIC_HIDDEN } from './finData.js';
+import { finCellGet, finCellSet, FIN_BUDGET_YEARS } from './finCalc.js';
 import { FIN_MAPPED } from './finMapping.js';
 import { finFill, finLogNum } from './finFormat.js';
 
@@ -24,10 +25,18 @@ const FIN_EDIT_COLS = [
     name: () => y, source: () => t('Årsrapport') + ' ' + y })),
   ...FIN_ACTUAL_Q.map((p, i) => ({ key: 'q' + i, kind: 'q', idx: i, budget: false,
     name: () => t(p.label) + ' ' + p.year, source: () => (FIN_MAPPED ? t('Saldobalance fra e-conomic') : t('Periodetal')) })),
+  // Regnskab v5: den uploadede saldobalances periode, januar-august 2026 (læst af AI). Står efter
+  // kvartalerne, så den bygger på dem, når rettelserne lægges ind (finApplyEdits).
+  { key: 'ytd', kind: 'ytd', budget: false,
+    name: () => t('Periodetal') + ' ' + t('jan-aug') + ' ' + FIN_ACTUAL_Q[0].year, source: () => t('Saldobalance, upload') },
   { key: 'bs', kind: 'bs', budget: true,
     name: () => t(FIN_BUDGET_SEP.label) + ' ' + FIN_BUDGET_SEP.year + ' (' + t('budget') + ')', source: () => t('Kundens budget') },
   ...FIN_BUDGET_Q.map((p, i) => ({ key: 'b' + i, kind: 'b', idx: i, budget: true,
     name: () => p.label + ' ' + p.year + ' (' + t('budget') + ')', source: () => t('Kundens budget') })),
+  // Regnskab v5 (9. oktober): budgettet for hele regnskabsår (Excel-skabelonen). Står efter
+  // kvartalerne, så det bygger på dem (finCellGet, kind 'by')
+  ...FIN_BUDGET_YEARS.map((y, i) => ({ key: 'by' + i, kind: 'by', idx: i, budget: true, year: y,
+    name: () => t('Budget') + ' ' + y, source: () => t('Kundens budget') })),
 ];
 const FIN_EDIT_COL = {};
 FIN_EDIT_COLS.forEach((c, i) => { FIN_EDIT_COL[c.key] = Object.assign({ order: i }, c); });
@@ -46,12 +55,28 @@ FIN_LAYOUT.forEach(g => g.entries.forEach(e => {
     FIN_POST_ORDER.push(cref);
   });
 }));
+// Regnskab v5 (9. oktober): poster, der kun kan rettes i budgettets hele år (Excel-skabelonen). I
+// tabellen er de summer af detaljer, der kun findes i årsrapporterne; i budgettet er de selve tallet.
+const FIN_BUDGET_ONLY = ['Anlægsaktiver', 'Omsætningsaktiver'];
+FIN_BUDGET_ONLY.forEach(ref => { FIN_POSTS[ref] = { ref, label: ref, raw: ref, budgetOnly: true }; });
+
+/* Regnskab v5: mask = { years: [bool pr. år i FIN_ANNUAL_YEARS] }; true = der er kun den offentlige
+   årsrapport for året, så posterne i FIN_PUBLIC_HIDDEN har intet tal i årskolonnen. Uden mask
+   (eksporter, memo, ældre kald) er alt som før. */
+function finMaskedPost(p, col, mask) {
+  if (!mask || !mask.years || !p || !col || col.kind !== 'annual' || !mask.years[col.idx]) return false;
+  if (p.raw) return FIN_PUBLIC_HIDDEN.rows.includes(p.raw);
+  if (p.parent) return FIN_PUBLIC_HIDDEN.childrenOf.includes(p.entry.label);
+  return FIN_PUBLIC_HIDDEN.entries.includes(p.label);
+}
 
 // Det oprindelige tal (fra årsrapport, periodetal eller kundens budget), eller null
 // hvis cellen ikke har et tal og derfor ikke kan rettes
-function finOriginal(rowRef, colKey) {
+function finOriginal(rowRef, colKey, mask) {
   const p = FIN_POSTS[rowRef], col = FIN_EDIT_COL[colKey];
   if (!p || !col) return null;
+  if (p.budgetOnly && col.kind !== 'by') return null;
+  if (finMaskedPost(p, col, mask)) return null;
   if (p.raw) return finCellGet(FIN_ROW_BY_LABEL[p.raw], col);
   if (col.kind !== 'annual') return null;
   const vals = p.child ? p.child.vals : p.entry.vals;
@@ -61,13 +86,14 @@ function finOriginal(rowRef, colKey) {
 // Det tal, en rettelse står i stedet for, som kilden siger nu. Efter en ommapning
 // kan det være et andet end det, der stod, da rettelsen blev lavet (x.original).
 // Omsætningen må mangle i en årsrapport (små virksomheder må udelade den). Så kan
-// rådgiveren indtaste den, fx fra en intern årsrapport. Summerne (bruttofortjeneste
+// rådgiveren indtaste den, f.eks. fra en intern årsrapport. Summerne (bruttofortjeneste
 // osv.) står som i årsrapporten.
 function finFillable(rowRef, colKey) {
   const col = FIN_EDIT_COL[colKey];
-  return !!col && col.kind === 'annual' && rowRef === 'Nettoomsætning';
+  // Selve omsætningen kan ikke tastes (den er summen af sine detaljer), men detaljerne kan, når årsrapporten ikke viser dem
+  return !!col && col.kind === 'annual' && typeof rowRef === 'string' && rowRef.indexOf('Nettoomsætning / ') === 0;
 }
-function finOrigOf(x) { const o = finOriginal(x.rowRef, x.colKey); return o != null ? o : x.original; }
+function finOrigOf(x, mask) { const o = finOriginal(x.rowRef, x.colKey, mask); return o != null ? o : x.original; }
 
 // Summerne bag posterne. En rettelse lægges som en ændring oven i den oprindelige
 // sum, så kolonner uden rettelser står præcis som i kilderne. Rækkefølgen er vigtig.
@@ -83,8 +109,10 @@ const FIN_EDIT_SUMS = [
 ];
 
 /* Lægger rettelserne ind i kopier af ANNUAL_REPORT og FIN_LAYOUT. Detaljelinjer
-   flytter deres forælder; en rettet forælder vinder over sine detaljer. */
-function finApplyEdits(edits) {
+   flytter deres forælder; en rettet forælder vinder over sine detaljer.
+   Regnskab v5: mask (se finMaskedPost) tømmer først de poster, den offentlige årsrapport ikke
+   viser, i årene uden intern årsrapport. En indtastet omsætning står så alene (finFillable). */
+function finApplyEdits(edits, mask) {
   const rows = ANNUAL_REPORT.groups.flatMap(g => g.rows).map(r => ({ ...r,
     values: r.values && r.values.slice(), q: r.q && r.q.slice(), bq: r.bq && r.bq.slice() }));
   const byLabel = {};
@@ -94,8 +122,23 @@ function finApplyEdits(edits) {
     children: e.children && e.children.map(c => ({ ...c, vals: c.vals.slice() })) })) }));
   const entryByLabel = {};
   layout.forEach(g => g.entries.forEach(e => { entryByLabel[e.label] = e; }));
+  if (mask && mask.years) mask.years.forEach((hide, i) => {
+    if (!hide) return;
+    FIN_PUBLIC_HIDDEN.rows.forEach(l => { if (byLabel[l] && byLabel[l].values) byLabel[l].values[i] = null; });
+    layout.forEach(g => g.entries.forEach(e => {
+      if (FIN_PUBLIC_HIDDEN.entries.includes(e.label) && e.vals) e.vals[i] = null;
+      if (FIN_PUBLIC_HIDDEN.childrenOf.includes(e.label)) (e.children || []).forEach(c => { c.vals[i] = null; });
+    }));
+  });
   const map = {};
-  (edits || []).forEach(x => { if (FIN_POSTS[x.rowRef] && FIN_EDIT_COL[x.colKey]) map[x.rowRef + '|' + x.colKey] = x; });
+  (edits || []).forEach(x => {
+    if (!FIN_POSTS[x.rowRef] || !FIN_EDIT_COL[x.colKey]) return;
+    // Regnskab v5: en omsætning, der er tastet ind, fordi årsrapporten ikke viste den (fill), gælder
+    // kun, mens året har den offentlige årsrapport alene. Kommer den interne, gælder dens tal, og
+    // uden mask (eksporter, memo) bruges den ikke: den må aldrig blive en rettelse, der flytter summerne.
+    if (x.fill && !(mask && mask.years && mask.years[FIN_EDIT_COL[x.colKey].idx])) return;
+    map[x.rowRef + '|' + x.colKey] = x;
+  });
   if (!Object.keys(map).length) return { rows, byLabel, layout, entryByLabel, map };
   FIN_EDIT_COLS.forEach(col => {
     const d = {};
@@ -104,15 +147,16 @@ function finApplyEdits(edits) {
       if (e.sum || e.derive) return;
       const ref = e.ref || e.label;
       let kids = 0;
+      let filled = false;
       if (col.kind === 'annual') (e.children || []).forEach(c => {
         const x = own(ref + ' / ' + c.label);
         if (x && c.vals[col.idx] != null) { kids += x.value - c.vals[col.idx]; c.vals[col.idx] = x.value; }
+        else if (x && x.fill) { c.vals[col.idx] = x.value; filled = true; }   // en detalje, årsrapporten ikke viser, tastet af rådgiveren
       });
       const cur = e.ref ? finCellGet(byLabel[e.ref], col) : (col.kind === 'annual' && e.vals ? e.vals[col.idx] : null);
       if (cur == null) {
-        // Et tal, årsrapporten ikke oplyser (omsætning): det indtastede står alene, summerne røres ikke
-        const x = own(ref);
-        if (x && e.ref && finFillable(e.ref, col.key)) finCellSet(byLabel[e.ref], col, x.value);
+        // Omsætningen, årsrapporten ikke viser: den er summen af detaljerne, rådgiveren har tastet. Summerne under den røres ikke
+        if (filled && e.ref === 'Nettoomsætning') finCellSet(byLabel[e.ref], col, (e.children || []).reduce((a, c) => a + (c.vals[col.idx] || 0), 0));
         return;
       }
       const x = own(ref);
@@ -121,7 +165,17 @@ function finApplyEdits(edits) {
       d[ref] = next - cur;
       if (e.ref) finCellSet(byLabel[e.ref], col, next); else e.vals[col.idx] = next;
     }));
+    // Budgettets hele år: anlægs- og omsætningsaktiver rettes direkte (FIN_BUDGET_ONLY)
+    if (col.kind === 'by') FIN_BUDGET_ONLY.forEach(ref => {
+      const x = own(ref), r = byLabel[ref];
+      const cur = r ? finCellGet(r, col) : null;
+      if (!x || cur == null || x.value === cur) return;
+      d[ref] = x.value - cur;
+      finCellSet(r, col, x.value);
+    });
     FIN_EDIT_SUMS.forEach(([label, parts]) => {
+      // En sum, der selv er rettet (budgettets anlægs- og omsætningsaktiver), står som rettet
+      if (own(label)) return;
       const s = parts.reduce((a, p) => a + (d[p] || 0), 0);
       const r = byLabel[label];
       if (!s || !r) return;
@@ -200,19 +254,22 @@ function finStoreEdits(list) {
 
 /* Gemmer nye tal for flere celler på én gang. changes = [{ rowRef, colKey, value }].
    Et tal, der er lig det oprindelige, fjerner rettelsen. Returnerer de ændrede
-   celler som { rowRef, colKey, from, to, removed }. */
-function finSaveEdits(changes, reason) {
+   celler som { rowRef, colKey, from, to, removed }. mask: se finMaskedPost (Regnskab v5). */
+function finSaveEdits(changes, reason, mask, opts) {
   const list = finLoadEdits();
-  const current = finApplyEdits(list);
+  const current = finApplyEdits(list, mask);
   const done = [];
+  // keep (Excel-import af budgettets hele år): et importeret tal gemmes, også når det er lig tallet
+  // bag cellen. Uden kundens budget er importen hele budgettet (finBudgetYear), så intet tal må falde væk
+  const keep = !!(opts && opts.keep);
   changes.forEach(ch => {
     const col = FIN_EDIT_COL[ch.colKey], p = FIN_POSTS[ch.rowRef];
-    const original = finOriginal(ch.rowRef, ch.colKey);
+    const original = finOriginal(ch.rowRef, ch.colKey, mask);
     if (!col || !p || (original == null && !finFillable(ch.rowRef, ch.colKey)) || ch.value == null || isNaN(ch.value)) return;
     const from = finPostValue(current, ch.rowRef, col);
-    if (from != null && Math.abs(ch.value - from) < 1e-9) return;
     const i = list.findIndex(x => x.rowRef === ch.rowRef && x.colKey === ch.colKey);
-    if (original != null && Math.abs(ch.value - original) < 1e-9) {
+    if (from != null && Math.abs(ch.value - from) < 1e-9 && !(keep && i < 0)) return;
+    if (original != null && Math.abs(ch.value - original) < 1e-9 && !keep) {
       if (i >= 0) list.splice(i, 1);
       else return;
       done.push({ rowRef: ch.rowRef, colKey: ch.colKey, from, to: original, removed: true });
@@ -220,6 +277,10 @@ function finSaveEdits(changes, reason) {
     }
     const x = { rowRef: ch.rowRef, colKey: ch.colKey, value: ch.value, original, by: finAdvisor(), at: new Date().toISOString(),
       reason: reason != null ? reason : (i >= 0 ? list[i].reason || '' : '') };
+    // Regnskab v5: et tal, kilden ikke har (omsætningen i en offentlig årsrapport), er en udfyldning
+    if (original == null && finFillable(ch.rowRef, ch.colKey)) x.fill = true;
+    // Rådgiverens version af kundens materiale (finVersions.js): tallene hører til versionen
+    if (opts && opts.versionId) x.versionId = opts.versionId;
     if (i >= 0) list[i] = x; else list.push(x);
     done.push({ rowRef: ch.rowRef, colKey: ch.colKey, from, to: ch.value });
   });
@@ -290,32 +351,14 @@ function finLogChanges(done) {
   });
 }
 
-// Migration: stod i financials.jsx før kontomappingen (efter finChildVal). Den læser
-// rettelserne (finLoadEdits, FIN_EDIT_COL), så den står her; i finCalc.js ville de to moduler
-// importere hinanden.
-/* Regnskab v2 (5. oktober): hvad kunden har leveret til 2026 og 2027.
-   hasBudget = budgetfilen er modtaget eller godkendt, eller rådgiveren har
-               importeret et budget (Importér budget)
-   months    = måneder med realiserede tal: periodetal modtaget eller
-               bogføringen forbundet (CW.consent), ellers 0
-   Graf og tabel viser kun 2026 og 2027 ud fra det, der er leveret. */
-function finDataState() {
-  const st = (id) => (window.CW && CW.itemState ? CW.itemState(id) : null);
-  const has = (id) => {
-    const x = st(id);
-    return !!x && (x.status === 'received' || x.status === 'approved') && ((x.files || []).length > 0 || x.noteKind === 'system');
-  };
-  const imported = finLoadEdits().some(x => FIN_EDIT_COL[x.colKey] && FIN_EDIT_COL[x.colKey].budget && /^Excel-import/.test(x.reason || ''));
-  const connected = !!(window.CW && CW.consent && CW.consent());
-  const months = connected || has('m-interim') ? FIN_ACTUAL_Q.reduce((a, p) => a + p.months, 0) : 0;
-  return { hasBudget: has('m-budget') || imported, months };
-}
+// Regnskab v5: hvad kunden har leveret (finDataState fra Regnskab v2) står nu i finSources.js
+// (finSourceState): årsrapporternes, periodetallenes og budgettets kilde.
 
 // Modul-eksport
 export {
   FIN_EDITS_KEY, FIN_OLD_BUDGET_KEY, FIN_EDIT_COLS, FIN_EDIT_COL, FIN_POSTS, FIN_POST_ORDER,
-  finOriginal, finFillable, finOrigOf, FIN_EDIT_SUMS, finApplyEdits, finAdvisor, finMigrateOldBudget,
+  FIN_BUDGET_ONLY, finMaskedPost, finOriginal, finFillable, finOrigOf, FIN_EDIT_SUMS, finApplyEdits, finAdvisor, finMigrateOldBudget,
   finLoadEdits, finStoreEdits, finSaveEdits, finRemoveEdits,
   FIN_NOTES_KEY, finLoadNotes, finStoreNotes, finAddNote, finDeleteNote, finCommentsFor, finSetReason,
-  finPostValue, finEditName, finLogChanges, finDataState,
+  finPostValue, finEditName, finLogChanges,
 };

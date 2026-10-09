@@ -108,7 +108,7 @@ const deptLbl = computed(() => t(d.value.label))
               type="secondary"
               class="memo-cmt-dept"
             >
-              {{ '· ' + t(d.label) }}
+              {{ '- ' + t(d.label) }}
             </a-typography-text>
           </template>
           <template #datetime>
@@ -164,7 +164,7 @@ const deptLbl = computed(() => t(d.value.label))
       type="secondary"
       class="memo-cmt-time"
     >
-      {{ c.author + ' · ' + t(d.label) + (blocking ? ' · ' + t('var blokerende') : '') }}
+      {{ c.author + ' - ' + t(d.label) + (blocking ? ' - ' + t('var blokerende') : '') }}
     </a-typography-text>
   </div>
 
@@ -181,7 +181,7 @@ const deptLbl = computed(() => t(d.value.label))
           type="secondary"
           class="memo-cmt-dept"
         >
-          {{ '· ' + t(d.label) }}
+          {{ '- ' + t(d.label) }}
         </a-typography-text>
       </template>
       <template #datetime>
@@ -250,7 +250,7 @@ const deptLbl = computed(() => t(d.value.label))
             v-if="!control"
             type="link"
             size="small"
-            class="memo-cmt-act primary"
+            class="memo-cmt-act primary cw-link"
             :aria-label="t('Løs kommentar fra') + ' ' + c.author"
             @click="emit('resolve', c)"
           >
@@ -260,7 +260,7 @@ const deptLbl = computed(() => t(d.value.label))
             v-if="control && !c.release"
             type="link"
             size="small"
-            class="memo-cmt-act primary"
+            class="memo-cmt-act primary cw-link"
             :aria-label="t('Svar og bed om frigivelse fra') + ' ' + c.author"
             @click="emit('request', c)"
           >
@@ -278,7 +278,7 @@ const deptLbl = computed(() => t(d.value.label))
               v-else
               type="link"
               size="small"
-              class="memo-cmt-act primary memo-cmt-wrap"
+              class="memo-cmt-act primary memo-cmt-wrap cw-link"
               @click="emit('simulate', c)"
             >
               {{ t('Simulér svar fra') + ' ' + c.author + ' (' + deptLbl + ')' }}

@@ -7,7 +7,7 @@ import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 /* Én rullebjælke: dokumentet ruller med siden (sagens rullefelt), og oversigten og kommentarerne står fast
    ved siden af. Aktivt afsnit = det sidste, hvis overskrift er rullet op over en linje ca. en tredjedel nede
    i rullefeltet. Regnes ved hver rulning. Før brugte prototypen en IntersectionObserver med tærskel 0.1,
-   men lange afsnit (fx Risikovurdering, 3.600 px) nåede aldrig 10 % synligt i en lav rude (1280 x 450 eller
+   men lange afsnit (f.eks. Risikovurdering, 3.600 px) nåede aldrig 10 % synligt i en lav rude (1280 x 450 eller
    200 % zoom), så markeringen blev hængende.
    docEl: template-ref til dokumentet (.memo-doc); getRoot: () => rullefeltet; keys: afsnittenes nøgler;
    active: ref med det aktive afsnit; pin: { until } — et dybdelink har lige valgt afsnittet, og rulningen

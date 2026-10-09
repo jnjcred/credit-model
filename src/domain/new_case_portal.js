@@ -1,6 +1,10 @@
 // Ny sag-guiden og kundeportalen (src/new_case_portal.jsx): hjælperne uden UI er flyttet ordret
 // hertil ved migrationen til Vue. Kun denne indledning, sektionsoverskrifterne, kommentaren til
 // pvDaysAgo, window-tildelingen og eksporten nederst er nye. Skærmene ligger i src/views/portal/.
+// Efter migrationen (8. oktober 2026) er sektionen "Demo: kundens datakilder til Regnskab" tilføjet
+// (den bruger csCanUndo fra customer.js og finInternalLoose fra finSources.js, som intet gør ved
+// indlæsning), og saldobalancen, debitorlisten og demofilernes sider (CW_DEMO_PAGES) bygges af
+// e-conomic-saldobalancen i kontomappingen (window.CW_MAP), så de passer med Regnskab.
 //
 // bootstrap.js importerer filen på new_case_portal.jsx' gamle plads (efter workspace, før
 // portal_onboarding). Det eneste, der sker ved indlæsning, er PORTAL_CONTACT, som læser
@@ -14,8 +18,10 @@
 // (kladden gemmes løbende; hører til portalens upload- og forbind-sider) og window.NewCaseModal,
 // window.CustomerPortal og CustomerPortal.supportsPreview.
 import '@/domain/data';
+import { csCanUndo } from '@/domain/customer';
+import { finInternalLoose } from '@/domain/financials/finSources';
 
-/* ── Ny sag-guiden ──────────────────────────────────────────────────────── */
+/* ── Ny sag-guiden──────────────────────────────────────────────────────── */
 
 // Udfylder {navn}-pladsholdere efter oversættelse: ncFill(t('Frist {date}'), { date })
 function ncFill(s, vars) {
@@ -77,7 +83,7 @@ const NC_CASE_TYPES = [
   { v: 'export', l: 'Eksportkaution', basis: 'facility', d: 'EIFO kautionerer for en del af bankens facilitet til eksport.' },
   { v: 'op', l: 'Driftskredit', basis: 'facility', d: 'EIFO kautionerer for en del af bankens driftskredit.' },
   { v: 'grow', l: 'Vækstlån', basis: 'loan', d: 'EIFO låner direkte til virksomheden.' },
-  { v: 'inv', l: 'Investeringslån', basis: 'loan', d: 'EIFO låner til en konkret investering, fx maskiner eller byggeri.' },
+  { v: 'inv', l: 'Investeringslån', basis: 'loan', d: 'EIFO låner til en konkret investering, f.eks. maskiner eller byggeri.' },
 ];
 const NC_GUARANTEE_SHARE = 0.8; // EIFO's typiske andel af bankens facilitet ved kaution
 
@@ -181,7 +187,7 @@ function demoPdf(name, title) {
   return new File([pdf], name, { type: 'application/pdf' });
 }
 const DEMO_FILE_NAMES = { 'm-annual': 'Intern_aarsrapport_2025.pdf', 'm-pitch': 'Virksomhedspraesentation.pdf', 'm-security': 'Pantebreve_og_kautioner.pdf', 'm-ownership': 'Ejeraftale.pdf', 'm-fx': 'Valutapolitik_og_terminsforretninger.pdf', 'm-group': 'Koncernsammenstilling_2025.pdf', 'm-tech': 'SaaS_noegletal_2026.pdf', 'm-lowcase': 'Foelsomhedsanalyse_budget.pdf', 'm-protocol': 'Revisionsprotokollat_2025.pdf', 'm-capital': 'Kapitalplan_og_stoetteerklaering.pdf', 'm-bizplan': 'Forretningsplan.pdf', 'm-agri': 'Effektivitetsnoegletal.pdf', 'm-pub-cvr': 'Vedtaegter.pdf', 'm-pub-market': 'Marked_og_konkurrenter.pdf', 'm-pub-product': 'Produktbeskrivelse.pdf' };
-// Filnavn til et punkt uden fast navn (fx en årsrapport for et bestemt år eller materiale, rådgiveren selv har skrevet ind)
+// Filnavn til et punkt uden fast navn (f.eks. en årsrapport for et bestemt år eller materiale, rådgiveren selv har skrevet ind)
 function demoFileName(it) {
   if (DEMO_FILE_NAMES[it.id]) return DEMO_FILE_NAMES[it.id];
   const base = String(t(it.label)).replace(/æ/g, 'ae').replace(/ø/g, 'oe').replace(/å/g, 'aa').replace(/Æ/g, 'Ae').replace(/Ø/g, 'Oe').replace(/Å/g, 'Aa')
@@ -233,8 +239,24 @@ function portalPeriod(lang, end) {
 }
 // En rigtig saldobalance som CSV (semikolon, dansk Excel). Tallene passer til sagens
 // niveau (omsætning ca. 29 mio. for årets første otte måneder), og balancen stemmer.
+/* Regnskab v5: saldobalancen fra regnskabssystemet med kundens egne konti og tal (kontomappingens
+   ark, window.CW_MAP), så filen, ERP-kolonnerne i Regnskab og den uploadede PDF har de samme tal.
+   end: 'YYYY-MM-DD' (kunden deler til og med) eller null. Drift: periodens bevægelse; status: saldo
+   ultimo. e-conomics fortegn (debet plus). → [[konto, navn, beløb i kr.], …] eller null. */
+function portalTrialBalanceRows(end) {
+  const M = window.CW_MAP;
+  if (!M || !M.ready()) return null;
+  const until = end ? String(end).slice(0, 7) : null;
+  const months = M.months().map(m => m.key).filter(k => !until || k <= until);
+  if (!months.length) return null;
+  const period = { months };
+  return M.accounts().filter(a => a.type === 'Drift' || a.type === 'Status')
+    .map(a => [String(a.nr), a.name, Math.round(M.accountValue(a, period))])
+    .filter(r => r[2] !== 0);
+}
 function portalTrialBalanceCsv(src, end) {
-  const rows = [
+  const live = portalTrialBalanceRows(end);
+  const rows = live || [
     ['1010', 'Salg af varer, eksport', -21480000], ['1020', 'Salg af varer, Danmark', -7760000],
     ['1310', 'Vareforbrug', 15890000], ['1410', 'Fragt og told', 1120000],
     ['2210', 'Lønninger', 7940000], ['2250', 'Pension', 690000],
@@ -247,8 +269,10 @@ function portalTrialBalanceCsv(src, end) {
     ['7210', 'Leverandører af varer og tjenesteydelser', -5870000], ['7310', 'Anden gæld', -2310000],
     ['7410', 'Anpartshaverlån', -500000],
   ];
-  const rest = rows.reduce((a, r) => a + r[2], 0);
-  rows.splice(17, 0, ['6820', 'Overført resultat', -rest]);
+  if (!live) {
+    const rest = rows.reduce((a, r) => a + r[2], 0);
+    rows.splice(17, 0, ['6820', 'Overført resultat', -rest]);
+  }
   const now = new Date();
   const when = portalYmd(now) + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
   const lines = [
@@ -261,14 +285,23 @@ function portalTrialBalanceCsv(src, end) {
   const name = 'Saldobalance_' + portalPeriod('da', end).replace(' ', '_') + '_' + src.replace(/\s+/g, '-') + '.csv';
   return new File(['﻿' + lines.join('\r\n') + '\r\n'], name, { type: 'text/csv' });
 }
-// Debitorlisten fra regnskabssystemet. Summen er kontoen Tilgodehavender fra salg
-// (5910) i saldobalancen, og de tre største kunder passer med sagens faktaark.
+// Debitorlisten fra regnskabssystemet. Summen er kontoen Tilgodehavender fra salg i saldobalancen
+// (Regnskab v5: kontoen med debitorerne i kontomappingen, så listen passer med saldobalancen), og de tre
+// største kunder passer med sagens faktaark. Ingen debitor er forfalden over 60 dage (periodetallenes noter).
 function portalDebtorCsv(src, end) {
-  const rows = [
+  let rows = [
     ['GE Vernova', 3770000, 410000, 38], ['Vestas Wind Systems', 1640000, 0, 0], ['Siemens Gamesa', 940000, 120000, 21],
     ['Hanse Rotor GmbH', 820000, 0, 0], ['Baltic Blade Service AB', 610000, 95000, 47], ['Fyns Kompositværksted ApS', 340000, 0, 0],
-    ['Øvrige kunder (24)', 1800000, 260000, 64],
+    ['Øvrige kunder (24)', 1800000, 260000, 56],
   ];
+  const tb = portalTrialBalanceRows(end);
+  const M = window.CW_MAP;
+  const debtors = tb && M ? tb.filter(r => M.defaultCat(Number(r[0])) === 'r_trade').reduce((a, r) => a + r[2], 0) : 0;
+  if (debtors > 0) {
+    const f = debtors / rows.reduce((a, r) => a + r[1], 0);
+    rows = rows.map(r => [r[0], Math.round(r[1] * f / 1000) * 1000, Math.round(r[2] * f / 1000) * 1000, r[3]]);
+    rows[rows.length - 1][1] += debtors - rows.reduce((a, r) => a + r[1], 0);
+  }
   const now = new Date();
   const when = portalYmd(now) + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
   const lines = [
@@ -281,6 +314,85 @@ function portalDebtorCsv(src, end) {
   const name = 'Debitorliste_' + portalPeriod('da', end).replace(' ', '_') + '_' + src.replace(/\s+/g, '-') + '.csv';
   return new File(['﻿' + lines.join('\r\n') + '\r\n'], name, { type: 'text/csv' });
 }
+
+/* ── Regnskab v5: demofilernes sider, bygget af sagens data ──────────────────
+   CW.demoUploadFile (case_state.js) læser dem som window.CW_DEMO_PAGES: [{ ref, title, body }] til
+   PDF'en (Courier, højst 106 tegn pr. linje). */
+// Beløb med punktum som tusindtalsskiller: kr. med øre (dec) eller hele tal (t.kr.)
+function portalAmount(v, dec) {
+  const n = Math.round(Math.abs(v) * 100) / 100;
+  const [i, d] = n.toFixed(2).split('.');
+  return (v < 0 && n !== 0 ? '-' : '') + i.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (dec ? ',' + d : '');
+}
+const portalPadR = (s, w) => (s.length > w ? s.slice(0, w) : s + ' '.repeat(w - s.length));
+const portalPadL = (s, w) => ' '.repeat(Math.max(0, w - s.length)) + s;
+
+/* Saldobalancen, som kunden har skrevet den ud af e-conomic som PDF: de samme konti, overskrifter og
+   sumlinjer som ERP-kilden (kontomappingens ark), så tallene passer med Regnskab. Konti uden
+   bevægelse og saldo er udeladt, som i e-conomics udskrift. → sider eller null (arket ikke hentet). */
+function portalTrialBalancePages() {
+  const M = window.CW_MAP;
+  if (!M || !M.ready() || !M.months().length) return null;
+  const keys = M.months().map(m => m.key);
+  const period = { months: keys };
+  const first = keys[0], last = keys[keys.length - 1];
+  const lastDay = new Date(Number(last.slice(0, 4)), Number(last.slice(5, 7)), 0).getDate();
+  const primoDate = '01-' + first.slice(5, 7) + '-' + first.slice(0, 4);
+  const ultimoDate = String(lastDay).padStart(2, '0') + '-' + last.slice(5, 7) + '-' + last.slice(0, 4);
+  const accounts = M.accounts();
+  const real = accounts.filter(a => a.type === 'Drift' || a.type === 'Status');
+  const val = (a) => {
+    const saldo = M.accountValue(a, period);
+    const primo = a.type === 'Status' ? a.primo || 0 : 0;
+    return { primo, mov: saldo - primo, saldo };
+  };
+  const sumOf = (a) => real.filter(x => x.nr >= a.from && x.nr <= a.to).map(val)
+    .reduce((s, v) => ({ primo: s.primo + v.primo, mov: s.mov + v.mov, saldo: s.saldo + v.saldo }), { primo: 0, mov: 0, saldo: 0 });
+  // Resultatopgørelsen er alt før balancens første overskrift (overskrifterne lige før den første statuskonto)
+  let split = accounts.findIndex(a => a.type === 'Status');
+  if (split < 0) split = accounts.length;
+  while (split > 0 && accounts[split - 1].type === 'Overskrift') split--;
+  const NW = 42, VW = 18;
+  const lines = (list, cols) => {
+    const out = [];
+    list.forEach((a, i) => {
+      if (a.type === 'Overskrift') { if (i > 0) out.push(''); out.push(portalPadR(String(a.nr), 6) + '  ' + a.name); return; }
+      const v = a.type === 'Sum' ? sumOf(a) : val(a);
+      if (a.type !== 'Sum' && !v.primo && !v.mov) return;
+      // Sumlinjen står under en streg i hver beløbskolonne
+      if (a.type === 'Sum') out.push(' '.repeat(8 + NW) + cols.map(() => portalPadL('-'.repeat(VW - 2), VW)).join(''));
+      out.push(portalPadR(String(a.nr), 6) + '  ' + portalPadR(a.name, NW) + cols.map(k => portalPadL(portalAmount(v[k], true), VW)).join(''));
+    });
+    return out;
+  };
+  const head = [
+    DATA.COMPANY.name + '  -  CVR ' + DATA.COMPANY.cvr,
+    // Udskriftens dato og aftale er arkets (eksporteret 14-09-2026) og demoens e-conomic-aftale
+    'Udskrevet fra e-conomic 14-09-2026  -  Aftale ' + ERP_SOURCES[0].agreement + '  -  Beløb i DKK',
+    'Fortegn som i e-conomic: debet er plus, kredit er minus.',
+    '',
+  ];
+  const total = real.map(val).reduce((s, v) => s + v.saldo, 0);
+  const pl = head.concat([
+    portalPadR('Konto', 6) + '  ' + portalPadR('Kontonavn', NW) + portalPadL('Periode', VW),
+    ' '.repeat(8 + NW) + portalPadL(portalPeriod('da', last), VW),
+    '',
+  ]).concat(lines(accounts.slice(0, split), ['saldo']));
+  const bs = head.concat([
+    portalPadR('Konto', 6) + '  ' + portalPadR('Kontonavn', NW) + portalPadL('Primo', VW) + portalPadL('Bevægelse', VW) + portalPadL('Saldo', VW),
+    ' '.repeat(8 + NW) + portalPadL(primoDate, VW) + portalPadL(portalPeriod('da', last), VW) + portalPadL(ultimoDate, VW),
+    '',
+  ]).concat(lines(accounts.slice(split), ['primo', 'mov', 'saldo'])).concat([
+    '',
+    Math.abs(total) < 0.5 ? 'Kontrol: debet og kredit stemmer (summen af alle drifts- og statuskonti er 0,00).'
+      : 'Kontrol: summen af alle drifts- og statuskonti er ' + portalAmount(total, true) + ' (debet og kredit stemmer ikke).',
+  ]);
+  return [
+    { ref: 'Resultatopgørelse', title: 'Driftskonti ' + primoDate + ' til ' + ultimoDate, body: pl.join('\n') },
+    { ref: 'Balance', title: 'Statuskonti pr. ' + ultimoDate, body: bs.join('\n') },
+  ];
+}
+
 /**
  * Kunden har givet læseadgang i regnskabssystemet. sharing er kundens valg fra
  * opstarten: { mode: 'ongoing' } (løbende) eller { mode: 'until', dataUntil } (tal
@@ -328,7 +440,7 @@ function portalRevoke(consent) {
   }).then(r => {
     if (!r.ok) return false;
     CW.setConsent(null);
-    CW.toast(ncFill(t('Adgangen til {src} er trukket tilbage. {adv} kan se det i sagen.'), { src: consent.system, adv: PORTAL_CONTACT.first }));
+    CW.toast(ncFill(t('Adgangen til {src} er trukket tilbage. {adv} kan se det i sagen.'), { src: consent.system, adv: 'EIFO' }));
     return true;
   });
 }
@@ -344,14 +456,13 @@ function pvDaysAgo(iso) {
 }
 
 /* Sagens linje i portalens topbjælke (efter bekræftelse): sagsnummer, produkt og
-   beløb (samme som rådgiverens sagshoved) og den ansvarlige rådgiver. */
+   beløb (samme som rådgiverens sagshoved). Den ansvarlige rådgiver vises ikke her. */
 function portalCaseMeta() {
   const co = (window.DATA && DATA.COMPANY) || {};
   const facility = [co.caseType, co.amount].filter(Boolean).join(', ');
   return [
     co.caseNr ? t('Sagsnr.') + ' ' + co.caseNr : null,
     facility ? { text: facility, title: co.amountNote || '' } : null,
-    t('Ansvarlig') + ': ' + PORTAL_CONTACT.name,
   ].filter(Boolean);
 }
 
@@ -362,9 +473,195 @@ function portalAutoDocs() {
   return Array.from(new Set(years));
 }
 
+/* Regnskabsåret, som kunden angiver ved budgettet (9. oktober): første måned 1-12, gemt på sagen
+   (CW.onboarding().fiscalYear = { start, at }) og skrevet i punktets historik. */
+function portalFiscalOptions(lang) {
+  const M = (lang || window.CW_LANG) === 'en'
+    ? ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+    : ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'december'];
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  return M.map((m, i) => ({ value: i + 1, label: cap(m) + '-' + M[(i + 11) % 12] }));
+}
+// months: regnskabsårets længde i måneder (12 er normalt; et kort eller langt år er 1-18)
+// periods: alle regnskabsår kunden har tilføjet under "Andet" ([{ from, to }], ISO-datoer); start og months er det første
+function portalSetFiscalYear(start, by, itemId, months, periods) {
+  const len = months && months !== 12 ? months : 12;
+  const per = periods && periods.length ? periods : null;
+  const prevFy = CW.onboarding().fiscalYear || {};
+  if (!start || (prevFy.start === start && (prevFy.months || 12) === len && JSON.stringify(prevFy.periods || null) === JSON.stringify(per))) return;
+  CW.setOnboarding({ fiscalYear: { start, months: len, periods: per, at: new Date().toISOString() } });
+  const label = portalFiscalOptions('da')[start - 1].label.toLowerCase() + (len !== 12 ? ', ' + len + ' ' + t('måneder') : '')
+    + (per && per.length > 1 ? ', ' + per.length + ' ' + t('regnskabsår') : '');
+  CW.log('fiscal-year', ncFill(t('Regnskabsåret er angivet: {aar}'), { aar: label }), { who: by || 'kunde', itemId: itemId || 'm-budget' });
+}
+
 // Antal hele måneder i "år til dato" (samme periode som portalPeriod)
 function portalMonths(end) {
   return portalPeriodEnd(end).m + 1;
+}
+
+/* ── Demo: kundens datakilder til Regnskab ──────────────────────────────────
+   Demoknapperne ved punkterne på kundens oversigt (PortalSourceDemo.vue) gør det, kunden ellers
+   gør: forbinder e-conomic, uploader saldobalancen som PDF, en intern årsrapport eller budgettet.
+   Alt skrives med CW's egne funktioner (localStorage kabul:* og filerne i IndexedDB cw-demo-files),
+   så "Nulstil demo" rydder det, og Overblik, Dokumenter og Regnskab reagerer, som hvis kunden selv
+   havde gjort det. Intet netværk: filerne bygges lokalt. Om en knap er trykket ned, læser knappen
+   selv af sagens tilstand (finSourceState og finDelivered i src/domain/financials/finSources.js).
+   Knapperne trækker kun et punkt tilbage, når kunden selv kan fortryde det (csCanUndo, samme regel
+   som "Fortryd" i portalen). Et godkendt punkt, et åbent spørgsmål, rådgiverens filer og kundens
+   svar står urørt, og en besked siger hvorfor. */
+
+// Demoens regnskabssystem. Tallene derfra slutter med august 2026 (Periodetal_jan-aug_2026.xlsx),
+// så kunden deler tal til og med 31. august 2026, ikke til og med seneste afsluttede måned
+const PORTAL_DEMO_ERP = 'e-conomic';
+const PORTAL_DEMO_SHARING = { mode: 'until', dataUntil: '2026-08-31' };
+// Filerne, hentningen lægger som andre filer, når Periodetal ikke er bedt om (portalConnectNow)
+const PORTAL_ERP_FILE_RE = /^(Saldobalance|Debitorliste)_.+\.csv$/;
+// Årsregnskaber: de interne årsrapporter for 2025 og 2024 (demofilerne i CW.demoUploadFile)
+const PORTAL_DEMO_FILES = { 'm-annual': ['m-annual', 'm-annual-2024'] };
+// Felterne i kundens opstart, som "Forbind e-conomic" skriver. Det, der stod før, gemmes i portalens
+// hukommelse (demoErp: { at, prev }; under kabul:, så "Nulstil demo" rydder det), og "fra" sætter
+// det tilbage
+const PORTAL_DEMO_OB_FIELDS = ['agreement', 'sharing', 'erp'];
+
+/**
+ * Kan kunden selv trække punktet tilbage (csCanUndo)? Hvis ikke, siger en besked hvorfor, og
+ * funktionen returnerer true: demoknappen gør så intet. Et punkt uden tilstand afvises ikke.
+ */
+function portalDemoRefused(itemId) {
+  const s = CW.itemState(itemId);
+  if (!s || csCanUndo(s)) return false;
+  const it = CW.itemById(itemId);
+  const text = s.status === 'approved' ? t('{item}: {adv} har godkendt punktet, så kunden kan ikke trække det tilbage (demo)')
+    : s.status === 'rejected' ? t('{item}: {adv} har stillet et spørgsmål til punktet. Kunden kan svare i punktet, men ikke trække det tilbage (demo)')
+    : s.answer ? t('{item}: kunden har svaret på et spørgsmål til punktet og kan ikke trække det tilbage (demo)')
+    : t('{item}: {adv} har tilføjet noget til punktet, så kunden kan ikke trække det tilbage (demo)');
+  CW.toast(ncFill(text, { item: it ? t(it.label) : itemId, adv: PORTAL_CONTACT.first }), { tone: 'info' });
+  return true;
+}
+
+/**
+ * Kundeside (rådgiverens forhåndsvisning) spærrer alle kundehandlinger. Demoknapperne virker der
+ * også og gemmes, som om kunden havde gjort det: spærren slås fra, mens fn skriver, og altid til
+ * igen bagefter. Beskeden vises først derefter (CW.setPreview(true) skjuler beskeder).
+ */
+function portalDemoAsCustomer(fn) {
+  const pv = !!CW.isPreview();
+  if (pv) CW.setPreview(false);
+  try { return fn(); } finally { if (pv) CW.setPreview(true); }
+}
+// ERP fra: adgangen trækkes tilbage, og de hentede tal fjernes (punktet eller de løse filer). En
+// saldobalance, kunden selv har uploadet, bliver stående. Kundens opstart står igen, som før demoen
+// forbandt: kun de felter, demoen skrev, og som ikke er ændret siden (samme at). Har demoen ikke
+// forbundet, står opstarten urørt, som når kunden selv trækker adgangen tilbage (portalRevoke)
+function portalDemoErpOff() {
+  if (CW.consent()) CW.setConsent(null);
+  const s = CW.itemState('m-interim');
+  if (s && s.noteKind === 'system') CW.resetItem('m-interim', 'kunde');
+  CW.allUploads().filter(f => !f.itemId && f.by === 'kunde' && PORTAL_ERP_FILE_RE.test(f.name)).forEach(f => CW.removeLooseUpload(f.id));
+  const undo = portalMem().demoErp;
+  if (!undo) return;
+  const ob = CW.onboarding();
+  const patch = {};
+  PORTAL_DEMO_OB_FIELDS.forEach(k => { if (ob[k] && ob[k].at === undo.at) patch[k] = (undo.prev || {})[k]; });
+  if (Object.keys(patch).length && CW.setOnboarding(patch) === false) return;
+  setPortalMem({ demoErp: null });
+}
+// ERP til, som ErpSharingCard og ErpConnectModal gør det, men uden dialogen: aftalen og
+// datadelingen, samtykket, hentningen (punktet eller andre filer) og systemet
+function portalDemoErpOn() {
+  const at = new Date().toISOString();
+  const ob = CW.onboarding();
+  // Opstarten, som den står nu, til "fra". Står demoens egne værdier der stadig, gælder det, der stod før dem
+  const old = portalMem().demoErp;
+  const prev = {};
+  PORTAL_DEMO_OB_FIELDS.forEach(k => { prev[k] = old && old.prev && ob[k] && ob[k].at === old.at ? old.prev[k] : ob[k]; });
+  setPortalMem({ demoErp: { at, prev } });
+  const helper = !!(ob.company && ob.company.advisor);
+  const sharing = ncFill(t('tal til og med {date}'), { date: CW.fmtDate(PORTAL_DEMO_SHARING.dataUntil + 'T12:00:00') });
+  CW.setOnboarding({ agreement: Object.assign({ at }, helper ? { mandate: true } : {}), sharing: Object.assign({}, PORTAL_DEMO_SHARING, { at }) }, helper
+    ? ncFill(t('{name} ({role}) sagde ja til at dele periodetal og debitordata med EIFO på vegne af kunden ({sharing})'), { name: ob.company.person, role: t('revisor eller rådgiver'), sharing })
+    : ncFill(t('Kunden sagde ja til at dele periodetal og debitordata med EIFO ({sharing})'), { sharing }));
+  portalConsentNow(PORTAL_DEMO_ERP, PORTAL_DEMO_SHARING, CW.onboarding().company);
+  portalConnectNow(PORTAL_DEMO_ERP, PORTAL_DEMO_SHARING);
+  CW.setOnboarding({ erp: { system: PORTAL_DEMO_ERP, at } });
+}
+/**
+ * Demo: periodetallenes kilde, som kunden ellers vælger på punktet Periodetal eller oversigten.
+ * to: 'erp' (e-conomic forbundet og tallene hentet), 'upload' (saldobalancen uploadet som PDF)
+ * eller 'none'. from: kilden nu (finSourceState().period). Én kilde ad gangen: forbindelsen, de
+ * hentede filer og en uploadet saldobalance fjernes, før den nye kilde sættes, så punktet kun har
+ * dens filer. Et punkt uden tal (en bemærkning, eller sendt videre til revisor) trækkes ikke
+ * tilbage først: den nye kilde afløser det, som når kunden sender en fil. Kan kunden ikke selv
+ * trække punktet tilbage, sker der intet (portalDemoRefused). Returnerer false, hvis sagen er
+ * lukket for kunden, eller knappen blev afvist.
+ */
+function portalDemoPeriod(to, from) {
+  if (CW.customerLock()) return false;
+  const c = CW.consent();
+  const src = (c && c.system) || PORTAL_DEMO_ERP;
+  // Skal punktet trækkes tilbage? Når det har tal, og kilden skiftes eller slås fra (fra ERP: kun
+  // de hentede tal). Det afgøres, før noget skrives, så en afvist knap intet har ændret
+  const s = CW.itemState('m-interim');
+  const has = !!s && ((s.files || []).length > 0 || s.noteKind === 'system');
+  const withdraw = has && (to !== 'none' || from !== 'erp' || s.noteKind === 'system');
+  if (withdraw && portalDemoRefused('m-interim')) return false;
+  const ok = portalDemoAsCustomer(() => {
+    if (to === 'none') {
+      if (from === 'erp') portalDemoErpOff();
+      else if (withdraw) CW.resetItem('m-interim', 'kunde');
+      return true;
+    }
+    portalDemoErpOff();
+    if (withdraw && CW.itemState('m-interim')) CW.resetItem('m-interim', 'kunde');
+    if (to === 'erp') { portalDemoErpOn(); return true; }
+    const file = CW.demoUploadFile('m-interim-pdf') || demoPdf('Saldobalance_jan-aug_2026.pdf', 'Saldobalance januar-august 2026 - ' + DATA.COMPANY.name);
+    // noteKind null: ellers følger en tidligere kilde ("Hentet fra e-conomic") med
+    return CW.markReceived('m-interim', { by: 'kunde', files: CW.putFiles([file], { by: 'kunde', itemId: 'm-interim' }), note: '', noteKind: null }) !== false;
+  });
+  if (!ok) return false;
+  CW.toast(to === 'erp' ? ncFill(from === 'upload' ? t('{src} er forbundet, og den uploadede saldobalance er trukket tilbage (demo)') : t('{src} er forbundet, og periodetallene er hentet (demo)'), { src: PORTAL_DEMO_ERP })
+    : to === 'upload' ? (from === 'erp' ? ncFill(t('Saldobalancen er uploadet som PDF, og forbindelsen til {src} er fjernet (demo)'), { src }) : t('Saldobalancen er uploadet som PDF (demo)'))
+    : from === 'erp' ? ncFill(t('Forbindelsen til {src} er fjernet (demo)'), { src })
+    : ncFill(t('{item} er trukket tilbage (demo)'), { item: t('Periodetal') }));
+  return true;
+}
+/**
+ * Demo: kunden sender (on) eller trækker et dokument tilbage (off) på et punkt: den interne
+ * årsrapport ('m-annual' eller 'm-annual-<år>') eller budgettet ('m-budget'). Er Årsregnskaber
+ * ('m-annual') ikke bedt om, sender kunden de interne årsrapporter som andre filer, som en kunde
+ * kan, og Regnskab læser dem derfra (finInternalLoose). Kan kunden ikke selv trække punktet
+ * tilbage, sker der intet (portalDemoRefused). Returnerer false, hvis sagen er lukket for kunden,
+ * eller knappen blev afvist.
+ */
+function portalDemoDocument(itemId, on) {
+  const it = CW.itemById(itemId);
+  if (!it || CW.customerLock()) return false;
+  if (!on && portalDemoRefused(itemId)) return false;
+  const loose = itemId === 'm-annual' && !CW.requestedItems().some(x => x.id === itemId);
+  const ok = portalDemoAsCustomer(() => {
+    if (!on) {
+      if (CW.itemState(itemId)) CW.resetItem(itemId, 'kunde');
+      if (itemId === 'm-annual') finInternalLoose().forEach(f => CW.removeLooseUpload(f.id));
+      return true;
+    }
+    const files = (PORTAL_DEMO_FILES[itemId] || [itemId]).map(id => CW.demoUploadFile(id)).filter(Boolean);
+    // Uden demofil: en lille PDF. En årsrapport får aldrig CVR-versionens filnavn (se DEMO_UPLOADS)
+    if (!files.length) files.push(it.year ? demoPdf('Intern_aarsrapport_' + it.year + '.pdf', t(it.label) + ' - ' + DATA.COMPANY.name) : portalDemoFileFor(it));
+    // Budgettet: kunden angiver regnskabsåret (demoens kunde har kalenderår)
+    if (itemId === 'm-budget') portalSetFiscalYear((CW.onboarding().fiscalYear || {}).start || 1, 'kunde', itemId);
+    if (loose) {
+      const metas = CW.putFiles(files, { by: 'kunde', itemId: null });
+      if (metas.length) CW.addLooseUploads(metas);
+      return metas.length > 0;
+    }
+    return CW.markReceived(itemId, { by: 'kunde', files: CW.putFiles(files, { by: 'kunde', itemId }), note: '' }) !== false;
+  });
+  if (ok) {
+    CW.toast(loose ? (on ? t('De interne årsrapporter er sendt som andre filer (demo)') : t('De interne årsrapporter er trukket tilbage (demo)'))
+      : ncFill(on ? t('{item} er sendt (demo)') : t('{item} er trukket tilbage (demo)'), { item: t(it.label) }));
+  }
+  return ok;
 }
 
 // Navne, som andre filer læser som globale (før migrationen delte de klassiske scripts navnerum):
@@ -372,9 +669,11 @@ function portalMonths(end) {
 //   PORTAL_CONTACT   memo_handoff (rådgiveren i vejledningen) og portal_onboarding
 //   ncFill, NC_EMAIL_RE, portalRecipient, portalMaskEmail, ERP_SOURCES, portalPeriod,
 //   portalMonths, portalConsentNow, portalConnectNow   portal_onboarding (kundens opstart)
+//   CW_DEMO_PAGES    demofilernes sider (CW.demoUploadFile i case_state.js)
 Object.assign(window, {
   ncFill, NC_EMAIL_RE, PORTAL_CONTACT, portalRecipient, portalMaskEmail, ERP_SOURCES, portalPeriod, portalMonths,
   portalConsentNow, portalConnectNow, portalFlowRole,
+  CW_DEMO_PAGES: { trialBalance: portalTrialBalancePages },
 });
 
 // Modul-eksport til Vue-komponenterne
@@ -386,4 +685,6 @@ export {
   demoPdf, DEMO_FILE_NAMES, demoFileName, DEMO_COUNTRIES, portalDemoFileFor, portalDemoUploadOne,
   ERP_SOURCES, portalPeriodEnd, portalPeriod, portalTrialBalanceCsv, portalDebtorCsv, portalConsentNow, portalConnectNow,
   portalConsentUntil, portalFlowRole, portalRevoke, pvDaysAgo, portalCaseMeta, portalAutoDocs, portalMonths,
+  PORTAL_DEMO_ERP, PORTAL_DEMO_SHARING, portalDemoAsCustomer, portalDemoPeriod, portalDemoDocument,
+  portalFiscalOptions, portalSetFiscalYear,
 };

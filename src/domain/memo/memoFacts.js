@@ -46,7 +46,7 @@ function memoFacts(opts) {
   // Kilde pr. række: den side, hvor oplysningen står (faktaarkets facility.refs)
   const facRef = (k) => (fac.refs && fac.refs[k]) || fac.source;
   const rows = [];
-  const join = (parts, sep) => parts.filter(Boolean).join(sep || ' · ') || null;
+  const join = (parts, sep) => parts.filter(Boolean).join(sep || ' - ') || null;
   const isMet = (c) => /opfyldt|met|done/i.test((c && c.status) || '');
 
   rows.push({ k: 'facility', label: t('Facilitet'),

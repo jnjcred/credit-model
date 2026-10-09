@@ -17,7 +17,7 @@
    "Nulstil demo".
    ──────────────────────────────────────────────────────────────────────── */
 (function () {
-  var FILE = 'data/Saldobalance_e-conomic_jan-aug_2026.xlsx';
+  var FILE = '/data/Saldobalance_e-conomic_jan-aug_2026.xlsx';
   var FILE_NAME = 'Saldobalance_e-conomic_jan-aug_2026.xlsx';
   var KEY = 'kabul:mapping:nordhavn';
   var EVENT = 'cw-mapping-changed';
@@ -293,10 +293,12 @@
   /* Tallene til regnskabstabellen (DKK mio., tabellens fortegn) for hver
      realiseret periode: entry[række], child['række / detalje'] og
      result (periodens resultat før udbytte). unmapped = drifts- og statuskonti
-     uden kategori, der har beløb. */
-  function compute(map) {
+     uden kategori, der har beløb.
+     Regnskab v5: periods (valgfri) er andre perioder end kvartalerne, f.eks. én pr. måned
+     ({ key, label, months: ['2026-01'] }). Uden den regnes kvartalerne som før. */
+  function compute(map, periods) {
     map = map || saved();
-    var periods = PERIODS.map(function (p) {
+    periods = (periods || PERIODS).map(function (p) {
       var entry = {}, child = {};
       state.accounts.forEach(function (a) {
         var m = map[a.nr], cat = m && m.cat ? CAT[m.cat] : null;

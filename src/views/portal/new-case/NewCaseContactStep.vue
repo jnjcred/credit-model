@@ -95,7 +95,7 @@ const onFoldKeydown = useCollapseKeyboard()
           <a-input
             id="nc-role"
             :value="contact.role"
-            :placeholder="t('fx økonomichef')"
+            :placeholder="t('f.eks. økonomichef')"
             @update:value="(v) => setContact('role', v)"
           />
         </a-form-item>

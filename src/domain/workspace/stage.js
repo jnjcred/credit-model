@@ -80,7 +80,7 @@ function wsIsEditing() {
 }
 
 // Sagens fase med samme navn som i sagslisten (DATA.STATUS). stageOverride
-// giver navnet på en anden fase, fx den en afslået sag genoptages i.
+// giver navnet på en anden fase, f.eks. den en afslået sag genoptages i.
 function wsPhaseName(stageOverride) {
   let key;
   if (!stageOverride) key = wsStatusKey(CW.LIVE_CASE_ID);

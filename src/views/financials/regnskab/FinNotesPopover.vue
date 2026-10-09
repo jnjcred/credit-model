@@ -55,7 +55,7 @@ const onInputKeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); add
         <a-list-item>
           <div class="fin-note">
             <a-typography-text type="secondary">
-              {{ c.by }}{{ c.at ? ' · ' + finShortDate(c.at) : '' }}
+              {{ c.by }}{{ c.at ? ' - ' + finShortDate(c.at) : '' }}
             </a-typography-text>
             <div class="fin-note-text">
               {{ t(c.text) }}
@@ -75,14 +75,24 @@ const onInputKeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); add
         </a-list-item>
       </template>
     </a-list>
-    <a-input
-      v-model:value="txt"
-      :maxlength="500"
-      autocomplete="off"
-      :placeholder="comments.length ? t('Tilføj en kommentar') : t('Skriv en kommentar')"
-      :aria-label="t('Ny kommentar')"
-      @keydown="onInputKeydown"
-    />
+    <div class="fin-notes-new">
+      <a-input
+        v-model:value="txt"
+        class="fin-notes-input"
+        :maxlength="500"
+        autocomplete="off"
+        :placeholder="comments.length ? t('Tilføj en kommentar') : t('Skriv en kommentar')"
+        :aria-label="t('Ny kommentar')"
+        @keydown="onInputKeydown"
+      />
+      <a-button
+        type="primary"
+        :disabled="!txt.trim()"
+        @click="add"
+      >
+        {{ t('Send') }}
+      </a-button>
+    </div>
   </div>
 </template>
 
@@ -97,6 +107,16 @@ const onInputKeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); add
 .fin-notes-list {
   max-height: 260px;
   overflow: auto;
+}
+
+.fin-notes-new {
+  display: flex;
+  gap: 8px;
+}
+
+.fin-notes-input {
+  flex: 1;
+  min-width: 0;
 }
 
 .fin-note { min-width: 0; }

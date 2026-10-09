@@ -91,14 +91,14 @@ onUpdated(nameTable)
                 type="secondary"
                 class="st"
               >
-                · {{ tt('opfyldt') }}
+                - {{ tt('opfyldt') }}
               </a-typography-text>
               <a-typography-text
                 v-if="it.source && it.source.doc && srcLabel(it.source)"
                 type="secondary"
                 class="src"
               >
-                · <span
+                - <span
                   class="memo-cite"
                   :data-doc="it.source.doc"
                   :data-page="it.source.ref || ''"
@@ -132,7 +132,7 @@ onUpdated(nameTable)
             type="secondary"
             class="src"
           >
-            · <span
+            - <span
               class="memo-cite"
               :data-doc="r.source.doc"
               :data-page="r.source.ref || ''"
@@ -149,7 +149,7 @@ onUpdated(nameTable)
             v-if="r.jump"
             type="link"
             size="small"
-            class="memo-cmt-act"
+            class="memo-cmt-act cw-link"
             @click="emit('jump', r.jump)"
           >
             {{ r.fallback }}
@@ -179,7 +179,7 @@ onUpdated(nameTable)
   padding-left: 16px;
 }
 
-/* Tal (fx "80 % · DKK 3,6 mio.") brydes ikke midt i */
+/* Tal (f.eks. "80 % · DKK 3,6 mio.") brydes ikke midt i */
 .nw {
   white-space: nowrap;
 }

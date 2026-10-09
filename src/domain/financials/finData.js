@@ -11,8 +11,8 @@
    Public-data table grouped into Resultat, Balance, Nøgletal
    ──────────────────────────────────────────────────────────────────────── */
 /* Periodeopsætning for regnskabstabellen.
-   Fire kolonnetyper: årsrapport (values) · estimat 2026 (udledt) ·
-   realiseret kvartal (q) · budget kvartal (bq).
+   Fire kolonnetyper: årsrapport (values) - estimat 2026 (udledt) ·
+   realiseret kvartal (q) - budget kvartal (bq).
    Alle tal er i DKK mio.; enhedsvælgeren skalerer først ved visning.
 
    Kun rå poster står i tabellen nedenfor. Delsummer (bruttofortjeneste, EBITDA,
@@ -221,6 +221,19 @@ const FIN_CONTROLS = [
 const FIN_ROW_BY_LABEL = {};
 ANNUAL_REPORT.groups.forEach(g => g.rows.forEach(r => { FIN_ROW_BY_LABEL[r.label] = r; }));
 
+/* Regnskab v5 (8. oktober 2026): det, den offentlige årsrapport ikke viser. Små virksomheder
+   (klasse B) må efter ÅRL § 32 slå omsætning, vareforbrug, andre driftsindtægter og andre
+   eksterne omkostninger sammen til én post, bruttofortjenesten. Uden en intern årsrapport står
+   disse poster derfor tomme i årskolonnerne (omsætningen kan tastes ind), og grafens serie
+   Bruttofortjeneste viser den offentlige bruttofortjeneste.
+   rows: rækker i ANNUAL_REPORT; entries: visningsrækker uden ref; childrenOf: visningsrækker,
+   hvis detaljer også er skjult. */
+const FIN_PUBLIC_HIDDEN = {
+  rows: ['Nettoomsætning', 'Vareforbrug', 'Bruttofortjeneste', 'Andre eksterne omkostninger'],
+  entries: ['Andre driftsindtægter'],
+  childrenOf: ['Omsætning i alt'],
+};
+
 // Migration: ejertyperne i ejerlisten (OwnerList i financials.jsx)
 const OWNER_KIND = { holding: 'Holdingselskab', fund: 'Fond', person: 'Person' };
 
@@ -243,4 +256,4 @@ const TRUSTPILOT = {
 };
 
 // Modul-eksport
-export { FIN_ANNUAL_YEARS, FIN_ACTUAL_Q, FIN_BUDGET_SEP, FIN_BUDGET_Q, ANNUAL_REPORT, FIN_LAYOUT, FIN_CONTROLS, FIN_ROW_BY_LABEL, OWNER_KIND, TRUSTPILOT };
+export { FIN_ANNUAL_YEARS, FIN_ACTUAL_Q, FIN_BUDGET_SEP, FIN_BUDGET_Q, ANNUAL_REPORT, FIN_LAYOUT, FIN_CONTROLS, FIN_ROW_BY_LABEL, FIN_PUBLIC_HIDDEN, OWNER_KIND, TRUSTPILOT };

@@ -7,7 +7,7 @@
 // Props:
 //   source  { doc, ref } fra faktaarket eller klarhedstjekket
 //   caseId  sagen, hvis Dokumenter-fane åbnes
-//   back    { route, anchor?, label }: Dokumenter får en knap tilbage hertil (fx Indstilling)
+//   back    { route, anchor?, label }: Dokumenter får en knap tilbage hertil (f.eks. Indstilling)
 // Emits: ingen (navigationen går gennem useNavigation).
 import { computed } from 'vue'
 import { FileTextOutlined } from '@ant-design/icons-vue'

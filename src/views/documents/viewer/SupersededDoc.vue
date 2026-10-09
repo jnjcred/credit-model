@@ -1,5 +1,5 @@
 <script setup>
-// Viseren: en erstattet version (documents.jsx: SupersededDoc), fx budget v1 og v2. De findes kun som
+// Viseren: en erstattet version (documents.jsx: SupersededDoc), f.eks. budget v1 og v2. De findes kun som
 // metadata (læst af versionsloggen); indholdet og ændringerne står i versionsloggen i den gældende version.
 // Viseren vises kun, når window.CW_SOURCE_VIEW er sat (DOC_PREVIEW).
 //
@@ -28,7 +28,7 @@ const emit = defineEmits(['open'])
         align="center"
       >
         <a-typography-text type="secondary">
-          {{ t('Dateret') + ' ' + docWhen(doc) + ' · ' + doc.size }}
+          {{ t('Dateret') + ' ' + docWhen(doc) + ' - ' + doc.size }}
         </a-typography-text>
         <a-button
           size="small"

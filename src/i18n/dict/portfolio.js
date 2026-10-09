@@ -336,7 +336,7 @@ Object.assign(window.I18N.en, {
   "Fortryd": "Undo",
   "{navn} er afsluttet": "{navn} has been closed",
   "Påmindet": "Reminded",
-  "{n} påmindelser · senest": "{n} reminders · latest",
+  "{n} påmindelser - senest": "{n} reminders - latest",
   "for {n} dage siden": "{n} days ago",
   "Dig": "You",
   "Kunden": "Customer",

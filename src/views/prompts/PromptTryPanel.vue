@@ -153,7 +153,7 @@ const lines = computed(() => (result.value ? Math.max(1, Math.ceil(result.value.
           </a-card>
           <div class="pw-result-meta">
             <a-typography-text type="secondary">
-              {{ pwFill(t('{ord} ord · ca. {linjer} linjer i boksen · {sek} s · {web}'), { ord: words, linjer: lines, sek: elapsed, web: result.web ? t('med websøgning') : t('uden websøgning') }) }}
+              {{ pwFill(t('{ord} ord - ca. {linjer} linjer i boksen - {sek} s - {web}'), { ord: words, linjer: lines, sek: elapsed, web: result.web ? t('med websøgning') : t('uden websøgning') }) }}
             </a-typography-text>
             <a-button
               size="small"

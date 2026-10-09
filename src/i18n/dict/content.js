@@ -30,7 +30,7 @@ Object.assign(window.I18N.en, {
     'Obtain a list of the specific assets covered by the guarantee.',
 
   // FINDINGS - sources
-  'Budget_2026-28_v3.xlsx · linje 197': 'Budget_2026-28_v3.xlsx · line 197',
+  'Budget_2026-28_v3.xlsx - linje 197': 'Budget_2026-28_v3.xlsx - line 197',
   'Aarsrapport_2025.pdf · note 14': 'Aarsrapport_2025.pdf · note 14',
   'Pantebrev_maskiner.pdf · §4': 'Pantebrev_maskiner.pdf · §4',
   'Periodetal_Q1-2026.xlsx': 'Periodetal_Q1-2026.xlsx',

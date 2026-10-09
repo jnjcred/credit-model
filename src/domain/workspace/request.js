@@ -3,7 +3,7 @@
 // migrationen til Vue; logik, der lå inde i komponenterne, er løftet ud i navngivne funktioner
 // med de samme linjer (kilden står over hver). Bare globaler (t, DATA, CW) læses via window.
 // Funktioner med parameteren ui får skærmens tilstand som funktioner med de gamle navne
-// (fx ui.setTried), så linjerne er de samme som før.
+// (f.eks. ui.setTried), så linjerne er de samme som før.
 import { confirmRemove } from '@/services/feedback';
 import { wsFill, wsPlural } from './format.js';
 import { wsAdvisor, wsCaseDeadline } from './caseData.js';
@@ -99,7 +99,9 @@ function wsSendRequest(caseData, onInvalid) {
   }
   return wsDoSend(c, caseData);
 }
-function wsDoSend(c, caseData) {
+// quiet: vinduet "Anmod om materiale" viser selv en kvittering, så der kommer ingen besked ovenpå
+function wsDoSend(c, caseData, quiet) {
+  const say = (text, opts) => { if (!quiet) CW.toast(text, opts); };
   const to = { name: c.draft.name.trim(), role: c.draft.role.trim(), email: c.draft.email.trim() };
   const first = !c.request;
   const added = c.diff ? c.diff.added.length : 0;
@@ -124,7 +126,7 @@ function wsDoSend(c, caseData) {
           CW.focusSoon('#ws-material-title');
         });
       };
-      CW.toast(noMail ? t('Anmodningen er oprettet uden mail. Giv selv kunden linket.') : wsFill(t('Anmodning sendt til {email}'), { email: to.email }), { action: { label: t('Fortryd'), onClick: undo } });
+      say(noMail ? t('Anmodningen er oprettet uden mail. Giv selv kunden linket.') : wsFill(t('Anmodning sendt til {email}'), { email: to.email }), { action: { label: t('Fortryd'), onClick: undo } });
     } else {
       // Fortryd en opdatering: den tidligere anmodning gælder igen, og
       // ændringerne ligger tilbage i kladden
@@ -135,7 +137,7 @@ function wsDoSend(c, caseData) {
         CW.toast(t('Opdateringen er fortrudt. Ændringerne ligger igen i kladden.'), { tone: 'info' });
         CW.focusSoon('#ws-hero-title');
       };
-      CW.toast(noMail ? t('Anmodningen er opdateret uden mail. Kundens side viser ændringen.')
+      say(noMail ? t('Anmodningen er opdateret uden mail. Kundens side viser ændringen.')
         : added ? wsFill(wsPlural(added, t('Opdatering sendt til {email} med 1 nyt punkt'), t('Opdatering sendt til {email} med {n} nye punkter')), { email: to.email })
         : wsFill(t('Opdatering sendt til {email}: punkter er fjernet'), { email: to.email }),
         { action: { label: t('Fortryd'), onClick: undoUpdate } });
@@ -209,17 +211,22 @@ function wsMaterialModel(caseData, request) {
   const hasOnFile = it => { const f = CW.onFile(it); return !!f && !f.stale; };
   const isExtra = it => it.tier === 'extra';
   const rank = it => it.custom ? 2 : isExtra(it) ? 1 : 0;
-  // Det rådgiveren selv har uploadet på kundens vegne, ligger på sagen og står under "Ligger allerede på sagen"
-  const missing = all.filter(it => !it.custom && !wsUploadedByAdvisor(it.id) && (hasOnFile(it) ? !!sel[it.id] : (!isExtra(it) || sel[it.id]))).sort((a, b) => rank(a) - rank(b));
-  const extras = all.filter(it => isExtra(it) && !hasOnFile(it) && !sel[it.id]);
+  // Punkter, der allerede ligger på sagen (uploadet af kunden eller rådgiveren, eller hentet), står under "Ligger allerede på sagen"
+  const delivered = it => hasOnFile(it) || !!CW.isReceived(it.id) || CW.isApproved(it.id);
+  const missing = all.filter(it => !it.custom && !wsUploadedByAdvisor(it.id) && !delivered(it) && (!isExtra(it) || sel[it.id])).sort((a, b) => rank(a) - rank(b));
+  const extras = all.filter(it => isExtra(it) && !delivered(it) && !sel[it.id]);
   const custom = all.filter(it => it.custom);
   const hasYears = all.some(it => it.tier === 'year' && hasOnFile(it));
-  const inCase0 = all.filter(it => !it.custom && (!!wsUploadedByAdvisor(it.id) || (hasOnFile(it) && !sel[it.id] && !(hasYears && it.id === 'm-annual'))));
+  const inCase0 = all.filter(it => !it.custom && (!!wsUploadedByAdvisor(it.id) || (delivered(it) && !(hasYears && it.id === 'm-annual'))));
   // Hentet automatisk (offentlige kilder og årsrapporterne fra CVR): står for sig, så rådgiveren kan
   // se, at det er hentet, og alligevel spørge kunden om det eller bede om en ny version
   const isFetched = it => { const f = CW.onFile(it); return !!f && (f.isPublic || it.tier === 'year') && !wsUploadedByAdvisor(it.id); };
   const fetched = inCase0.filter(isFetched);
   const inCase = inCase0.filter(it => !isFetched(it));
+  // Ligger på sagen, delt i godkendt (flueben) og til rådgiverens gennemgang (et andet ikon)
+  const isApprovedItem = it => CW.isApproved(it.id) || (!!wsUploadedByAdvisor(it.id) && wsUploadedByAdvisor(it.id).status === 'approved');
+  const godkendt = inCase.filter(isApprovedItem);
+  const gennemgang = inCase.filter(it => !isApprovedItem(it));
   const catOptions = WS_MATERIAL_CATS.map(c => c.label);
 
   // Det, mailen beder om: valgte punkter, som rådgiveren ikke selv har uploadet.
@@ -235,12 +242,12 @@ function wsMaterialModel(caseData, request) {
   const deadlineText = draft.deadline ? CW.fmtDate(draft.deadline) : '';
   const first = (draft.name || '').trim().split(/\s+/)[0] || t('modtageren');
   const mail = CW.requestMail({ items: mailItems, deadline: draft.deadline, to: { name: draft.name, email: draft.email } });
-  const defSubject = mail.subject + ' · ' + mail.caseLine;
+  const defSubject = mail.subject + ' - ' + mail.caseLine;
   const whyOf = it => hasOnFile(it) ? t('Opdateret version.') : t(it.why || '');
   const removedList = removedItems.map((it, n) => (n + 1) + '. ' + t(it.label)).join('\n');
   const noNew = request && mailItems.length === 0;
   const hasMail = !(request && mailItems.length === 0 && !notifyRemoved);   // intet at skrive til kunden: ingen mail
-  // Rådgiveren kan altid lade være med at sende mailen (fx fordi de selv ringer eller skriver til kunden)
+  // Rådgiveren kan altid lade være med at sende mailen (f.eks. fordi de selv ringer eller skriver til kunden)
   const wantMail = draft.sendMail !== false;
   const showMail = hasMail && wantMail;
   const reqLink = 'https://' + ((request && request.link) || (DATA.REQUEST_LINK || 'crediwire.app/c/nh-9j2k-7Aq3'));
@@ -274,7 +281,7 @@ function wsMaterialModel(caseData, request) {
   // Sendeknappens tekst (L2228)
   const sendLabel = request ? (showMail ? t('Send opdatering') : t('Gem ændringen')) : showMail ? wsFill(t('Send til {name}'), { name: first }) : t('Opret uden mail');
   return {
-    sel, st, check, draft, cd, all, hasOnFile, isExtra, rank, missing, extras, custom, hasYears, inCase0, isFetched, fetched, inCase, catOptions,
+    sel, st, check, draft, cd, all, hasOnFile, isExtra, rank, missing, extras, custom, hasYears, inCase0, isFetched, fetched, inCase, godkendt, gennemgang, catOptions,
     added, mailItems, listError, removedItems, notifyRemoved, deadlineText, first, mail, defSubject, whyOf, removedList, noNew, hasMail,
     wantMail, showMail, reqLink, copyLink, defBody, subject, body, canDiscard, sendLabel,
   };
@@ -285,13 +292,13 @@ function wsMaterialModel(caseData, request) {
 // sent: kvitteringen { name, count, deadline, update, noMail } eller null.
 function wsMaterialHeading(sent, request, view) {
   const title = (sent ? sent.update : request) ? t('Ret i anmodningen') : t('Anmod om materiale');
-  const subtitle = view === 'sent' ? (sent && sent.noMail ? t('Der er ikke sendt en mail. Kunden ser anmodningen via linket.') : t('Kunden har fået mailen og kan uploade materialet via linket.'))
+  const subtitle = view === 'sent' ? ''
     : view === 'preview' ? t('Tjek modtager og mail, før du sender.')
     : t('Vælg det materiale, du vil have fra kunden.');
   const sentTitle = sent ? (sent.noMail
     ? (sent.update ? t('Anmodningen er opdateret uden mail') : wsFill(t('Anmodningen til {name} er oprettet uden mail'), { name: sent.name }))
     : wsFill(sent.update ? t('Opdatering sendt til {name}') : t('Anmodning sendt til {name}'), { name: sent.name })) : null;
-  const sentText = sent ? wsFill(t('{items} · svarfrist {date}. Du kan følge svarene i sagen.'), { items: wsPlural(sent.count, t('1 punkt'), t('{n} punkter')), date: CW.fmtDate(sent.deadline) }) : null;
+  const sentText = sent ? wsFill(t('{items} - svarfrist {date}. Du kan følge svarene i sagen.'), { items: wsPlural(sent.count, t('1 punkt'), t('{n} punkter')), date: CW.fmtDate(sent.deadline) }) : null;
   return { title, subtitle, sentTitle, sentText };
 }
 
@@ -335,7 +342,7 @@ function wsMaterialSend(caseData, request, model, ui) {
   if (c.error) { if (/navn|mail|frist/i.test(c.error)) setEditRec(true); return; }
   const info = { name: c.draft.name.trim(), count: mailItems.length, deadline: c.draft.deadline, update: !!request, noMail: !showMail };
   if (c.noRequired) { wsSendRequest(caseData); onClose(); return; }
-  wsDoSend(c, caseData);
+  wsDoSend(c, caseData, true);
   wsSetDraft({ subject: null, body: null, sendMail: true }, caseData);
   onSent && onSent(info);
   setView('sent');
@@ -381,16 +388,18 @@ function wsRemoveAdvisorFiles(it, up) {
 /* Påmindelse til kunden (WSRemindModal, workspace.jsx L2506–2579): mailen handler som
    udgangspunkt om alt, kunden mangler at sende; rådgiveren kan skrive den om. ids: punkterne,
    påmindelsen gælder (tom: "Kunden mangler ikke noget."). */
-function wsRemindMail() {
+// only: kun disse punkter (Påmind på ét punkt); uden only alt, kunden mangler (Påmind alle).
+function wsRemindMail(only) {
   const request = CW.request();
   const st = CW.items();
   const adv = wsAdvisor();
   const to = (request && request.to) || {};
   // Det, kunden stadig skylder: ikke sendt endnu, eller afvist og skal sendes igen
-  const missingItems = wsCustomerList().filter(e => !e.dropped && (!st[e.it.id] || st[e.it.id].status === 'pending' || st[e.it.id].status === 'rejected')).map(e => e.it);
+  const missingItems = wsCustomerList().filter(e => !e.dropped && (!st[e.it.id] || st[e.it.id].status === 'pending' || st[e.it.id].status === 'rejected'))
+    .filter(e => !only || only.indexOf(e.it.id) >= 0).map(e => e.it);
   const ids = missingItems.map(it => it.id);
   const mail = CW.requestMail({ items: missingItems, deadline: request && request.deadline, to: { name: to.name, email: to.email }, link: request && request.link });
-  const defSubject = t('Påmindelse') + ': ' + mail.subject + ' · ' + mail.caseLine;
+  const defSubject = t('Påmindelse') + ': ' + mail.subject + ' - ' + mail.caseLine;
   const defBody = [
     mail.greeting, '',
     t('Vi mangler stadig følgende materiale til vurderingen af jeres ansøgning:'), '',
@@ -419,7 +428,7 @@ function wsRejectMail(it, reason, sendMail, subjectEdit, bodyEdit) {
   const to = (request && request.to) || {};
   const label = t(it.label);
   const mail = CW.requestMail({ items: [it], deadline: request && request.deadline, to: { name: to.name, email: to.email }, link: request && request.link });
-  const defSubject = wsFill(t('Vi har et spørgsmål til {item}'), { item: label }) + ' · ' + mail.caseLine;
+  const defSubject = wsFill(t('Vi har et spørgsmål til {item}'), { item: label }) + ' - ' + mail.caseLine;
   const defBody = [
     mail.greeting, '',
     wsFill(t('Tak for det, I har sendt. Vi har kigget på "{item}" og har et spørgsmål:'), { item: label }), '',

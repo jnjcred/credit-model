@@ -91,14 +91,14 @@ function requestMeta(r) {
   const F = DATA.fmt;
   const closed = r.status === 'closed';
   const parts = [];
-  if (r.status === 'draft') parts.push(t('Ikke sendt') + ' · ' + r.total + ' ' + (r.total === 1 ? t('punkt') : t('punkter')));
+  if (r.status === 'draft') parts.push(t('Ikke sendt') + ' - ' + r.total + ' ' + (r.total === 1 ? t('punkt') : t('punkter')));
   else parts.push(reqFill(t('{n} af {m} modtaget'), { n: r.received, m: r.total }));
   if (closed) parts.push(t(LOCK_LABEL[r.closed] || 'Lukket'));
   else if (r.status === 'stuck') parts.push(t('sidder fast siden') + ' ' + F.shortDate(r.lastActivityAt || r.sentAt));
   else if (r.status === 'waiting') parts.push(t('sendt') + ' ' + F.shortDate(r.sentAt));
   else if (r.status === 'active' && r.lastActivityAt) parts.push(t('seneste aktivitet') + ' ' + F.ago(r.lastActivityAt));
   if (r.lastReminder && !closed) parts.push(t('påmindet') + ' ' + F.shortDate(r.lastReminder.at));
-  return parts.join(' · ');
+  return parts.join(' - ');
 }
 
 // Tidslinje for anmodningen. Nordhavn læser sagens historik (CW.activity),

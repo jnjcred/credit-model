@@ -174,7 +174,7 @@ const status = computed(() => (!base.value ? '' : dirty.value ? t('Ændringer er
                   </template>
                 </span>
                 <a-typography-text type="secondary">
-                  {{ 'prompts/' + f.file + (copies[f.file] ? ' · ' + t('browserkopi') : '') }}
+                  {{ 'prompts/' + f.file + (copies[f.file] ? ' - ' + t('browserkopi') : '') }}
                 </a-typography-text>
               </span>
             </template>
@@ -347,6 +347,7 @@ const status = computed(() => (!base.value ? '' : dirty.value ? t('Ændringer er
                             </a-typography-text>
                             <template #actions>
                               <a-button
+                                class="cw-link"
                                 type="link"
                                 size="small"
                                 @click="loadVersion(v)"

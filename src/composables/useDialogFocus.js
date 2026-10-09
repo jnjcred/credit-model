@@ -5,10 +5,10 @@
 //    tabindex="0" og aria-hidden) før og efter indholdet, når dialogen åbner, og vagterne er ekstra
 //    Tab-stop uden navn. Lander fokus på en vagt, flyttes det til dialogens første element (ved åbning
 //    og Tab fra det sidste) eller sidste element (Shift+Tab fra det første). Dialoger, der selv sætter
-//    fokus et bestemt sted (fx bekræftelsens årsag), gør det stadig bagefter.
+//    fokus et bestemt sted (f.eks. bekræftelsens årsag), gør det stadig bagefter.
 // 2. Lukkeknappen hedder "Luk" på dansk. antdv's kryds hedder altid "Close" (aria-label), også i en
 //    dansk brugerflade; navnet sættes, når fokus kommer ind i dialogen.
-// 3. Esc og Tab, når fokus er tabt. Forsvinder det element, der har fokus (fx en fil, der fjernes med
+// 3. Esc og Tab, når fokus er tabt. Forsvinder det element, der har fokus (f.eks. en fil, der fjernes med
 //    "Fjern", eller et valgt søgeresultat), står fokus på <body>, og antdv hører kun tasterne inde i
 //    dialogen. Tab går ind i den øverste åbne dialog, og Esc sendes til dialogen, så den lukker på sin
 //    sædvanlige måde (ikke, hvis den er sat til at ignorere Esc). Fokus flyttes først ved en tast.

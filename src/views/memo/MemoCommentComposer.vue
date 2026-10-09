@@ -3,7 +3,7 @@
 // · Kredit" er feltets etiket; rådgiveren skriver altid i eget navn. Feltet får fokus, når boksen åbner.
 // Ctrl/Cmd+Enter sender, Esc lukker og tømmer feltet (i skuffen på smal skærm lukker Esc kun boksen, som
 // før). "Send" kan ikke trykkes, mens feltet er tomt (som før: knappen er slået fra).
-// Teksten ejes af tråden (v-model:text), som før: lukker siden boksen (fx fordi rådgiveren åbner boksen
+// Teksten ejes af tråden (v-model:text), som før: lukker siden boksen (f.eks. fordi rådgiveren åbner boksen
 // ved et andet afsnit), står teksten der stadig, næste gang boksen åbner i samme tråd.
 //
 // Props: sKey (afsnittets nøgle; feltets id er cmt-new-<sKey>), text (v-model:text).
@@ -47,7 +47,7 @@ const fieldId = 'cmt-new-' + props.sKey
       <template #label>
         <span class="memo-cmt-as">
           {{ t('Du skriver som') + ' ' }}<a-typography-text strong>
-            {{ MEMO_ME.author + ' · ' + t(MEMO_ME.label) }}
+            {{ MEMO_ME.author + ' - ' + t(MEMO_ME.label) }}
           </a-typography-text>
         </span>
       </template>

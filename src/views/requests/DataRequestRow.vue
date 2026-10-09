@@ -18,7 +18,7 @@ const closed = computed(() => props.request.status === 'closed')
 const late = computed(() => props.request.sentAt && dl.value.overdue && props.request.status !== 'ready' && !closed.value)
 const showDl = computed(() => props.request.deadline && !closed.value && props.request.status !== 'ready')
 // Til højre: "Jonas K. · svarfrist 05-10-2026" (+ et rødt "overskredet")
-const cat = computed(() => (props.request.owner || '-') + (showDl.value ? ' · ' + t('svarfrist') + ' ' + dl.value.date : ''))
+const cat = computed(() => (props.request.owner || '-') + (showDl.value ? ' - ' + t('svarfrist') + ' ' + dl.value.date : ''))
 
 // Handlingen efter tilstand: lukket, til gennemgang, påmind, komplet, ikke sendt
 const action = computed(() => {
@@ -39,6 +39,7 @@ const action = computed(() => {
     <a-list-item-meta :description="requestMeta(request)">
       <template #title>
         <a-button
+          class="cw-link"
           type="link"
           size="small"
           aria-haspopup="dialog"
@@ -62,7 +63,7 @@ const action = computed(() => {
       <a-tooltip :title="showDl ? t('Kundens svarfrist') : undefined">
         <span>
           {{ cat }}<template v-if="late">
-            · <a-typography-text type="danger">{{ t('overskredet') }}</a-typography-text>
+            - <a-typography-text type="danger">{{ t('overskredet') }}</a-typography-text>
           </template>
         </span>
       </a-tooltip>

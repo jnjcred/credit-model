@@ -1,6 +1,6 @@
 <script setup>
 // En række i indstillingen (WSCheckRow i workspace.jsx L3336–3363): titel, én grå linje med
-// kildelinket, eventuelle dybdelinks (fx tal, der ikke findes i kilden) og til højre rækkens
+// kildelinket, eventuelle dybdelinks (f.eks. tal, der ikke findes i kilden) og til højre rækkens
 // handling ("Åbn memo", "Gå til udestående", "Åbn afsnit 2" ...). Gruppens overskrift siger, om
 // punktet blokerer, kræver en begrundelse eller er til orientering.
 //
@@ -66,6 +66,7 @@ const back = computed(() => ({ route: 'workspace:' + props.caseId + ':indstil', 
                 #actions
               >
                 <a-button
+                  class="cw-link"
                   type="link"
                   size="small"
                   :aria-label="l.aria"
@@ -84,6 +85,7 @@ const back = computed(() => ({ route: 'workspace:' + props.caseId + ':indstil', 
         flex="none"
       >
         <a-button
+          class="cw-link"
           type="link"
           size="small"
           :aria-label="r.action.aria || undefined"

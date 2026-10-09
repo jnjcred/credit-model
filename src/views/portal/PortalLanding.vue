@@ -33,7 +33,7 @@ const steps = [
   <div class="portal-land">
     <a-typography-title>{{ first ? ncFill(t('Kære {name},'), { name: first }) : t('Velkommen') }}</a-typography-title>
     <a-typography-paragraph type="secondary">
-      {{ ncFill(t('Tak for jeres ansøgning hos EIFO. For at vi kan behandle den, har vi brug for noget materiale fra {company}.'), { company: DATA.COMPANY.name }) }}
+      {{ ncFill(t('Tak for jeres ansøgning hos EIFO. For at vi kan behandle den, har vi brug for noget materiale om {company}.'), { company: DATA.COMPANY.name }) }}
     </a-typography-paragraph>
     <a-card
       size="small"
@@ -47,7 +47,7 @@ const steps = [
           <a-typography-text strong>
             {{ t('Hvorfor Crediwire?') }}
           </a-typography-text>
-          {{ ' ' }}{{ ncFill(t('EIFO bruger Crediwire til sikker indsamling af materiale, derfor ligger siden hos Crediwire. Kun {adv} og hendes kolleger hos EIFO ser det, I sender.'), { adv }) }}
+          {{ ' ' }}{{ t('EIFO bruger Crediwire til sikker indsamling af materiale, derfor ligger siden hos Crediwire. Kun medarbejdere hos EIFO ser det, I sender.') }}
         </div>
       </div>
     </a-card>

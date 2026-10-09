@@ -37,7 +37,7 @@ const recipient = computed(() => {
   const req = m.value.req
   if (!req) return ''
   return (req.to && (req.to.name || req.to.email) ? wsFill(t('Til {name}'), { name: [req.to.name, req.to.role ? t(req.to.role) : '', req.to.email].filter(Boolean).join(', ') }) : t('Modtager er ikke udfyldt'))
-    + (req.deadline ? ' · ' + wsFill(t('Svarfrist {date}'), { date: CW.fmtDate(req.deadline) }) : '')
+    + (req.deadline ? ' - ' + wsFill(t('Svarfrist {date}'), { date: CW.fmtDate(req.deadline) }) : '')
 })
 const reqTitle = computed(() => (m.value.sent ? wsFill(t('Anmodning sendt {when}'), { when: CW.fmtWhen(m.value.req.sentAt) }) : t('Gemt anmodning, ikke sendt')))
 </script>
@@ -134,7 +134,7 @@ const reqTitle = computed(() => (m.value.sent ? wsFill(t('Anmodning sendt {when}
               v-if="m.mail"
               size="small"
               type="inner"
-              :title="m.mail.subject + ' · ' + t('Sagsnr.') + ' ' + caseData.caseNr"
+              :title="m.mail.subject + ' - ' + t('Sagsnr.') + ' ' + caseData.caseNr"
             >
               <a-typography-paragraph>{{ m.mail.greeting }}</a-typography-paragraph>
               <a-typography-paragraph type="secondary">

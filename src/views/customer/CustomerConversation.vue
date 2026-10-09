@@ -18,10 +18,10 @@
 // forhåndsvisning stopper alle submit-hændelser (Enter i emnefeltet ville ellers give en note).
 import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import { Grid } from 'ant-design-vue'
-import { MailOutlined, SendOutlined } from '@ant-design/icons-vue'
+import { SendOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
-import { csAboutLabel, csAdvisor, csCustomerName, csFill, csFirst, csInitials, csShortDate } from '@/domain/customer'
+import { csAboutLabel, csAdvisor, csCustomerName, csFill, csInitials, csShortDate } from '@/domain/customer'
 import { wsPublicTopics } from '@/domain/workspace/publicSources.js'
 import { useCase } from '@/composables/useCaseVersion'
 import { useSelectEscape } from '@/composables/useSelectEscape'
@@ -40,7 +40,7 @@ const ws = computed(() => props.variant === 'workspace')
 
 // Det, der læses af sagens tilstand, følger den (som CW.useCase() før)
 const adv = useCase(() => csAdvisor())
-const advFirst = computed(() => csFirst(adv.value.name))
+const advFirst = computed(() => 'EIFO')   // kunden har en dialog med EIFO (rådgiverens navn står ved hver besked)
 const customer = useCase(() => csCustomerName())
 const msgs = useCase(() => CW.conversation())
 const requested = useCase(() => CW.requestedItems())
@@ -54,7 +54,7 @@ const publicTopics = useCase(() => (advisorSide.value ? wsPublicTopics() : []))
 
 const text = ref('')
 const itemId = ref('')
-// Emne uden for punkterne (rådgiverens side), fx "Årsrapport 2024" fra de offentlige data
+// Emne uden for punkterne (rådgiverens side), f.eks. "Årsrapport 2024" fra de offentlige data
 const about = ref('')
 // Mail til kunden, når det er rådgiveren, der skriver: på sagen og i forhåndsvisningen af
 // kundens side (Kundeside). Kun når anmodningen er sendt. Som ved "Stil spørgsmål til materialet"
@@ -100,7 +100,7 @@ const mailBase = computed(() => {
   const req = request.value
   return canMail.value ? CW.requestMail({ items: [], deadline: req.deadline, to: { name: req.to && req.to.name, email: req.to && req.to.email }, link: req.link }) : null
 })
-const defSubject = computed(() => (mailBase.value ? (topic.value ? csFill(t('Vi har et spørgsmål til {item}'), { item: topic.value }) : t('Besked fra EIFO')) + ' · ' + mailBase.value.caseLine : ''))
+const defSubject = computed(() => (mailBase.value ? (topic.value ? csFill(t('Vi har et spørgsmål til {item}'), { item: topic.value }) : t('Besked fra EIFO')) + ' - ' + mailBase.value.caseLine : ''))
 const defBody = computed(() => (mailBase.value ? [
   mailBase.value.greeting, '',
   text.value.trim() || t('[Din besked]'), '',
@@ -115,7 +115,7 @@ const mailTo = computed(() => csFill(t('Send også en mail til kunden ({email})'
 function send () {
   const txt = text.value.trim()
   if (!txt) return
-  // I forhåndsvisningen af kundesiden er det rådgiveren, der skriver (fx svarer derinde ved en fejl)
+  // I forhåndsvisningen af kundesiden er det rådgiveren, der skriver (f.eks. svarer derinde ved en fejl)
   const asAdvisor = props.side === 'kunde' && preview.value
   if (canMail.value && sendMail.value && !mailBody.value.trim()) return
   // Mailens oplysninger, som de stod, da der blev trykket Send
@@ -164,13 +164,13 @@ const status = computed(() => (!msgs.value.length || props.readOnly ? null
   : waits.value === props.side ? { text: props.side === 'kunde' ? t('Venter på jeres svar') : t('Afventer dit svar'), strong: true }
   : waits.value ? { text: props.side === 'kunde' ? csFill(t('{navn} svarer typisk inden for 1 arbejdsdag'), { navn: advFirst.value }) : t('Afventer kunden'), strong: false }
   : null))
-const title = computed(() => (props.side === 'kunde' ? csFill(t('Jeres dialog med {navn}'), { navn: advFirst.value }) : t('Dialog med kunden')))
+const title = computed(() => (props.side === 'kunde' ? csFill(t('Dialog med {navn}'), { navn: advFirst.value }) : t('Dialog med kunden')))
 const msgLabel = computed(() => (props.side === 'kunde' ? csFill(t('Besked til {navn}'), { navn: advFirst.value }) : t('Besked til kunden')))
 const placeholder = computed(() => (props.side === 'kunde' ? (preview.value ? t('Skriv som rådgiver') : csFill(t('Skriv til {navn}'), { navn: advFirst.value })) : t('Skriv til kunden')))
 
 // "Handler om": sagen generelt, de anmodede punkter og (rådgiverens side) de offentlige data.
 // Grupperne vises kun, når der er offentlige emner (som optgroup før). Et emne, der ikke står på
-// listerne (fx et dokument, der er slettet siden), står som sin egen mulighed sidst.
+// listerne (f.eks. et dokument, der er slettet siden), står som sin egen mulighed sidst.
 const topicValue = computed(() => itemId.value || (about.value ? 'about:' + about.value : ''))
 const topicOptions = computed(() => {
   const items = requested.value.map(it => ({ value: it.id, label: t(it.label) }))
@@ -183,7 +183,7 @@ const topicOptions = computed(() => {
 function onTopic (v) {
   if (v.indexOf('about:') === 0) { about.value = v.slice(6); itemId.value = '' } else { itemId.value = v; about.value = '' }
 }
-// Esc i den åbne liste lukker kun listen (også når samtalen står i en a-drawer, fx forhåndsvisningen)
+// Esc i den åbne liste lukker kun listen (også når samtalen står i en a-drawer, f.eks. forhåndsvisningen)
 const selectEsc = useSelectEscape()
 
 function resetMail () {
@@ -200,10 +200,6 @@ function resetMail () {
     <a-card :bordered="!ws">
       <template #title>
         <a-space :size="8">
-          <MailOutlined
-            v-if="ws"
-            aria-hidden="true"
-          />
           <span
             :id="pid + '-dialog-h'"
             role="heading"
@@ -269,7 +265,7 @@ function resetMail () {
                 </template>
                 <template v-if="r.a.tag">{{ r.a.tag }}{{ ' ' }}</template>
                 <span :title="CW.fmtWhen(r.m.at)">{{ csShortDate(r.m.at) }}</span>
-                <template v-if="r.about"> · {{ r.about }}</template>
+                <template v-if="r.about"> - {{ r.about }}</template>
               </span>
             </template>
             <template #content>
@@ -357,6 +353,7 @@ function resetMail () {
               </a-typography-text>
               <a-button
                 v-if="subjectEdit != null || bodyEdit != null"
+                class="cw-link"
                 type="link"
                 @click="resetMail"
               >

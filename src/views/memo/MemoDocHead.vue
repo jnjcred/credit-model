@@ -25,7 +25,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['connect-ai', 'generate', 'toggle-origin', 'export'])
 
-const title = computed(() => (props.readOnly ? t('Credit memo · indstillet version') + ' ' + props.version : t('Credit memo · udkast')))
+const title = computed(() => (props.readOnly ? t('Credit memo - indstillet version') + ' ' + props.version : t('Credit memo - udkast')))
 // Fremdriften og forklaringen på gennemgangen står her, én gang for hele memoet
 const sub = computed(() => props.reviewedCount + ' ' + t('af') + ' ' + props.total + ' ' + t('afsnit gennemgået') + '. ' +
   (props.readOnly ? t('Skrivebeskyttet') + '.' : t('Læs hvert afsnit, ret det nødvendige, og markér det som gennemgået.')))

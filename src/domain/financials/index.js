@@ -7,7 +7,7 @@
 //   3. window.CW_EXPORT_DOCS = [5 eksporter]; memo_handoff lægger sin vejledning til bagefter, og
 //      data.js, case_state.js, Dokumenter og Overblik læser listen
 // Modulerne selv har ingen virkninger uden for sig selv. Vue-komponenterne importerer fra dem
-// (fx '@/domain/financials/finEdits'), ikke fra denne fil: den skal kun køre én gang.
+// (f.eks. '@/domain/financials/finEdits'), ikke fra denne fil: den skal kun køre én gang.
 import { FIN_ANNUAL_YEARS, FIN_ACTUAL_Q, FIN_BUDGET_SEP, FIN_BUDGET_Q, ANNUAL_REPORT } from './finData.js';
 import { finEstimate2026, FIN_RATIOS } from './finCalc.js';
 import { finSyncMapping } from './finMapping.js';

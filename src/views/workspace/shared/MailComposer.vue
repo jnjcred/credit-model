@@ -8,8 +8,8 @@
 //   subject, body   teksterne, der vises (standardteksten eller rådgiverens rettelser)
 //   isDefault       teksterne er standardteksten: knappen "Gendan standardtekst" står ikke
 //   rows            tekstfeltets højde i linjer (anmodning 16, påmindelse 14, spørgsmål 12)
-//   subjectId       id på emnefeltet (fx 'ws-req-subject', 'ws-remind-subject', 'ws-reject-subject')
-//   note            grå linje under mailen (fx "Mailen sendes præcis som vist."); tom: ingen
+//   subjectId       id på emnefeltet (f.eks. 'ws-req-subject', 'ws-remind-subject', 'ws-reject-subject')
+//   note            grå linje under mailen (f.eks. "Mailen sendes præcis som vist."); tom: ingen
 // Emits: update:subject, update:body (rådgiveren retter; v-model:subject / v-model:body),
 //        reset (Gendan standardtekst).
 import { t } from '@/i18n'
@@ -56,6 +56,7 @@ defineEmits(['update:subject', 'update:body', 'reset'])
       </a-typography-text>
       <a-button
         v-if="!isDefault"
+        class="cw-link"
         type="link"
         size="small"
         @click="$emit('reset')"

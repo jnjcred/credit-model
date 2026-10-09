@@ -65,6 +65,8 @@ function finAiAiText(id) {
   return s.ai != null ? s.ai : t(s.alt ? def.alt : def.text);
 }
 function finAiText(id) { const s = finAiState(id); return s.edited != null ? s.edited : finAiAiText(id); }
+// Har rådgiveren rettet eller kommenteret en af tekstene (ids)? Så er kilden AI og rådgiver, ellers AI
+function finAiTouched(ids) { const all = finAiLoad(); return ids.some(k => all[k] && (all[k].edited != null || all[k].note)); }
 function finAiAnyEdited() { const all = finAiLoad(); return Object.keys(all).some(k => all[k] && all[k].edited != null); }
 
 // Sagens materiale til AI'en (pladsholderen {materiale}): ledelsesberetningen i den
@@ -90,7 +92,7 @@ async function finAiPrompt(id) {
   try {
     if (window.CW_PROMPTS && typeof CW_PROMPTS.load === 'function') raw = await CW_PROMPTS.load(def.file);
     else {
-      const r = await fetch('prompts/' + def.file + '?t=' + Date.now(), { cache: 'no-store' });
+      const r = await fetch('/prompts/' + def.file + '?t=' + Date.now(), { cache: 'no-store' });
       if (r.ok) raw = await r.text();
     }
   } catch (e) { raw = null; }
@@ -129,7 +131,7 @@ function finAiVars(id, opts) {
   return {
     virksomhed: co.name, cvr: co.cvr, branche: cvrVal('industry'), aktivitet: co.activity, hjemsted: co.hq,
     ansatte: cvrVal('employees'), hjemmeside: co.website, dato: DATA.fmt.longDate(DATA.fmt.isoDay(new Date())),
-    sprog: en ? 'engelsk' : 'dansk', materiale: finAiContext(), nuvaerende_tekst: finAiAiText(id),
+    sprog: en ? 'engelsk' : 'dansk', materiale: opts && opts.noMaterial ? '' : finAiContext(), nuvaerende_tekst: finAiAiText(id),
     faktor: (opts && opts.faktor) || (def.faktor ? t(def.faktor) : ''),
   };
 }
@@ -156,20 +158,24 @@ async function finAiGenerate(id, pr, opts) {
 
 async function finAiRun(id) {
   if (window.AI && typeof AI.isReady === 'function' && AI.isReady()) {
-    const r = await finAiGenerate(id, await finAiPrompt(id));
-    finAiPatch(id, { ai: r.text, aiAt: new Date().toISOString(), aiWeb: r.web, edited: null, editedAt: null, editedBy: null });
+    // Grundlaget, rådgiveren har valgt (basis: { uploads, web }): uden internet søges der ikke; uden materialet sendes det ikke med
+    const basis = finAiState(id).basis || {};
+    const pr = await finAiPrompt(id);
+    if (basis.web === false) pr.web = false;
+    const r = await finAiGenerate(id, pr, { noMaterial: basis.uploads === false });
+    finAiPatch(id, { ai: r.text, aiAt: new Date().toISOString(), aiWeb: r.web, edited: null, editedAt: null, editedBy: null, noAi: null });
     return { real: true, web: r.web };
   }
   // Demo uden AI-forbindelse: skift til det andet forberedte AI-udkast
   await new Promise(r => setTimeout(r, 1100));
   const s = finAiState(id);
-  finAiPatch(id, { ai: null, alt: !s.alt, aiAt: new Date().toISOString(), aiWeb: false, edited: null, editedAt: null, editedBy: null });
+  finAiPatch(id, { ai: null, alt: !s.alt, aiAt: new Date().toISOString(), aiWeb: false, edited: null, editedAt: null, editedBy: null, noAi: null });
   return { real: false };
 }
 
 // Modul-eksport
 export {
   PRODUCT_TEXT, MARKET_TEXT, MARKET_PEST, FIN_AI_KEY, FIN_AI_DEFS, FIN_PEST_ALT,
-  finAiLoad, finAiPatch, finAiState, finAiAiText, finAiText, finAiAnyEdited,
+  finAiLoad, finAiPatch, finAiState, finAiAiText, finAiText, finAiAnyEdited, finAiTouched,
   finAiContext, finAiPrompt, finAiParse, finAiFill, finAiClean, finAiVars, finAiGenerate, finAiRun,
 };

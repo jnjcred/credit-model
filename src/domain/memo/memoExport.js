@@ -237,15 +237,15 @@ function exportMemoToWord(sections, opts) {
     ? t('Indstillet version') + ' ' + locked.version + ', ' + fmtDay(locked.at) + '. ' + t('Låst: svarer til det, kreditkomitéen har fået.') + (locked.past ? ' ' + t('Tidligere version, ikke den gældende.') : '')
     : t('Udkast') + ', ' + t('ikke indstillet') + '. ' + t('Kan ændre sig før indstilling.');
   parts.push(`<p class="stamp ${locked ? 'locked' : 'draft'}">${esc(stamp)} ${esc(t('Eksporteret'))} ${esc(fmtWhen(new Date().toISOString()))}.</p>`);
-  parts.push(`<h1>${esc(t('Kreditindstilling'))} · ${esc(coName)}</h1>`);
-  parts.push(`<p class="meta"><strong>${esc(t('Indstilling af'))} ${esc(t('nyt engagement'))} ${esc(t('til'))} ${esc(t('Kreditkomité'))}</strong><br/>${esc(t('Kreditrisiko:'))} ${esc(front ? front.risk : memoRisk())} · ${esc(t('Kundetype:'))} ${esc(t('Erhverv, SMV'))}</p>`);
+  parts.push(`<h1>${esc(t('Kreditindstilling'))} - ${esc(coName)}</h1>`);
+  parts.push(`<p class="meta"><strong>${esc(t('Indstilling af'))} ${esc(t('nyt engagement'))} ${esc(t('til'))} ${esc(t('Kreditkomité'))}</strong><br/>${esc(t('Kreditrisiko:'))} ${esc(front ? front.risk : memoRisk())} - ${esc(t('Kundetype:'))} ${esc(t('Erhverv, SMV'))}</p>`);
   parts.push(`<table style="width:100%; font-size:10pt; margin: 8pt 0 14pt;">`);
   parts.push(`<tr><td><strong>${esc(t('Dato:'))}</strong> ${esc(memoDate(locked, docLang))}</td><td><strong>CVR:</strong> ${esc(CO.cvr || '')}</td></tr>`);
   parts.push(`<tr><td><strong>${esc(t('Status:'))}</strong> ${esc(locked ? t('Indstillet version') + ' ' + locked.version : t('Udkast'))}</td><td></td></tr>`);
   parts.push(`<tr><td><strong>${esc(t('Branche:'))}</strong> ${esc(t('Vindmøllekomponenter / komposit'))}</td><td><strong>${esc(t('Sagsnr.:'))}</strong> ${esc(CO.caseNr || '')}</td></tr>`);
   parts.push(`<tr><td><strong>${esc(t('Primær kundeansvarlig:'))}</strong> ${esc(t('Mette Larsen, Kredit'))}</td><td><strong>${esc(t('Sekundær:'))}</strong> ${esc(t('Sofie Andersen, Erhverv'))}</td></tr>`);
   parts.push(`</table>`);
-  parts.push(`<p class="meta">${esc(t('Dispensation fra acceptkriterie'))}: ${esc(t('Ingen'))} · ${esc(t('Eksporteret'))} ${esc(fmtDay(new Date().toISOString()))}</p>`);
+  parts.push(`<p class="meta">${esc(t('Dispensation fra acceptkriterie'))}: ${esc(t('Ingen'))} - ${esc(t('Eksporteret'))} ${esc(fmtDay(new Date().toISOString()))}</p>`);
   parts.push(memoFactsHtml(esc, front ? front.facts : memoFacts({ final: !!locked }), docLang));
 
   // Filen skal svare til skærmen. Før blev hvert afsnit rådgiveren ikke selv
@@ -291,7 +291,7 @@ function exportMemoToWord(sections, opts) {
               + `<div class="cmt-meta">${esc(c.resolved.dept ? t('Frigivet af') : t('Løst af'))} ${esc(c.resolved.by)}, ${esc(fmtWhen(c.resolved.at))}: ${esc(t(c.resolved.reason || ''))}</div>`
             : st === 'withdrawn' ? `<div class="cmt-meta">${esc(t('Trukket tilbage af'))} ${esc(c.withdrawn.by)}, ${esc(fmtWhen(c.withdrawn.at))}</div>`
             : isBlockingComment(c) ? `<div class="cmt-meta"><strong>${esc(t('Blokerer indstilling'))}</strong></div>` : '';
-          parts.push(`<div class="cmt-box"><div class="cmt-meta"><span class="cmt-dept">${esc(c.author)}</span> · ${esc(t(d.label))} · ${esc(commentWhen(c))}</div>${esc(t(c.text)).replace(/\n/g, '<br/>')}${tail}</div>`);
+          parts.push(`<div class="cmt-box"><div class="cmt-meta"><span class="cmt-dept">${esc(c.author)}</span> - ${esc(t(d.label))} - ${esc(commentWhen(c))}</div>${esc(t(c.text)).replace(/\n/g, '<br/>')}${tail}</div>`);
         });
       }
     }

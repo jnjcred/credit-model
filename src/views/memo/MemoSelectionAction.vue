@@ -7,7 +7,7 @@
 // klikket), ikke på Enter eller mellemrum.
 //
 // Props: x, y (skærmkoordinater). Emits: activate.
-import { RobotOutlined } from '@ant-design/icons-vue'
+import AiIcon from '@/components/common/AiIcon.vue'
 import { t } from '@/i18n'
 
 defineProps({
@@ -28,7 +28,7 @@ const emit = defineEmits(['activate'])
       @mousedown.prevent="emit('activate')"
     >
       <template #icon>
-        <RobotOutlined aria-hidden="true" />
+        <AiIcon aria-hidden="true" />
       </template>
       {{ t('Omskriv markeringen') }}
     </a-button>

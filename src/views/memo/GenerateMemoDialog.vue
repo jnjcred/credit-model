@@ -68,6 +68,7 @@ onBeforeUnmount(() => {
       </a-typography-text>
       <a-space :size="4">
         <a-button
+          class="cw-link"
           type="link"
           size="small"
           @click="setAll(true)"
@@ -75,6 +76,7 @@ onBeforeUnmount(() => {
           {{ t('Vælg alle') }}
         </a-button>
         <a-button
+          class="cw-link"
           type="link"
           size="small"
           @click="setAll(false)"

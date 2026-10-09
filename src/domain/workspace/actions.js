@@ -39,7 +39,7 @@ function wsReopen() {
  * "Anmod om materiale" / "Anmod om mere materiale" fra alle skærme. Første
  * anmodning er fasen Materialevalg. Er anmodningen sendt, åbnes kladden som en
  * visning, og fasen bevares. En indstillet sag skal trækkes tilbage først, en
- * afslået sag genoptages først. open() viser vælgeren (fx går til Overblik).
+ * afslået sag genoptages først. open() viser vælgeren (f.eks. går til Overblik).
  */
 function wsRequestMore(open) {
   const cs = CW.caseState();
@@ -65,7 +65,7 @@ function wsRequestMore(open) {
 
 /**
  * Kundeside-overlayet (forhåndsvisning af kundens portal) fra andre skærme,
- * fx Dataanmodninger. Står man ikke i sagen, åbnes sag 1 først.
+ * f.eks. Dataanmodninger. Står man ikke i sagen, åbnes sag 1 først.
  */
 let wsPendingPreview = false;
 const wsOpenCustomerPreview = function () {
@@ -75,7 +75,7 @@ const wsOpenCustomerPreview = function () {
   if (inCase) { window.dispatchEvent(new CustomEvent('cw-open-customer-preview')); return true; }
   wsPendingPreview = true;
   if (typeof window.__go === 'function') window.__go('workspace:' + CW.LIVE_CASE_ID);
-  // Er sagshovedet allerede monteret (fx fra en anden sag), får det besked her
+  // Er sagshovedet allerede monteret (f.eks. fra en anden sag), får det besked her
   setTimeout(() => { if (wsPendingPreview) window.dispatchEvent(new CustomEvent('cw-open-customer-preview')); }, 200);
   return true;
 };
@@ -104,7 +104,7 @@ function wsScrollTo(id) {
 }
 
 // back: { route, anchor, label } giver Dokumenter en knap tilbage til stedet,
-// man kom fra (fx beslutningsgrundlaget på Overblik).
+// man kom fra (f.eks. beslutningsgrundlaget på Overblik).
 function wsOpenDoc(src, go, caseId, back) {
   if (!src || !src.doc) return;
   const detail = { doc: src.doc, name: wsDocName(src.doc), ref: src.ref || null, back: back || null };
@@ -135,7 +135,7 @@ function wsRunMemoLink(link) {
 }
 
 // "Spørg kunden" om noget hentet automatisk: anmodningen åbner med spørgsmålet til punktet klar
-// (itemId er katalogets punkt, fx 'm-annual-2024' eller 'm-pub-market'). Spørgsmålet bliver et
+// (itemId er katalogets punkt, f.eks. 'm-annual-2024' eller 'm-pub-market'). Spørgsmålet bliver et
 // punkt i anmodningen, som kunden får, når anmodningen sendes.
 function wsAskAbout(itemId) {
   window.__wsAskItem = itemId;
@@ -185,7 +185,7 @@ function wsTakeAskItem() {
 }
 
 // Kundeside (WSCustomerPreview, workspace.jsx L818–822): spærren for kundehandlinger slås til,
-// før portalen tegnes første gang, så intet i portalen (fx "læst af kunden") når at ske.
+// før portalen tegnes første gang, så intet i portalen (f.eks. "læst af kunden") når at ske.
 // Undtagen med rollen Kunde (vælgeren øverst i portalen, portalFlowRole i portalens kode).
 function wsPreviewLockOn() {
   return typeof CW.setPreview === 'function' && !(typeof portalFlowRole === 'function' && portalFlowRole() === 'kunde');

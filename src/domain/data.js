@@ -695,7 +695,7 @@ function requestRows() {
     });
   });
 }
-/* Klokken: faste demohændelser fra kunderne på de andre sager (fx Marstal
+/* Klokken: faste demohændelser fra kunderne på de andre sager (f.eks. Marstal
    indsendte for 4 timer siden). Samme tidspunkt og tekst som rækken i
    Dataanmodninger og kortet i Mine opgaver. Set-markeringen gemmes lokalt
    (kabul:, så "Nulstil demo" rydder den). */
@@ -786,7 +786,7 @@ const DOC_MONTHS = { januar: 1, februar: 2, marts: 3, april: 4, maj: 5, juni: 6,
 function docPad(n) { return String(n).padStart(2, '0'); }
 // Seneste fulde dato i en tekst: 24-05-2026, 24.5.2026 eller 24. maj 2026.
 // Meta nævner ofte både periode og dokumentets egen dato; den seneste er
-// dokumentets (fx "Regnskabsår 2024 (1.1.2024 - 31.12.2024) · godkendt 24. april 2025").
+// dokumentets (f.eks. "Regnskabsår 2024 (1.1.2024 - 31.12.2024) · godkendt 24. april 2025").
 function docDateIn(text) {
   const s = String(text || '');
   const found = [];
@@ -872,7 +872,7 @@ function docRegistry() {
       sourceLabel: d.source || d.sourceLabel || DOC_SOURCE[type] || 'Kundeupload',
       hasContent: true,
     });
-    // Erstattede versioner fra versionsloggen (fx Budget v1 og v2)
+    // Erstattede versioner fra versionsloggen (f.eks. Budget v1 og v2)
     const vm = /_v(\d+)(\.\w+)$/.exec(d.name);
     const log = vm && d.pages.find(p => /versionslog/i.test(p.ref + ' ' + p.title));
     if (vm && log) {
@@ -990,7 +990,7 @@ const BOARD = [
   { name: "Erik Sandberg", role: "Bestyrelses­formand", since: "2020" },
   { name: "Anders Christensen", role: "Bestyrelsesmedlem", since: "2014" },
   { name: "Lene Mortensen", role: "Bestyrelsesmedlem", since: "2021" },
-  { name: "Kim Vestergaard", role: "Bestyrelsesmedlem", since: "2023" },
+  { name: "Kim Vestergaard", role: "Bestyrelsesmedlem", since: "2023", demoPep: true },
 ];
 // Direktion. Maria Lindbjerg er CTO, men ikke anmeldt som direktør i CVR.
 const MANAGEMENT = [
@@ -1014,7 +1014,7 @@ window.DATA = {
   // Alle sager med aktuel ejer og status, inkl. kladder fra Ny sag-guiden
   get CASES() { return allCases(); },
   // Dokumentregistret, bygget af window.CASE_DOCS
-  // Uden de hentede dokumenter, rådgiveren har slettet (CW.removeDoc, fx en forkert årsrapport fra CVR)
+  // Uden de hentede dokumenter, rådgiveren har slettet (CW.removeDoc, f.eks. en forkert årsrapport fra CVR)
   get DOCS() { const reg = docRegistry(); return window.CW && CW.isDocRemoved ? reg.filter(d => !CW.isDocRemoved(d.name)) : reg; },
   // Hele registret, også de slettede (til listen "Slettet" og årsrapportpunkterne)
   get ALL_DOCS() { return docRegistry(); },

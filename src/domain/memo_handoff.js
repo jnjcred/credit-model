@@ -55,7 +55,7 @@ function hoMark(keys, all) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   00_README_for_AI.md: vejledning til den AI (fx Copilot), der skal læse sagens
+   00_README_for_AI.md: vejledning til den AI (f.eks. Copilot), der skal læse sagens
    materiale og hjælpe rådgiveren med credit memoet. Bygges, når den hentes, ud af
    præcis de filer, som "Hent alle" henter (hoGroups), så listen altid passer.
    Står under Dokumenter og først i gruppen "Fra Crediwire" på Credit memo.

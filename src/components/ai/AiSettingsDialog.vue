@@ -188,7 +188,7 @@ const intro = computed(() => (isLocal.value
               >
                 {{ en.label }}
                 <a-typography-text type="secondary">
-                  · {{ engineStatus(en).available ? t('klar') : t('ikke klar') }}
+                  - {{ engineStatus(en).available ? t('klar') : t('ikke klar') }}
                 </a-typography-text>
                 <a-typography-text
                   type="secondary"

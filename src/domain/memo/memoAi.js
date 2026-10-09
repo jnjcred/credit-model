@@ -8,7 +8,7 @@
 // src/components/ai) og window.MemoAI. SEC og MEMO_SOURCES importeres fra memoTemplates.js.
 // cleanHtml er rettet to steder i forhold til prototypen:
 // - Modellens og udklipsholderens HTML fortolkes i et tomt dokument uden vindue
-//   (document.implementation.createHTMLDocument), så billeder ikke hentes, og on*-handlere (fx <img onerror>)
+//   (document.implementation.createHTMLDocument), så billeder ikke hentes, og on*-handlere (f.eks. <img onerror>)
 //   aldrig kører. Resultatet er det samme som ved fortolkning i sidens eget dokument; kun indhold i <noscript>
 //   læses som markup i stedet for tekst.
 // - <style>, <title> og <script> fjernes med indhold i stedet for at blive pakket ud. Excel og Word lægger et
@@ -118,11 +118,11 @@ function caseDocs() { return window.CASE_DOCS || []; }
 const MAX_PAGE_CHARS = 7000;
 
 function docAsText(doc) {
-  const head = '=== DOKUMENT: ' + doc.name + ' (' + doc.type + (doc.meta ? ' · ' + doc.meta : '') + ') ===';
+  const head = '=== DOKUMENT: ' + doc.name + ' (' + doc.type + (doc.meta ? ' - ' + doc.meta : '') + ') ===';
   const pages = doc.pages.map(p => {
     let body = p.body || '';
     if (body.length > MAX_PAGE_CHARS) body = body.slice(0, MAX_PAGE_CHARS) + '\n[…afkortet]';
-    return '--- ' + p.ref + ' · ' + p.title + ' ---\n' + body;
+    return '--- ' + p.ref + ' - ' + p.title + ' ---\n' + body;
   });
   return head + '\n' + pages.join('\n\n');
 }

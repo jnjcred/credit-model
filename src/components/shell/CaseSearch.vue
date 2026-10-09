@@ -28,7 +28,7 @@ const results = computed(() => {
 const options = computed(() => {
   const opts = results.value.map(c => ({
     value: String(c.id),
-    label: c.name + ' ' + c.caseNr + ' CVR ' + c.cvr + ' · ' + t('Ansvarlig') + ': ' + c.responsible,
+    label: c.name + ' ' + c.caseNr + ' CVR ' + c.cvr + ' - ' + t('Ansvarlig') + ': ' + c.responsible,
     c,
   }))
   return q.value.trim() === '' ? [{ label: t('Seneste sager'), options: opts }] : opts
@@ -93,7 +93,7 @@ function clear () {
               </a-typography-text>
             </div>
             <a-typography-text type="secondary">
-              CVR {{ c.cvr }} · {{ t('Ansvarlig') }}: {{ c.responsible }}
+              CVR {{ c.cvr }} - {{ t('Ansvarlig') }}: {{ c.responsible }}
             </a-typography-text>
           </div>
           <RightOutlined aria-hidden="true" />

@@ -1,20 +1,20 @@
 <script setup>
 /* Værktøjslinjen over regnskabet (financials.jsx AnnualReportSection, F:1842-1862): enheden
-   (DKK mio. / DKK t.), "Skjul tomme rækker" og budgettet ud og ind som Excel. Importerede tal
-   bliver rettelser (finImportBudget); "Importér budget" vises ikke, når sagen er indstillet, og
-   beder sektionen åbne filvælgeren (som grafens knap).
-   Props: unit ('mio' | 'thousand'), hideEmpty, locked
-   Emits: update:unit, update:hideEmpty, import (vælg en fil), export */
+   (DKK mio. / DKK t.) og "Skjul tomme rækker"; til højre sektionens indhold (slot). "Eksportér budget" er
+   taget ud (Jesper 9. oktober).
+   9. oktober: importen står nu ved budgettet (FinBudgetVersion.vue og grafens boks "Intet budget"),
+   så det er tydeligt, at den bliver rådgiverens version af punktet Budget.
+   Props: unit ('mio' | 'thousand'), hideEmpty
+   Emits: update:unit, update:hideEmpty
+   Slot: default (til højre) */
 import { computed } from 'vue'
-import { DownloadOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 
 defineProps({
   unit: { type: String, required: true },
   hideEmpty: { type: Boolean, default: false },
-  locked: { type: Boolean, default: false },
 })
-const emit = defineEmits(['update:unit', 'update:hideEmpty', 'import', 'export'])
+const emit = defineEmits(['update:unit', 'update:hideEmpty'])
 
 const unitOptions = computed(() => [{ value: 'mio', label: t('DKK mio.') }, { value: 'thousand', label: t('DKK t.') }])
 </script>
@@ -36,28 +36,10 @@ const unitOptions = computed(() => [{ value: 'mio', label: t('DKK mio.') }, { va
     >
       {{ t('Skjul tomme rækker') }}
     </a-checkbox>
-    <!-- Budgettet ud og ind som Excel. Importerede tal bliver rettelser. -->
-    <a-space class="fin-toolbar-end">
-      <a-button
-        v-if="!locked"
-        id="fin-import-budget"
-        @click="emit('import')"
-      >
-        <template #icon>
-          <UploadOutlined aria-hidden="true" />
-        </template>
-        {{ t('Importér budget') }}
-      </a-button>
-      <a-button
-        id="fin-export-budget"
-        @click="emit('export')"
-      >
-        <template #icon>
-          <DownloadOutlined aria-hidden="true" />
-        </template>
-        {{ t('Eksportér budget') }}
-      </a-button>
-    </a-space>
+    <!-- Til højre: det, sektionen lægger ind (demoknappen og "Sammenlign periodetal med samme periode sidste år") -->
+    <div class="fin-toolbar-end">
+      <slot />
+    </div>
   </div>
 </template>
 

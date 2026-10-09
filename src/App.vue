@@ -52,7 +52,7 @@ watch(route, () => closeNav())
 // Ikke ved første indlæsning, og ikke når kun en fane i samme sag skifter:
 // fanerne beholder selv fokus. Forsvinder knappen, der skiftede fane (fx
 // "Åbn memo"), får den aktive fane fokus. En skærm, der selv flytter fokus
-// bagefter (fx klokken eller et dybdelink i memoet), vinder, fordi den kommer senere.
+// bagefter (f.eks. klokken eller et dybdelink i memoet), vinder, fordi den kommer senere.
 // flush 'post': først når den gamle side er fjernet, ellers fandt den dens h1.
 watch(route, (r, prev, onCleanup) => {
   if (prev === r) return
@@ -95,7 +95,7 @@ function skipToMain () {
 // Navigationspanelet på smalle skærme, som før migrationen (app.jsx): en modal dialog med navnet
 // Hovedmenu. Når det åbner, får det aktive menupunkt fokus, og Tab bliver i panelet. Esc og
 // lukkeknappen (Luk menuen) lukker og giver fokus tilbage til menuknappen. Et klik på baggrunden, et
-// sideskift, et klik på en knap i panelet eller fokus, der forlader panelet (fx når en dialog åbner
+// sideskift, et klik på en knap i panelet eller fokus, der forlader panelet (f.eks. når en dialog åbner
 // fra "Ny sag"), lukker det uden at flytte fokus.
 let refocusToggle = false
 function closeNavPanel (focusToggle) {

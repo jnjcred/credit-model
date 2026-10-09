@@ -37,7 +37,7 @@ function saveComments(sKey, arr) {
    Comment = { id, dept, author, at (ISO), text, blocking?,
                resolved?: { by, at, reason }, withdrawn?: { by, at } }
    ──────────────────────────────────────────────────────────────────────────── */
-const MEMO_ME = MEMO_DEPTS[0]; // Mette Larsen · Kredit, den der sidder ved tasterne
+const MEMO_ME = MEMO_DEPTS[0]; // Mette Larsen - Kredit, den der sidder ved tasterne
 
 /* Kontrolfunktionerne kan blokere en indstilling. En kommentar fra Compliance
    eller Risiko, der kræver handling, blokerer, indtil den er løst med en

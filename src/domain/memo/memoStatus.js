@@ -45,7 +45,7 @@ function memoStatusText(st) {
   else if (st.reviewed) parts.push(t('Gennemgået'));
   else if (st.state === 'done') parts.push(t('Færdig'));
   if (st.blanks) parts.push(st.blanks + ' ' + (st.blanks === 1 ? t('felt mangler') : t('felter mangler')));
-  return parts.join(' · ');
+  return parts.join(' - ');
 }
 
 /**
@@ -96,7 +96,7 @@ function memoCommentCounts(frozen) {
                 vejledning til valg, der ikke er aktuelle)
    - caseData:  sagens data mangler faktisk
    Felterne genkendes på teksten (dansk eller engelsk) i skabelonens rækkefølge.
-   Ukendte felter (fx skrevet af AI) regnes som manglende sagsdata.
+   Ukendte felter (f.eks. skrevet af AI) regnes som manglende sagsdata.
    Rækker: [dansk tekst, engelsk tekst, gruppe, etiket]
    ──────────────────────────────────────────────────────────────────────────── */
 const MEMO_BLANKS = {

@@ -1,4 +1,4 @@
-// Under 1000 px (fx 200 % zoom) foldes sidebjælken ind og åbnes fra menuknappen,
+// Under 1000 px (f.eks. 200 % zoom) foldes sidebjælken ind og åbnes fra menuknappen,
 // og sagshovedet ruller med indholdet. Samme grænse som før migrationen.
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 

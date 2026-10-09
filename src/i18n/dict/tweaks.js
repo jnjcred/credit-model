@@ -66,7 +66,7 @@ Object.assign(window.I18N.en, {
   "{date} (kundens frist for materialet, ikke sagsfristen)": "{date} (the customer's deadline for the material, not the case deadline)",
   "Anmodningen til {name} med {n} punkter og svarfrist {date} er gemt på sagen. Der er ikke sendt noget til kunden.": "The request to {name} with {n} items and response deadline {date} is saved on the case. Nothing has been sent to the customer.",
   "Anmodningen med {n} punkter og svarfrist {date} er gemt på sagen. Der er ikke sendt noget til kunden.": "The request with {n} items and response deadline {date} is saved on the case. Nothing has been sent to the customer.",
-  "Skriv beløbet som et tal, fx 4.500.000 eller 4,5 mio.": "Write the amount as a number, e.g. 4,500,000 or 4.5m.",
+  "Skriv beløbet som et tal, f.eks. 4.500.000 eller 4,5 mio.": "Write the amount as a number, e.g. 4,500,000 or 4.5m.",
   "Send anmodningen": "Send the request",
   // Materialekataloget (case_state.js)
   "Likviditetsbudgettet viser, hvor meget af kreditten I forventer at bruge, og hvornår.": "The cash flow budget shows how much of the credit you expect to use, and when.",

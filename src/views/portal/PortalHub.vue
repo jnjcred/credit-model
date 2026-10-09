@@ -5,18 +5,23 @@
 // ("Vi er færdige"), hjælp fra revisor eller bank og andre filer, dialogen med rådgiveren og
 // "Jeres kontakt". Overskriften (h1) er kun for skærmlæsere.
 //
-// Props: requested (punkterne i anmodningen), lock ('submitted' | 'declined' | null: sagen er låst).
+// Props: requested (punkterne i anmodningen), lock ('submitted' | 'declined' | null: sagen er låst),
+//        demo (demoknapperne til Regnskabs kilder må vises: ikke i Kundeflow).
 // Emits: open(id) (et punkt), open-bundle(preselect) (hjælp fra revisor eller bank), other (andre
 //        filer), submit (Vi er færdige), erp (forbind regnskabssystemet).
 // Kundehandlinger bærer data-cust-act (forhåndsvisningens spærre). "Andre filer (n)" bærer det ikke:
-// rådgiveren kan se filerne i forhåndsvisningen (dialogens Send stoppes).
+// rådgiveren kan se filerne i forhåndsvisningen (dialogens Send stoppes). Demoknapperne
+// (PortalSourceDemo) bærer det heller ikke: de virker også i forhåndsvisningen. De står ved punkterne
+// (PortalHubRow), under de hentede årsrapporter (en intern årsrapport, når ingen årsrapport er bedt
+// om) og under handlingerne (forbind e-conomic, når Periodetal ikke er bedt om). Ikke på en låst sag.
 // Ikke porteret (død kode): fresh og onStatus (ubrugte props), openDialog, req, draft og deadline, og
 // tjekket af onErp (portalen gav den altid).
 import { computed } from 'vue'
 import { Grid } from 'ant-design-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
-import { PORTAL_CONTACT, ncFill, portalAutoDocs, portalConsentUntil, portalRevoke, portalStatus } from '@/domain/new_case_portal'
+import { ncFill, portalAutoDocs, portalConsentUntil, portalRevoke, portalStatus } from '@/domain/new_case_portal'
+import { finDelivered, finInternalLoose } from '@/domain/financials/finSources'
 import { useCaseVersion } from '@/composables/useCaseVersion'
 import CustomerConversation from '@/views/customer/CustomerConversation.vue'
 import PortalSteps from './components/PortalSteps.vue'
@@ -24,17 +29,19 @@ import PortalConsentBox from './components/PortalConsentBox.vue'
 import PortalHubRow from './components/PortalHubRow.vue'
 import PortalStatusIcon from './components/PortalStatusIcon.vue'
 import PortalContactCard from './components/PortalContactCard.vue'
+import PortalAiLine from './components/PortalAiLine.vue'
 
 const props = defineProps({
   requested: { type: Array, required: true },
   lock: { type: String, default: null },
+  demo: { type: Boolean, default: false },
 })
 const emit = defineEmits(['open', 'open-bundle', 'other', 'submit', 'erp'])
 
 const version = useCaseVersion()
 const screens = Grid.useBreakpoint()
 const narrow = computed(() => !!screens.value.xs)
-const adv = PORTAL_CONTACT.first
+const adv = 'EIFO'   // kunden skriver til og hører fra EIFO; rådgiverens navn står kun på kontaktkortet
 const locked = computed(() => !!props.lock)
 
 const hub = computed(() => {
@@ -54,9 +61,18 @@ const hub = computed(() => {
   const erpOffer = !consent && !props.requested.some(it => it.id === 'm-interim') && !(ob.agreement && ob.agreement.declined)
   // Kunden valgte "Vi venter på vores revisor" i opstarten: vejen videre står her
   const waitingErp = !consent && !locked.value && !!(ob.erp && ob.erp.waiting)
+  // Demoknapperne uden for punkterne. De interne årsrapporter står under den nyeste hentede
+  // årsrapport, når ingen årsrapport er bedt om, eller når de er sendt herfra (så de kan trækkes
+  // tilbage). Uden punkt sendes de som andre filer, som en kunde kan (portalDemoDocument), og Regnskab
+  // læser dem derfra. Forbind e-conomic står under handlingerne, når Periodetal ikke er bedt om.
+  const demo = props.demo && !locked.value
+  const asked = (re) => props.requested.some(it => re.test(it.id))
+  const annualDemo = demo && !asked(/^m-annual$/) && (!asked(/^m-annual-\d{4}$/) || finDelivered(CW.itemState('m-annual')) || finInternalLoose().length > 0)
+  const erpDemo = demo && !asked(/^m-interim$/)
+  const years = portalAutoDocs()
   const rows = props.requested.map(it => ({ key: it.id, it, status: portalStatus(it.id) }))
-    .concat(portalAutoDocs().map(y => ({ key: 'auto-' + y, year: y })))
-  return { canDelegate, submittedAt, showSubmit, loose, consent, erpOffer, waitingErp, rows }
+    .concat(years.map((y, i) => ({ key: 'auto-' + y, year: y, demo: annualDemo && i === years.length - 1 })))
+  return { canDelegate, submittedAt, showSubmit, loose, consent, erpOffer, waitingErp, rows, erpDemo }
 })
 </script>
 
@@ -78,7 +94,19 @@ const hub = computed(() => {
           id="cwp-items-h"
           role="heading"
           aria-level="2"
-        >{{ t('Materiale') }}</span>
+        >{{ t('Anmodet materiale') }}</span>
+      </template>
+      <template
+        v-if="hub.canDelegate && !locked"
+        #extra
+      >
+        <a-button
+          type="link"
+          data-cust-act="delegate"
+          @click="emit('open-bundle', null)"
+        >
+          {{ t('Få hjælp fra revisor eller bank') }}
+        </a-button>
       </template>
       <a-list
         v-if="hub.rows.length"
@@ -92,6 +120,7 @@ const hub = computed(() => {
             :status="r.status"
             :read-only="locked"
             :narrow="narrow"
+            :demo="demo"
             @open="(id) => emit('open', id)"
           />
           <!-- Det, EIFO selv har hentet (årsrapporterne fra CVR): ét afkrydset punkt pr. år -->
@@ -99,33 +128,51 @@ const hub = computed(() => {
             v-else
             :data-row="'auto-' + r.year"
           >
-            <div class="hub-auto cwp-row">
-              <PortalStatusIcon status="auto" />
-              <span class="hub-auto-text">
-                <a-typography-text
-                  strong
-                  type="secondary"
-                >
-                  {{ t('Årsrapport') + ' ' + r.year }}<span class="sr-only">{{ ': ' + t('Hentet automatisk') }}</span>
-                </a-typography-text>
-                <!-- EIFO godkender ikke årsrapporterne; de er hentet fra CVR. Mærkaten er grøn som Godkendt -->
+            <div class="hub-auto-item">
+              <div class="hub-auto cwp-row">
+                <PortalStatusIcon status="auto" />
+                <span class="hub-auto-text">
+                  <a-typography-text
+                    strong
+                    type="secondary"
+                  >
+                    {{ t('Årsrapport') + ' ' + r.year }}<span class="sr-only">{{ ': ' + t('Hentet automatisk') }}</span>
+                  </a-typography-text>
+                  <!-- EIFO godkender ikke årsrapporterne; de er hentet fra CVR. Mærkaten er grøn som Godkendt -->
+                  <a-badge
+                    v-if="narrow"
+                    status="success"
+                    :text="t('Hentet automatisk')"
+                    aria-hidden="true"
+                  />
+                </span>
                 <a-badge
-                  v-if="narrow"
+                  v-if="!narrow"
                   status="success"
                   :text="t('Hentet automatisk')"
                   aria-hidden="true"
                 />
-              </span>
-              <a-badge
-                v-if="!narrow"
-                status="success"
-                :text="t('Hentet automatisk')"
-                aria-hidden="true"
-              />
+              </div>
             </div>
           </a-list-item>
         </template>
       </a-list>
+      <div
+        v-if="!locked"
+        class="hub-foot"
+      >
+        <a-button
+          type="text"
+          :data-cust-act="hub.loose.length ? undefined : 'upload'"
+          @click="emit('other')"
+        >
+          {{ t('Send en anden fil') }}
+        </a-button>
+      </div>
+      <!-- Oplysningen om AI står ét sted, nederst i kortet med materialet, og kan foldes ud (ikke under hvert punkt) -->
+      <div class="hub-ai">
+        <PortalAiLine />
+      </div>
     </a-card>
 
     <a-card
@@ -226,32 +273,16 @@ const hub = computed(() => {
     </a-card>
 
     <a-space
-      v-if="!locked"
+      v-if="!locked && hub.erpOffer && !hub.waitingErp"
       wrap
       :size="4"
     >
       <a-button
-        v-if="hub.canDelegate"
-        type="text"
-        data-cust-act="delegate"
-        @click="emit('open-bundle', null)"
-      >
-        {{ t('Få hjælp fra revisor eller bank') }}
-      </a-button>
-      <a-button
-        v-if="hub.erpOffer && !hub.waitingErp"
         type="text"
         data-cust-act="erp"
         @click="emit('erp')"
       >
         {{ t('Forbind regnskabssystem') }}
-      </a-button>
-      <a-button
-        type="text"
-        :data-cust-act="hub.loose.length ? undefined : 'upload'"
-        @click="emit('other')"
-      >
-        {{ hub.loose.length ? ncFill(t('Andre filer ({n})'), { n: hub.loose.length }) : t('Send en anden fil') }}
       </a-button>
     </a-space>
 
@@ -285,6 +316,12 @@ const hub = computed(() => {
   min-width: 0;
 }
 
+/* Ikonet er lige så højt som titlens linje og centreret i den, så det flugter med teksten */
+.hub-auto :deep(.portal-status-icon) {
+  align-items: center;
+  height: 22px;
+}
+
 .hub-auto-text {
   display: flex;
   flex: 1;
@@ -292,4 +329,24 @@ const hub = computed(() => {
   align-items: flex-start;
   min-width: 0;
 }
+
+/* Rækken og demoknapperne under den fylder listens linje (som punkternes rækker) */
+.hub-auto-item {
+  flex: 1;
+  min-width: 0;
+}
+
+/* "Send en anden fil" står nederst i kortet, under en streg */
+.hub-foot {
+  padding: 12px 0 0;
+  margin-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* AI-oplysningen nederst i kortet, under en streg som "Send en anden fil" */
+.hub-ai {
+  margin-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
 </style>

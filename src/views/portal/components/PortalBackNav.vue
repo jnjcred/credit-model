@@ -26,6 +26,7 @@ defineEmits(['back'])
     :aria-label="t('Navigation i portalen')"
   >
     <a-button
+      class="cw-link"
       type="link"
       @click="$emit('back')"
     >

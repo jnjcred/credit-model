@@ -16,7 +16,7 @@ import { Upload } from 'ant-design-vue'
 import { CloseOutlined, FileOutlined, SendOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
-import { CS_ACCEPT, csAcceptFiles, csAdvisor, csClearDraft, csFill, csFirst } from '@/domain/customer'
+import { CS_ACCEPT, csAcceptFiles, csClearDraft, csFill } from '@/domain/customer'
 import { confirmRemove } from '@/services/feedback'
 import { useUploadButton } from '@/composables/useUploadButton'
 
@@ -27,7 +27,7 @@ const props = defineProps({
 const emit = defineEmits(['done', 'cancel'])
 
 const it = computed(() => CW.itemById(props.itemId))
-const adv = csFirst(csAdvisor().name)
+const adv = 'EIFO'   // kunden skriver til EIFO
 const pid = computed(() => (props.idPrefix || 'cs') + '-noted-' + props.itemId)
 const kind = ref('none')
 const text = ref('')
@@ -90,10 +90,11 @@ function onText (v) {
 }
 
 const textLabel = computed(() => (kind.value === 'other' ? t('Hvordan og hvornår har I sendt det?') : csFill(t('Kort forklaring til {navn}'), { navn: adv })))
-const placeholder = computed(() => (kind.value === 'other' ? t('Fx: Sendt med post til Mette 2. oktober.')
-  : kind.value === 'na' ? t('Fx: Vi har ingen lån ud over kassekreditten.')
-  : t('Fx: Vi har ingen ejeraftale.')))
-const KINDS = [['none', 'Har vi ikke'], ['na', 'Ikke relevant for os'], ['other', 'Sendt på anden måde']]
+const placeholder = computed(() => (kind.value === 'other' ? t('F.eks. sendt over mail til Mette 2. oktober.')
+  : kind.value === 'na' ? t('F.eks. vi har ingen lån ud over kassekreditten.')
+  : t('F.eks. vi har ingen ejeraftale.')))
+// Valgene er begrundelser, så de passer til overskriften "Angiv en begrundelse"
+const KINDS = [['none', 'Vi har det ikke'], ['na', 'Det er ikke relevant for os'], ['other', 'Vi har sendt det på anden måde']]
 // Upload-knappen er det eneste Tab-stop (a-uploads omslag tages ud; se useUploadButton)
 const uploadRoot = ref(null)
 useUploadButton(uploadRoot)
@@ -110,7 +111,7 @@ useUploadButton(uploadRoot)
       :colon="false"
     >
       <template #label>
-        <span :id="pid + '-kind-label'">{{ t('Hvorfor sender I ikke en fil?') }}</span>
+        <span :id="pid + '-kind-label'">{{ t('Angiv en begrundelse') }}</span>
       </template>
       <a-radio-group
         v-model:value="kind"

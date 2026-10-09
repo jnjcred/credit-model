@@ -84,7 +84,7 @@ const onOlderChange = (keys) => { showOlder.value = [].concat(keys || []).includ
                 v-if="nameLink"
                 type="link"
                 size="small"
-                class="cw-filelink doc-name"
+                class="cw-filelink doc-name cw-link"
                 v-bind="nameLink"
                 @click="onName"
               >
@@ -171,7 +171,7 @@ const onOlderChange = (keys) => { showOlder.value = [].concat(keys || []).includ
                         v-if="preview"
                         type="link"
                         size="small"
-                        class="cw-filelink doc-name"
+                        class="cw-filelink doc-name cw-link"
                         :aria-current="isOlderSel(o) ? 'true' : undefined"
                         @click="emit('select', o)"
                       >

@@ -98,7 +98,7 @@ const openN = computed(() => comments.value.filter(c => commentState(c) === 'ope
       <a-button
         type="link"
         size="small"
-        class="ttl"
+        class="ttl cw-link"
         :title="t('Spring til afsnit')"
         @click="emit('scroll-to-section', sKey)"
       >

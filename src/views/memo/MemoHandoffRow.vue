@@ -34,6 +34,7 @@ const meta = computed(() => {
       <template #title>
         <a-button
           v-if="can"
+          class="cw-link"
           type="link"
           size="small"
           :aria-label="hoFill(t('Hent {navn}'), { navn: d.name })"

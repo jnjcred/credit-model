@@ -1,6 +1,6 @@
 <script setup>
 // Trustpilot (financials.jsx: TrustpilotSection + TrustpilotStars): et blødt signal som én rolig
-// række; fordelingen og de seneste anmeldelser i en fold. Tallene er faste demo-data
+// række og fordelingen altid fremme; de seneste anmeldelser i en fold. Tallene er faste demo-data
 // (TRUSTPILOT i src/domain/financials/finData.js). Søjlerne er antal / største antal, og
 // stjernerne er Math.round(bedømmelse), som før migrationen.
 //
@@ -11,6 +11,7 @@ import { DATA } from '@/domain/data'
 import { TRUSTPILOT } from '@/domain/financials/finData'
 import { finFill, finPublicDataDate } from '@/domain/financials/finFormat'
 import { useCaseVersion } from '@/composables/useCaseVersion'
+import FinSourceBar from './FinSourceBar.vue'
 import { collapseExpandIcon, useCollapseKeyboard } from '@/composables/useCollapseKeyboard'
 
 const caseVersion = useCaseVersion()
@@ -36,14 +37,12 @@ const fetchedAt = computed(() => { caseVersion.value; return finPublicDataDate()
           <span>
             <a-typography-text strong>Trustpilot</a-typography-text>
             <a-typography-text type="secondary">
-              {{ ' · ' + finFill(t('{score} af 5'), { score: DATA.fmt.num(score, 1) }) + ' · ' + totalReviews + ' ' + t('anmeldelser') }}
+              {{ ' - ' + finFill(t('{score} af 5'), { score: DATA.fmt.num(score, 1) }) + ' - ' + totalReviews + ' ' + t('anmeldelser') }}
             </a-typography-text>
           </span>
-          <a-typography-text type="secondary">
-            {{ t('hentet') }} {{ fetchedAt }}
-          </a-typography-text>
         </div>
         <a-button
+          class="cw-link"
           type="link"
           size="small"
           :href="'https://www.trustpilot.com/review/' + DATA.COMPANY.trustpilotDomain"
@@ -53,6 +52,30 @@ const fetchedAt = computed(() => { caseVersion.value; return finPublicDataDate()
           {{ t('Åbn på Trustpilot') }}
         </a-button>
       </div>
+      <!-- Fordelingen: antal pr. antal stjerner, søjlen målt mod det største antal -->
+      <div class="fin-tp-dist">
+        <a-row
+          v-for="d in dist"
+          :key="d.stars"
+          align="middle"
+          :wrap="false"
+        >
+          <a-col :span="6">
+            <a-typography-text type="secondary">
+              {{ d.stars }} {{ d.stars === 1 ? t('stjerne') : t('stjerner') }}
+            </a-typography-text>
+          </a-col>
+          <a-col :span="18">
+            <a-progress
+              :percent="(d.count / maxCount) * 100"
+              :format="() => String(d.count)"
+              status="normal"
+              size="small"
+            />
+          </a-col>
+        </a-row>
+      </div>
+      <!-- De seneste anmeldelser i en fold; fordelingen står altid fremme -->
       <div @keydown="onFoldKeydown">
         <a-collapse
           v-model:active-key="foldKeys"
@@ -62,31 +85,8 @@ const fetchedAt = computed(() => { caseVersion.value; return finPublicDataDate()
           <a-collapse-panel
             id="fin-trustpilot"
             key="trustpilot"
-            :header="t('Fordeling og seneste anmeldelser')"
+            :header="t('Seneste anmeldelser') + ' (' + reviews.length + ')'"
           >
-            <!-- Fordelingen: antal pr. antal stjerner, søjlen målt mod det største antal -->
-            <div class="fin-tp-dist">
-              <a-row
-                v-for="d in dist"
-                :key="d.stars"
-                align="middle"
-                :wrap="false"
-              >
-                <a-col :span="6">
-                  <a-typography-text type="secondary">
-                    {{ d.stars }} {{ d.stars === 1 ? t('stjerne') : t('stjerner') }}
-                  </a-typography-text>
-                </a-col>
-                <a-col :span="18">
-                  <a-progress
-                    :percent="(d.count / maxCount) * 100"
-                    :format="() => String(d.count)"
-                    status="normal"
-                    size="small"
-                  />
-                </a-col>
-              </a-row>
-            </div>
             <a-list
               :data-source="reviews"
               row-key="author"
@@ -101,12 +101,13 @@ const fetchedAt = computed(() => { caseVersion.value; return finPublicDataDate()
                       >
                         <a-rate
                           :value="Math.round(item.stars)"
+                          class="fin-tp-stars"
                           disabled
                           aria-hidden="true"
                         />
                       </span>
                       <a-typography-text type="secondary">
-                        {{ item.author }} · {{ DATA.fmt.longDate(item.date) }}
+                        {{ item.author }} - {{ DATA.fmt.longDate(item.date) }}
                       </a-typography-text>
                     </a-space>
                     <span>{{ t(item.text) }}</span>
@@ -117,6 +118,7 @@ const fetchedAt = computed(() => { caseVersion.value; return finPublicDataDate()
           </a-collapse-panel>
         </a-collapse>
       </div>
+      <FinSourceBar :sources="[{ text: t('Trustpilot API'), title: finFill(t('Hentet {date}'), { date: fetchedAt }) }]" />
     </a-card>
   </section>
 </template>
@@ -142,7 +144,13 @@ const fetchedAt = computed(() => { caseVersion.value; return finPublicDataDate()
   min-width: 0;
 }
 
+/* Små stjerner, så de ikke fylder mere end navnet og datoen ved siden af */
+.fin-tp-stars {
+  font-size: 13px;
+}
+
 .fin-tp-dist {
   max-width: 420px;
+  margin-top: 16px;
 }
 </style>

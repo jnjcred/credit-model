@@ -21,6 +21,7 @@
 // Ikke porteret: compact (kun mindre luft og skrift i prototypen; antdv's felt har én størrelse).
 import { ref } from 'vue'
 import { Upload } from 'ant-design-vue'
+import { PaperClipOutlined } from '@ant-design/icons-vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { CS_ACCEPT, csAcceptFiles, csStageFiles } from '@/domain/customer'
@@ -89,7 +90,7 @@ function remove (f, i) {
         </a-typography-text>
         <div>
           <a-typography-text type="secondary">
-            {{ hint || t('PDF, Excel, Word eller billeder · højst 50 MB pr. fil') }}
+            {{ hint || t('PDF, Excel, Word eller billeder - højst 50 MB pr. fil') }}
           </a-typography-text>
         </div>
         <!-- Kun til at se på: et klik her er et klik på feltet -->
@@ -115,40 +116,42 @@ function remove (f, i) {
       show-icon
       :message="err"
     />
-    <a-list
+    <!-- De valgte filer, som vedhæftede filer i en mail: en lille clips, navnet, størrelsen og Fjern -->
+    <ul
       v-if="staged.length"
-      class="portal-picker-gap"
-      size="small"
-      bordered
-      :data-source="staged"
+      class="portal-picker-gap portal-picker-files"
+      :aria-label="t('Klar til at sende')"
     >
-      <template #header>
-        <a-typography-text type="secondary">
-          {{ t('Klar til at sende') }}
-        </a-typography-text>
-      </template>
-      <template #renderItem="{ item: f, index: i }">
-        <a-list-item>
-          <div class="portal-picker-file">
-            <div class="portal-picker-name">
-              {{ f.name }}
-            </div>
-            <a-typography-text type="secondary">
-              {{ CW.fmtSize(f.size) }}
-            </a-typography-text>
-          </div>
-          <template #actions>
-            <a-button
-              type="text"
-              :aria-label="ncFill(t('Fjern {file}'), { file: f.name })"
-              @click="remove(f, i)"
-            >
-              {{ t('Fjern') }}
-            </a-button>
-          </template>
-        </a-list-item>
-      </template>
-    </a-list>
+      <li
+        v-for="(f, i) in staged"
+        :key="f.id"
+      >
+        <div class="portal-picker-file">
+          <PaperClipOutlined
+            class="portal-picker-clip"
+            aria-hidden="true"
+          />
+          <span class="portal-picker-name">{{ f.name }}</span>
+          <a-typography-text type="secondary">
+            {{ CW.fmtSize(f.size) }}
+          </a-typography-text>
+          <a-button
+            type="link"
+            size="small"
+            class="portal-picker-remove"
+            :aria-label="ncFill(t('Fjern {file}'), { file: f.name })"
+            @click="remove(f, i)"
+          >
+            {{ t('Fjern') }}
+          </a-button>
+        </div>
+        <!-- Plads til noget ved filen, f.eks. valg af emne i "Send en anden fil" -->
+        <slot
+          name="file"
+          :file="f"
+        />
+      </li>
+    </ul>
   </div>
 </template>
 
@@ -169,8 +172,27 @@ function remove (f, i) {
   margin-top: 12px;
 }
 
+.portal-picker-files {
+  padding: 0;
+  margin-bottom: 0;
+  list-style: none;
+}
+
 .portal-picker-file {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
   min-width: 0;
+}
+
+.portal-picker-clip {
+  flex-shrink: 0;
+  color: @text-color-secondary;
+}
+
+.portal-picker-remove {
+  padding: 0;
+  margin-left: auto;
 }
 
 /* Lange filnavne brydes, så listen ikke bliver bredere end siden */

@@ -6,9 +6,11 @@ Jesper skal forklare noget.
 ## Vue 3 + ant-design-vue (8. oktober 2026)
 
 Prototypen er flyttet fra React 18 (UMD + Babel i browseren) til Vue 3 + ant-design-vue 3.2.13,
-Crediwires designsystem fra frontend-app. Det er gjort i en separat arbejdskopi (git worktree)
-`credit-model-antdv` på branchen `ant-design-vue-migration`; den oprindelige mappe `credit-model` er
-urørt. Funktioner, beregninger, tekster, data og gemte nøgler i `localStorage` er de samme.
+Crediwires designsystem fra frontend-app. Migrationen blev lavet i arbejdskopien `credit-model-antdv`
+(branchen `ant-design-vue-migration`) og blev 8. oktober den rigtige udgave: mappen `credit-model` er nu
+`main` med antd-udgaven (udgivet på Cloudflare). Det gamle React-design ligger som backup i
+`credit-model-back-up-old-design`. Funktioner, beregninger, tekster, data og gemte nøgler i
+`localStorage` er de samme som før migrationen.
 
 - **Resultatet:** [MIGRATION.md](MIGRATION.md) (startkommandoer, komponentmapping, alle afvigelser
   med begrundelse, udførte checks og det, der ikke er verificeret).
@@ -64,7 +66,7 @@ egne.
 Vue-udgaven skal bygges, før devserveren kan vise den:
 
 ```powershell
-cd "c:\Users\jnj\CrediWire ApS Dropbox\Product team\AI Agents\Hello world\credit-model-antdv"
+cd "c:\Users\jnj\CrediWire ApS Dropbox\Product team\AI Agents\Hello world\credit-model"
 npm install        # første gang
 npm run build      # bygger appen til dist/
 node devserver.js  # serverer dist/ og AI-broen
@@ -1310,3 +1312,233 @@ Afløser "Spørg kunden" → dialogen fra tidligere i dag.
 - Dialogens "Handler om → Offentlige data" findes stadig til almindelige beskeder.
 - Test: `askitem.js da|en` (scratchpad for session 2e448e6b, mappen `ob`). `askpub.js`
   er forældet (testede den gamle vej via dialogen).
+
+## Regnskab v5: graf og tabel efter kundens kilder (8. oktober)
+
+Afløser "Regnskab v2" (5.-6. oktober) på fanen Virksomheden. Bygget efter designet "Graph redesign
+without takt v5" fra Claude Design (`data/Graph redesign without takt v5.zip`, mappen
+`design_handoff_regnskab_v5` med README og `Regnskab.dc.html`), i antd-udgaven og appens egne farver:
+designets lilla (navy) er appens primære blå (`@primary-color`, Bruttofortjeneste `@primary-3`);
+budgettets orange og EBITDA's orange er designets. Backup før ændringen:
+`..\credit-model_backup_2026-10-08_foer-regnskab-v5`.
+
+**Hvad man ser**
+- Graf og tabel deler kolonner (grafen måler tabellens kolonner og ruller vandret med den):
+  **Årsrapporter** (tre år) | **Periodetal** ([år foreløbig] [samme periode sidste år] [måneder…]
+  [perioden]) | **Budget** ([året før] [budgetåret] [næste budgetår]). Kun budgettet er farvet.
+- Båndet over kolonnerne har AI-mærket, når tallene er læst af AI (intern årsrapport, uploadet
+  saldobalance, budget), og "Anmod", når kunden ikke har sendt periodetal eller budget ("Anmodet",
+  når punktet allerede står i den sendte anmodning; `finSourceState().requested`).
+- Perioden: fra ERP "‹ jan-aug ⌄ 2026": pilen folder månederne ud, og "Bogført til og med" vælger
+  måneden (Crediwires vurdering er mærket; rådgiverens valg gemmes i `kabul:fin-period:nordhavn` og
+  står i historikken som 'fin-period'). Fra en uploadet saldobalance står filens periode fast.
+- "Sammenlign med samme periode sidste år" (kontakten ved overskriften) giver en kolonne for sidste
+  år, vækst foran tallene og sidste års omrids på månedernes søjler.
+- "% nået" i budgetåret (omsætning, dækningsbidrag, EBITDA), "Vis nøgletal" under tabellen (de
+  seks nøgletal; i budgetåret forskellen i procentpoint), og advarslen ved af- og nedskrivninger.
+- Rækkerne er tabellens egne kategorier (`FIN_LAYOUT`), som Jesper bad om; designets eksempelrækker
+  er ikke brugt. Kontrol står som før.
+
+**Kilderne** (`src/domain/financials/finSources.js`, `finSourceState()`; ingen andre steder):
+- Årsrapporter: offentlige (CVR), eller interne pr. år ('m-annual' dækker alle tre år,
+  'm-annual-<år>' året og året før). Uden intern årsrapport viser årskolonnerne ikke omsætning,
+  vareforbrug, dækningsbidrag, andre eksterne omkostninger og andre driftsindtægter (ÅRL § 32;
+  `FIN_PUBLIC_HIDDEN` i finData.js). Omsætningen kan stadig tastes ind ("Ikke oplyst"), og en
+  indtastet omsætning flytter ikke summerne. Grafens Bruttofortjeneste er § 32-bruttofortjenesten
+  (dækningsbidrag + andre eksterne omkostninger + andre driftsindtægter), så offentlige år har den.
+- Periodetal: 'erp' (kunden har forbundet e-conomic, eller tallene er hentet derfra), 'upload'
+  (kunden har sendt en saldobalance; læst af AI) eller 'none'. ERP vinder, hvis begge findes.
+- Budget: kundens budget (læst og mappet af AI) eller en Excel-import. Budgettet er hele regnskabsår
+  (Jesper 8. oktober: kunden skal tvinges til at uploade budget for hele år). Budget 2026 er
+  budgetfilens 2026E (realiseret jan-aug plus budget sep-dec, som filen selv opgør året), 2027 er
+  Q1-Q4 2027 (Q4 2027 og balancen 31-12-2027 står i `finSourceData.js`).
+- Tallene: `finDatasets.js` (ERP måned for måned fra kontomappingen, `CW_MAP.compute(…, perioder)`;
+  den uploadede saldobalance som modellens kolonne `ytd`; sammenligningen fra periodetallenes
+  kolonne "8 mdr 2025", fordelt på måneder efter kvartalsvæksten). Kolonner, rækker, piller, graf og
+  detaljefelt: `finRegnskab.js`. Måneder og regnskabsår: `finTimeline.js`.
+- Jesper 8. oktober: uploadet budget og saldobalance skal læses af en LLM, når vi når dertil, fordi
+  filerne er så forskellige. I prototypen kommer tallene fra sagens dokumenter; `finUploadMap` og
+  `finBudgetYear` i finDatasets.js er stedet, hvor LLM-læsningen skal sættes ind. Den skal også
+  afvise eller markere et budget, der ikke dækker hele regnskabsår.
+
+**Rettelser.** Årene (som før) og en uploadet saldobalances periode (ny rettelseskolonne `ytd`) kan
+rettes i cellen. ERP-tal rettes i kontomappingen og budgettet med Excel-import. Gamle rettelser af
+kvartalerne (q0-q2, bs, b0-b3) gælder stadig i ERP-tallene og budgettet, men har ikke længere egne
+celler. En omsætning, der tastes ind i et år med kun offentlig årsrapport, gemmes som udfyldning
+(`fill: true`): den står alene (flytter ikke summerne), gælder kun så længe året er offentligt (kommer
+den interne årsrapport, gælder dens tal), og eksporten bruger den ikke.
+- Den uploadede saldobalance har sine egne tal (`FIN_UPLOAD_2026` i finSourceData.js: filens
+  "8 mdr 2026" og balancen 31-08-2026) og afhænger ikke af kontomappingen; detaljerne står tomme,
+  til LLM-læsningen kan mappe dem.
+- Et budget, der kun er importeret af rådgiveren (Excel), står som "Budget importeret af rådgiveren"
+  uden AI-mærke; kun kundens fil er "Budget fra kunden" og "læst og mappet af AI".
+- Demovisningen ved tabellen skriver intet: "Importér budget" og båndenes "Anmod" står, men er slået
+  fra, og grafens valg (serier, Skjul graf) gemmes ikke imens. Den begynder med sagens valgte
+  "bogført til og med"; et skift af periodetallenes kilde eller af kanttilfælde nulstiller det.
+- Bred tabel (sammenligning, måneder): tabellen ruller i sin egen ramme med rækkenavnene stående fast
+  til venstre, og grafen ruller med (grafens detaljefelt står også fast). Folder man månederne ud,
+  rulles perioden (med pilen, der har fokus) ind midt i rammen. Er rammen under 1000 px (fx 1280 px
+  skærm), må rækkenavnene bryde (container query), så standardtabellen står uden vandret rulning.
+- Grafen: et negativt tal er en stiplet søjle; Bruttofortjeneste har en forklaring (serien og
+  detaljefeltet), fordi den ikke er tabellens dækningsbidrag, som sagens dokumenter kalder
+  bruttofortjeneste. På engelsk hedder dækningsgraden nu "Contribution margin ratio".
+
+**Demo**
+- Ved tabellen (`FinTableDemo.vue`): skift kilderne (årsrapporter, periodetal, budget) og
+  kanttilfældene med eksempeldata (regnskabsår juli-juni, bogført 3/8/12 måneder eller ind i næste år,
+  bogført til angivet af Crediwire eller kunden). Ændrer kun visningen, ligger i hukommelsen
+  (`useFinDemoView.js`) og er væk efter genindlæsning; tal kan ikke rettes imens. Kanttilfældene
+  bruger sagens egne måneder, hvor de findes (jan-aug 2026 fra ERP, jan-aug 2025 fra periodetallene);
+  resten er regnet ud af årsrapporterne og budgettet (`finDemoDataset` i finDatasets.js).
+- I kundeportalen og på Kundeside (`PortalSourceDemo.vue`): "Forbind e-conomic", "Upload saldobalance
+  (PDF)", "Upload intern årsrapport" og "Upload budget" ved felterne. De skriver kundens tilstand med
+  CW's egne funktioner (samtykke, filer i IndexedDB, punkternes status), gemmes og ryddes af
+  "Nulstil demo". Ingen netværk eller rigtige integrationer. Detaljer: `portalDemo*` i
+  `new_case_portal.js`. En knap er kun trykket ned, når det, den siger, er sket (forbundet = samtykke,
+  PDF = en PDF på Periodetal).
+- Er Årsregnskaber ikke bedt om, sender "Upload intern årsrapport" de interne årsrapporter som andre
+  filer (som en kunde kan), og Regnskab læser dem derfra på navnet (`finInternalLoose`,
+  `Intern_aarsrapport_<år>.pdf`; i produktet klassificerer AI'en filen).
+- Demofilerne passer med Regnskab: ERP-hentningens saldobalance (CSV) og debitorliste bygges af
+  e-conomic-saldobalancen i kontomappingen (debitorerne = konto 5300, ingen over 60 dage), og den
+  uploadede "Saldobalance_jan-aug_2026.pdf" er en rigtig saldobalance med e-conomics konti, sumlinjer
+  og kontrol (`portalTrialBalancePages`). Den interne årsrapport har en side mere end CVR-udgaven:
+  specifikationerne bag omsætning (pr. kunde), vareforbrug og andre eksterne omkostninger
+  (`PORTAL_ANNUAL_SPEC`, summerne er årsrapporternes). Siderne bygges i `new_case_portal.js`
+  (`window.CW_DEMO_PAGES`) og læses af `CW.demoUploadFile` i case_state.js.
+
+**Fjernet:** 2026E/2027B, kvartalerne ("Udfold kvartaler"), prognosezonen og "Ingen prognose"-kortet
+fra v2 (designet har dem ikke), og koden bag dem (`finBuildCols`, `finTableRows`, `finChartModel`,
+`finDataState` m.fl.).
+
+**Kendte begrænsninger**
+- Memo, Overblik og eksporten `Regnskabstabel_Nordhavn.xlsx` læser stadig ANNUAL_REPORT med 2026E og
+  2027B (uændret); de følger ikke kilderne i Regnskab.
+- Kanttilfældene er eksempeldata; de længste ligger i fremtiden, og ved regnskabsår fra juli er
+  årsrapporternes år blot omdøbt (kildelinjen siger "Årsrapporter (eksempeldata)").
+- "Bogført til angivet af kunden" er taget ud af demoen (Jesper 9. oktober: ikke endnu). Koden til
+  kundens egen angivelse (`estBy: 'cust'` i FinPeriodSelect) står stadig, men bruges ikke.
+- En anden fane opdateres ikke, når demoknapperne bruges i portalen (sagen lytter kun i samme fane).
+- Vækst mod sidste år vises ikke for et resultat (dækningsbidrag, EBITDA, resultater), der var
+  negativt sidste år; en omkostning vokser som beløb (vareforbrug +7 %), som i designet.
+- Periodevælgerens grupper pr. regnskabsår er antdv's `a-menu-item-group`, som axe melder for
+  ARIA-strukturen (samme mønster som brugermenuen); punkternes navne har året med.
+- Periodevælgeren viser kun måneder med tal (designet viser 24 måneder).
+- Test (scratchpad for session 3c57baf0): `unit/domain_smoke.mjs` (domænet i Node), `rs_states.js`,
+  `rs_edit.js` (21/21: indtastet omsætning, rettelse af upload, periodevalg gemt og logget, demo
+  nulstillet ved genindlæsning), `rs_fix.js` (13/13: gennemgangens fund) og `rs_en.js` (engelsk).
+  Kundeportalens demoknapper: `trackB/`, `verifyB/` og `fixB/` (bl.a. 47/47, 23/23, 37/37). To
+  uafhængige gennemgange (tal og logik; design, kontrakt og tilgængelighed) i `numrev/` og
+  `rev-design/`, deres fund er rettet. En blind slutrunde (`blind.txt`, to testere uden kendskab til
+  de tidligere fund); dens fund er rettet og bevist i `rs_blind2.js` (24/24) og `blind2/portal.js`
+  (29/29), undtagen dem under Kendte begrænsninger.
+
+## Offentlige årsrapporter efter § 32, budget for hele år og regnskabsåret (9. oktober)
+
+Jesper 9. oktober: eksterne årsrapporter har ikke omsætning eller vareforbrug, det har den interne;
+kunden angiver sit regnskabsår, og vi godkender kun budgetter for hele regnskabsår; Excel-skabelonen
+skal have hele år; "bogført til angivet af kunden" tages ikke med endnu. Backup før ændringerne:
+`..\credit-model_backup_2026-10-09_src_foer-runde2` (kun src).
+
+**Årsrapporterne** (`src/domain/case_documents_public.js`, indlæses lige efter case_documents.js):
+- `Aarsrapport_<år>.pdf` (CVR) er nu § 32-udgaven: resultatopgørelsen begynder med bruttofortjenesten
+  (dækningsbidrag + andre eksterne omkostninger: 15.900 / 12.900 / 10,8), noterne om omsætning,
+  vareforbrug og andre eksterne omkostninger er taget ud, nøgletallene på omsætningen (marginer,
+  omsætningsvækst, debitor- og lagerdage, omsætning pr. medarbejder) er væk, og teksterne nævner ingen
+  omsætningstal (kun andele i pct.). Ændringerne står som tekstrettelser pr. side (`PUBLIC_PATCHES`);
+  en tekst, der ikke findes, giver en advarsel i konsollen.
+- `Intern_aarsrapport_<år>.pdf` (Kundeupload) er den fulde rapport plus en side med specifikationer
+  (omsætning pr. kunde, vareforbrug, andre eksterne omkostninger; flyttet hertil fra
+  new_case_portal.js). Den står sidst i CASE_DOCS og først på sagen, når kunden sender den.
+  Kundeportalens demofil for intern årsrapport er dette dokument.
+- Memoet: 42 henvisninger, der citerede omsætning, vareforbrug, dækningsbidrag eller marginer i
+  årsrapporterne, peger nu på den interne årsrapport (samme side), og den interne står i
+  afsnittenes kildelister. Indtil kunden har sendt den, viser memoet dem som "dokumentet findes ikke i
+  sagen", som periodetallene. Skabelonens tekst er ændret, så gemte memoudkast nulstilles (seed-version).
+  `CASE_FACTS.keyFigures` (omsætning og EBITDA-margin) peger også på den interne.
+
+**Budget for hele år**
+- Excel ("Eksportér/Importér budget", `finBudgetExcel.js`): kolonnerne er Budget 2026, 2027 og 2028
+  (hele regnskabsår), nye rettelseskolonner `by0`-`by2` (finEdits.js, `finCellGet` kind 'by' i
+  finCalc.js). Uden rettelse er året budgetfilens år (2026E, Q1-Q4 2027, 2028), med de gamle
+  kvartalsrettelser. Anlægs- og omsætningsaktiver kan importeres (`FIN_BUDGET_ONLY`); summerne i filen
+  bruges ikke, de regnes. En fil med kvartaler eller måneder afvises med en forklaring. Uden
+  kundens budget er en import hele budgettet: kun de importerede tal og summerne af dem står i
+  tabellen (`finBudgetYear(…, imported)`), og importerede tal gemmes, også hvis de er lig tallet
+  bag cellen. Uden budget er eksporten en tom skabelon. Ældre importer af kvartaler tæller ikke som
+  et importeret budget.
+- Kundeportalen, punktet Budget (`PortalUpload.vue`): en boks siger, at vi kun godkender budgetter for
+  hele regnskabsår, og kunden skal vælge sit regnskabsår (januar-december, februar-januar …), før
+  budgettet kan sendes. Det gemmes på sagen (`CW.onboarding().fiscalYear = { start }`) og står i
+  punktets historik (`portalSetFiscalYear`). Demoknappen "Upload budget" sætter kalenderår.
+- Hvilken periode et budget skal dække sent på året, er sendt som spørgsmål til EIFO:
+  `external_material/EIFO 2026/Spørgsmål til EIFO - budgetperiode.md` (git-ignoreret). EIFO's
+  forretningsgang og kreditindstillingsskabelon taler om årsbudgettet for indeværende regnskabsår
+  ("Er det realistisk, at årsbudgettet nås?", Need-to-Meet) og årlig indlevering af budget; om
+  rullende 12 måneder står der intet.
+
+**Samtidigt arbejde.** En anden session ændrede samme dag bl.a. demopanelet ved tabellen (kan
+foldes sammen), "Vis detaljer" (fjernet) og indtastning af omsætning (nu detaljerne, ikke summen).
+Testene `rs_fix.js` og `rs_edit.js` er tilpasset det. Test af denne runde: `rs_round2.js` (15/15:
+import af hele år, afvisning af kvartaler, offentlige og interne årsrapporter, memoets henvisninger,
+regnskabsåret i portalen), `rs_blind2.js` 24/24, `blind2/portal.js` 29/29.
+
+**Boksen "Intet budget" i grafen er tilbage** (Jesper 9. oktober; som "Ingen prognose" i Regnskab v2).
+Mangler budgettet, står en boks over de tomme kolonner i grafen: "Intet budget for 2026 og 2027" (uden
+periodetal: "Ingen periodetal og intet budget …") med "Anmod kunden om budget", "Importér budget" og
+"Anmod kunden om periodetal". Er punktet allerede bedt om, står det i stedet; i demovisningen er
+knapperne slået fra. Budgetkolonnerne i grafen har kun den orange flade, når der er et budget, så
+boksen ligger på én flade (`FinChart.vue`, `askBox`; `finChartColumns` budget).
+
+**Rådgiverens budget som version af punktet Budget** (Jesper 9. oktober: source of truth er punktet).
+- "Importér budget" er væk fra værktøjslinjen. Uden budget står "Upload rådgiverens budget" i grafens
+  boks; med budget står linjen `FinBudgetVersion.vue` over grafen: hvilket budget tabellen bruger
+  (kundens fil eller rådgiverens version), "Del med kunden"/"Fjern deling", "Brug kundens budget"/"Brug
+  rådgiverens version", "Hent rådgiverens fil" og "Upload ny version". Ikke i demovisningen.
+- En import bliver en version (`finVersions.js`, `kabul:fin-versions:nordhavn`): filen ligger som
+  rådgiverens fil under Dokumenter, tallene er rettelser med `versionId`, og historikken står på punktet
+  Budget. Versionen er intern, til rådgiveren deler den; så ser kunden filen på sit budgetpunkt
+  (`PortalUpload.vue`). Har kunden sendt et budget, bygger versionen på det, og kundens original
+  bevares; vælges kundens, tæller rådgiverens rettelser ikke (`finActiveEdits`).
+- Er budgettet anmodet og ikke sendt, spørger importen, om anmodningen skal lukkes (`CW.withdrawItem`:
+  punktet tages ud af anmodningen uden mail; `CW.restoreItem` fortryder). Lades den åben, bruger
+  Regnskab rådgiverens version, til kunden sender sit.
+- Modellen er generel pr. punkt, men kun koblet på budgettet. Periodetal og intern årsrapport kan bruge
+  den samme, når rådgiveren skal kunne rette i dem.
+
+**Grafen ved første periodetal**: første gang sagen får periodetal (ERP eller uploadet saldobalance),
+slås Omsætning til og Bruttofortjeneste fra; derefter huskes rådgiverens valg (`periodSeen` i
+`kabul:fin-chart`).
+
+**Ingen automatisk genindlæsning**: `vite.config.mjs` har `server.hmr` slået fra, så ændringer i koden
+ikke genindlæser en åben prototype. Ændringer ses ved næste manuelle genindlæsning. `CW_HMR=1 npm run
+dev` giver det gamle tilbage. Test: `rs_versions.js` (23/23).
+
+**Grafens boks, knapperne** (Jesper 9. oktober): to primære knapper "Anmod om budget" og "Anmod om
+periodetal" (kun når periodetallene mangler), og til højre blå tekstlinks "Upload budget" (rådgiverens
+version, se ovenfor) og "Upload periodetal" (rådgiveren lægger en saldobalance på punktet Periodetal som
+sin fil; Regnskab læser den som uploadet saldobalance). Er punktet anmodet, står "Budget er anmodet" /
+"Periodetal er anmodet" i stedet for knappen. I en smal boks bryder linkene ned på næste linje.
+
+## Oplysning om AI i kundeflowet (9. oktober)
+
+Jesper: læs op på AI-forordningen og få det ind i kundeflowet, også for eksisterende kunder.
+- **Hvad reglerne kræver:** AI-forordningen kræver ikke samtykke, men information, der er "klar og
+  letgenkendelig, senest ved første interaktion eller eksponering" (art. 50, stk. 5). Kreditvurdering af
+  virksomheder er ikke højrisiko (bilag III, 5(b), gælder kun fysiske personer). Vurderes en fysisk person,
+  f.eks. en personlig kautionist, gælder art. 26, stk. 11 (oplysning) og art. 86 (forklaring), når
+  højrisikoreglerne træder i kraft (udskudt til 2. december 2027 med omnibus-aftalen fra maj 2026). Efter
+  GDPR er samtykke ikke frit i en låneansøgning; kunden skal oplyses (art. 13/14), og ingen afgørelse må
+  træffes alene af AI (art. 22).
+- **Løsning:** en oplysning, kunden kvitterer for (ikke et samtykke), adskilt fra brugsvilkårene:
+  `src/domain/aiNotice.js` (tekst, version `AI_NOTICE_VERSION`, `aiNoticeDone`, `aiNoticeAccept`).
+  - Skærmbilledet `PortalAiNotice.vue` står i portalen lige efter trinnet Bruger og før oversigten
+    (`CustomerPortalView.vue`, content 'ai'). Flueben + Fortsæt; gemmes som `CW.onboarding().aiNotice =
+    { version, at, by }` og står i sagens historik.
+  - Eksisterende kunder uden kvittering (eller med en ældre version) får det ved næste login; har de
+    allerede sendt materiale, står der "Nyt: sådan bruger vi AI".
+  - Hvert uploadpunkt har en kort linje med hele teksten til at folde ud (`PortalAiLine.vue`).
+  - Ikke i rådgiverens forhåndsvisning og ikke på en låst sag.
+- **Ikke lavet:** et fravalg ("læs uden AI"), som kræver manuel behandling; i dag skriver kunden til
+  rådgiveren. Rådgiveren ser kvitteringen i historikken, ikke som en mærkat på Overblik.
+- Test: `blind2/ai.js` (8/8). Portaltestenes opsætning kvitterer for oplysningen.

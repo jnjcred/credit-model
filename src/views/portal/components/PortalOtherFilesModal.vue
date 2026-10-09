@@ -3,6 +3,7 @@
 // et punkt. Rådgiveren får dem med det samme. Øverst de andre filer, kunden har sendt, med "Fjern"
 // (bekræftelse), derunder filvælgeren og "Send til {rådgiver}" (den rigtige disabled-attribut, til der er
 // valgt en fil). Et dobbeltklik sender én gang.
+// Hver valgt fil får et emne (de samme som i Dokumenter og anmodningen; standard er Andet), som følger filen.
 //
 // Props: getContainer (portalens rod: dialogen lægges dér, så forhåndsvisningens spærre ser dens knapper).
 // Emits: close (dialogen er lukket; efter lukke-animationen).
@@ -12,7 +13,7 @@ import { nextTick, ref, shallowRef, watch } from 'vue'
 import { t } from '@/i18n'
 import { CW } from '@/domain/case_state'
 import { csShortDate } from '@/domain/customer'
-import { PORTAL_CONTACT, ncFill } from '@/domain/new_case_portal'
+import { ncFill } from '@/domain/new_case_portal'
 import { useCase } from '@/composables/useCaseVersion'
 import { dialogBodyStyle } from '@/components/common/dialogBody'
 import PortalFilePicker from './PortalFilePicker.vue'
@@ -25,8 +26,12 @@ const emit = defineEmits(['close'])
 const open = ref(true)
 const staged = shallowRef([])
 let sending = false
-const adv = PORTAL_CONTACT.first
+const adv = 'EIFO'   // kunden skriver til og hører fra EIFO; rådgiverens navn står kun på kontaktkortet
 const loose = useCase(() => CW.allUploads().filter(f => !f.itemId && f.by === 'kunde'))
+// Emnet pr. fil (fil-id -> dansk etiket); Øvrigt vises som Andet
+const cats = ref({})
+const catOptions = CW.MATERIAL_CATS.map(c => c.label).concat(['Øvrigt']).map(c => ({ value: c, label: c === 'Øvrigt' ? t('Andet') : t(c) }))
+const catOf = (f) => cats.value[f.id] || 'Øvrigt'
 const wrapProps = { 'aria-modal': 'true', 'aria-labelledby': 'cwp-o-title' }
 
 // En fjernet fil tager sin "Fjern"-knap med sig, og fokus falder ud på siden. Før tog dialogen stadig
@@ -42,12 +47,12 @@ watch(() => staged.value.length, (n, o) => { if (n < o) keepFocus() }, { flush: 
 function send () {
   if (!staged.value.length || sending) return
   sending = true
-  CW.addLooseUploads(staged.value)
+  CW.addLooseUploads(staged.value.map(f => ({ ...f, cat: catOf(f) })))
   CW.toast(ncFill(staged.value.length === 1 ? t('1 fil sendt til {navn}') : t('{n} filer sendt til {navn}'), { n: staged.value.length, navn: adv }))
   open.value = false
 }
 function remove (f) {
-  CW.confirm({ title: ncFill(t('Fjern {navn}?'), { navn: f.name }), text: ncFill(t('{navn} har allerede fået filen. Hun kan se i sagens historik, at I har fjernet den.'), { navn: adv }), confirmLabel: t('Fjern filen'), danger: true })
+  CW.confirm({ title: ncFill(t('Fjern {navn}?'), { navn: f.name }), text: t('EIFO har allerede fået filen og kan se i sagens historik, at I har fjernet den.'), confirmLabel: t('Fjern filen'), danger: true })
     .then(r => { if (r.ok) { CW.removeLooseUpload(f.id); CW.toast(ncFill(t('{navn} er fjernet'), { navn: f.name })); keepFocus() } })
 }
 </script>
@@ -90,7 +95,7 @@ function remove (f) {
               {{ f.name }}
             </div>
             <a-typography-text type="secondary">
-              {{ f.sizeLabel }} ·
+              {{ f.sizeLabel }} - {{ t(f.cat && f.cat !== 'Øvrigt' ? f.cat : 'Andet') }} -
               <a-tooltip :title="CW.fmtWhen(f.at)">
                 <span>{{ csShortDate(f.at) }}</span>
               </a-tooltip>
@@ -109,7 +114,18 @@ function remove (f) {
         </a-list-item>
       </template>
     </a-list>
-    <PortalFilePicker v-model:staged="staged" />
+    <PortalFilePicker v-model:staged="staged">
+      <template #file="{ file }">
+        <a-select
+          :value="catOf(file)"
+          :options="catOptions"
+          size="small"
+          class="portal-other-cat"
+          :aria-label="ncFill(t('Emne for {navn}'), { navn: file.name })"
+          @update:value="(v) => { cats = { ...cats, [file.id]: v } }"
+        />
+      </template>
+    </PortalFilePicker>
     <template #footer>
       <a-button @click="open = false">
         {{ t('Annullér') }}
@@ -136,6 +152,12 @@ function remove (f) {
 }
 
 /* Lange filnavne brydes, så listen ikke bliver bredere end dialogen */
+.portal-other-cat {
+  display: block;
+  min-width: 200px;
+  margin-top: 6px;
+}
+
 .portal-other-name {
   word-break: break-all;
 }

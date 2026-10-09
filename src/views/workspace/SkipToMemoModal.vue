@@ -71,7 +71,7 @@ onMounted(() => CW.focusSoon('#ws-skip-reason'))
           id="ws-skip-reason"
           v-model:value="reason"
           :rows="3"
-          :placeholder="t('Fx: Kunden har allerede sendt årsrapport og periodetal i forbindelse med bankens ansøgning.')"
+          :placeholder="t('F.eks. kunden har allerede sendt årsrapport og periodetal i forbindelse med bankens ansøgning.')"
           :aria-invalid="invalid ? true : undefined"
           aria-describedby="ws-skip-msg"
         />

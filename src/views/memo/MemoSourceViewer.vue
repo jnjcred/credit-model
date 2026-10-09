@@ -16,7 +16,7 @@
 // i 3.2.13).
 //
 // Props: doc (CASE_DOCS-dokumentet: { name, type, meta, pages: [{ ref, title, body }] }), page (henvisningens
-//        side, fx 's. 9'), quote (henvisningens tekst), context (citeContext), alt (den danske udgave eller null),
+//        side, f.eks. 's. 9'), quote (henvisningens tekst), context (citeContext), alt (den danske udgave eller null),
 //        inCase (dokumentet står under Dokumenter).
 // Emits: close.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -140,13 +140,13 @@ const claimText = computed(() => {
     ? t('Henvisningen') + ' "' + props.quote + '" ' + t('dækker påstanden:') + ' "' + r.claim + '"'
     : t('Påstand i memoet:') + ' "' + (r.claim || props.quote) + '"'
 })
-const passageText = computed(() => t('Sammenlignet med kilden:') + ' "' + res.value.passages.slice(0, 2).map(p => p.length > 220 ? p.slice(0, 217).replace(/\s+\S*$/, '') + ' …' : p).join('" · "') + '"')
+const passageText = computed(() => t('Sammenlignet med kilden:') + ' "' + res.value.passages.slice(0, 2).map(p => p.length > 220 ? p.slice(0, 217).replace(/\s+\S*$/, '') + ' …' : p).join('" - "') + '"')
 // Dommens farve og ikon (✓ fundet, ? kontrollér sammenhængen, ! ikke fundet, kilden siger det modsatte)
 const alertType = computed(() => (green.value ? 'success' : contra.value ? 'error' : 'warning'))
 const verdictIcon = computed(() => (green.value ? CheckCircleFilled : contra.value ? CloseCircleFilled : state.value === 'context' ? QuestionCircleFilled : ExclamationCircleFilled))
 const markClass = computed(() => (state.value === 'exact' ? 'memo-src-hit-exact' : green.value ? 'memo-src-hit-ok' : contra.value ? 'memo-src-hit-contra' : 'memo-src-hit-warn'))
 const showElsewhere = computed(() => state.value === 'missing' && first && first.elsewhere >= 0 && first.elsewhere !== idx.value)
-const typeLine = computed(() => t(props.doc.type) + (props.doc.meta ? ' · ' + t(props.doc.meta.split('·')[0].trim()) : ''))
+const typeLine = computed(() => t(props.doc.type) + (props.doc.meta ? ' - ' + t(props.doc.meta.split('·')[0].trim()) : ''))
 
 // Fokus: "Luk" ved åbning; det, der havde fokus før (henvisningen), igen ved lukning
 const prev = document.activeElement
@@ -255,6 +255,7 @@ onBeforeUnmount(() => {
         >{{ msg }}</span>
         <a-button
           v-if="showElsewhere"
+          class="cw-link"
           type="link"
           size="small"
           @click="idx = first.elsewhere"
@@ -270,7 +271,7 @@ onBeforeUnmount(() => {
     >
       <div class="memo-src-page-h">
         <a-typography-text strong>
-          {{ cur ? memoRefLabel(cur.ref) + ' · ' + cur.title : '' }}
+          {{ cur ? memoRefLabel(cur.ref) + ' - ' + cur.title : '' }}
         </a-typography-text>
       </div>
       <div class="memo-src-text">

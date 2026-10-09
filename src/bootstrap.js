@@ -2,8 +2,9 @@
 // migrationen. Filerne sætter fortsat deres window-globaler (DATA, CW, AI,
 // CASE_DOCS, CASE_FACTS, CW_MAP, t), fordi de læser hinanden den vej; Vue-koden
 // importerer i stedet de eksporterede værdier. Rækkefølgen betyder noget:
-// fx læser case_state.js window.t, når den indlæses.
+// f.eks. læser case_state.js window.t, når den indlæses.
 import './domain/case_documents.js'
+import './domain/case_documents_public.js' // offentlige årsrapporter (§ 32) og de interne udgaver
 import './domain/data.js'
 import './domain/case_facts.js'
 import './i18n/index.js'

@@ -79,7 +79,7 @@ export function useMemoDeepLink ({ getRoot, active, pin, railTab, narrow, drawer
       const body = secEl.querySelector('.memo-body')
       const f = body ? memoBlankFields(k, body.innerHTML).find(x => x.id === tgt.field) : null
       const el = f ? body.querySelectorAll('.tpl-blank')[f.index] : null
-      // Feltet står i skabelonens foldede vejledning (fx "bilag 2" i afsnit 6):
+      // Feltet står i skabelonens foldede vejledning (f.eks. "bilag 2" i afsnit 6):
       // vejledningen foldes ud, og dybdelinket prøves igen, når den er tegnet
       if (el && secEl.classList.contains('guide-folded') && el.closest('.tpl-hints, .tpl-hint, .tpl-note, .tpl-guide') && !tgt.__guide) {
         window.dispatchEvent(new CustomEvent('memo-show-guide', { detail: { sKey: k } }))

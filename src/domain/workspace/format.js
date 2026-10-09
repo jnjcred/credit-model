@@ -38,7 +38,7 @@ function wsSentText(r, dateOnly) {
   const f = dateOnly ? wsDay : CW.fmtWhen;
   const first = r.firstSentAt || r.sentAt;
   return (r.version || 1) > 1 && first !== r.sentAt
-    ? wsFill(t('Sendt {first} · opdateret {when}'), { first: f(first), when: f(r.sentAt) })
+    ? wsFill(t('Sendt {first} - opdateret {when}'), { first: f(first), when: f(r.sentAt) })
     : wsFill(t('Sendt {when}'), { when: f(r.sentAt) });
 }
 // Når en dansk dato ("9. okt.") slutter sætningen, står der kun ét punktum

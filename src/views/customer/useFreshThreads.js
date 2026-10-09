@@ -6,7 +6,7 @@
 // Brug (i setup):
 //   const fresh = useFreshThreads(previewRef, resetKeyRef)
 //     previewRef   ref, computed eller getter: true i rådgiverens forhåndsvisning af kundesiden
-//     resetKeyRef  ref, computed eller getter: visningen, fx view + ':' + (activeId || '')
+//     resetKeyRef  ref, computed eller getter: visningen, f.eks. view + ':' + (activeId || '')
 //   fresh er Set'et med trådenes id'er (reaktivt).
 // Sideeffekt (som før): de ulæste tråde markeres som læst af kunden (CW.markRead(id, 'kunde')),
 // når komponenten er monteret, og hver gang der kommer nye. Ikke i forhåndsvisningen.
